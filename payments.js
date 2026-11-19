@@ -1,6 +1,7 @@
 import { startSendMoneyPrompt } from "./sendmoney.js";
 import { shopCyclePrice, planPrice } from "./planPricing.js";
 import { isPlatformAdmin } from "./platform.js";
+import { credential } from "./integrations-core.js";
 
 /**
  * JMSURF Garage modules on the bill: every switched-on module (active, on trial
@@ -185,6 +186,8 @@ async function payheroCredentials() {
 // JMSURF Technologies Paybill — subscription and renewal money lands here.
 // Keys come from the saved settings or the container environment only.
 const DARAJA_DEFAULT_SHORTCODE = "4022819";
+/** The platform's own JMSURF PAY settlement channel (package fees), separate from every company. */
+const PLATFORM_EXTERNAL_ID = "jmsurf-garage-platform";
 
 /** Daraja rejects references with spaces or symbols; max 12 characters. */
 function safeAccountReference(...candidates) {
@@ -192,7 +195,7 @@ function safeAccountReference(...candidates) {
     const cleaned = str(candidate).replace(/[^A-Za-z0-9]/g, "").toUpperCase();
     if (cleaned) return cleaned.slice(0, 12);
   }
-  return "JMSURFPOS";
+  return "JMSURFGARAGE";
 }
 
 /** Platform Daraja keys used for subscription and renewal payments only. */
@@ -202,7 +205,7 @@ async function darajaCredentials() {
 
   const till = pick(daraja.till_number, daraja.buy_goods_number);
   const paybill = pick(daraja.paybill_number, daraja.shortcode);
-  const shortcode = pick(daraja.shortcode, daraja.paybill_number, till, process.env.MPESA_SHORTCODE, DARAJA_DEFAULT_SHORTCODE);
+  const shortcode = pick(daraja.shortcode, daraja.paybill_number, till, credential("MPESA_SHORTCODE"), DARAJA_DEFAULT_SHORTCODE);
 
   // A paybill needs CustomerPayBillOnline; only a till uses CustomerBuyGoodsOnline.
   // Getting this wrong makes Safaricom accept the request but never deliver the PIN prompt.
@@ -213,12 +216,12 @@ async function darajaCredentials() {
   }
 
   return {
-    consumerKey: pick(daraja.consumer_key, process.env.MPESA_CONSUMER_KEY),
-    consumerSecret: pick(daraja.consumer_secret, process.env.MPESA_CONSUMER_SECRET),
-    passkey: pick(daraja.passkey, process.env.MPESA_PASSKEY),
+    consumerKey: pick(daraja.consumer_key, credential("MPESA_CONSUMER_KEY")),
+    consumerSecret: pick(daraja.consumer_secret, credential("MPESA_CONSUMER_SECRET")),
+    passkey: pick(daraja.passkey, credential("MPESA_PASSKEY")),
     shortcode,
     accountReference: pick(daraja.account_reference),
-    environment: pick(daraja.environment, process.env.MPESA_ENVIRONMENT, "live"),
+    environment: pick(daraja.environment, credential("MPESA_ENVIRONMENT"), "live"),
     transactionType,
   };
 }
@@ -1065,7 +1068,7 @@ async function handlePlatformBillingRegister(req, res, body) {
     const provisioned = await sendMoneyApi("/api/saas/provision-tenant", {
       method: "POST",
       body: {
-        name: "JMSURF Technologies", description: "JMSURF Garage subscription fees", source: "jmsurf-pos", externalId: "platform-fees",
+        name: "JMSURF Technologies", description: "JMSURF Garage subscription fees", source: "jmsurf-garage", externalId: PLATFORM_EXTERNAL_ID,
         accountType: type === "till" ? "till" : "paybill", accountNumber, accountName: accountName || "JMSURF Technologies",
         ...(type === "till" ? {} : { businessNumber }),
       },

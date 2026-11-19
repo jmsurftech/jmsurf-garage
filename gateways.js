@@ -1,9 +1,14 @@
 // ---------------------------------------------------------------------------
-// Shop-owned gateways handled by the app container:
+// Company-owned gateways handled by the app container:
 //
-//   Daraja   -> the shop's own Safaricom app keys; money lands on the shop's
-//               own Paybill/Till. Saved in business_settings.
-//   Paystack -> the shop's own Paystack secret key (card and mobile money).
+//   Daraja   -> the company's own Safaricom app; money lands on its own
+//               Paybill/Till. Shortcode, type and environment are in
+//               business_settings; consumer key, secret and passkey are in
+//               integration_secrets (daraja_*), encrypted (integrations-core.js).
+//               STK push for sales (POS) and invoices (staff, portal, pay links),
+//               STK query, C2B URL registration (garage-integrations.js receives
+//               the confirmations and matches them to invoices).
+//   Paystack -> the company's own Paystack secret key (card and mobile money).
 //
 // Each shop has exactly one active gateway (business_settings.payment_provider)
 // and these routes refuse to run unless it is the one selected. A sale is only
@@ -11,6 +16,7 @@
 // amount; stock then follows automatically (database trigger apply_sale_stock).
 // ---------------------------------------------------------------------------
 import { isDemoTenant } from "./demo.js";
+import { decryptSecret, darajaTimestamp, darajaPassword as stkPassword, darajaBase, darajaOutcome, darajaReference, kenyaMsisdn } from "./integrations-core.js";
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
 const ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
@@ -76,12 +82,27 @@ async function pendingSale(ctx, saleId, methods) {
   return { sale };
 }
 
+/**
+ * The company's gateway settings. Daraja keys come from integration_secrets (encrypted);
+ * keys saved by older screens in business_settings still work until they are saved again.
+ */
 async function shopSettings(tenantId) {
-  return one(
-    `business_settings?tenant_id=eq.${tenantId}&select=payment_provider,mpesa_consumer_key,mpesa_consumer_secret,mpesa_passkey,` +
-      `mpesa_shortcode,mpesa_till_number,mpesa_environment,mpesa_account_reference,mpesa_transaction_type,business_name,` +
-      `paystack_secret_key,business_email&limit=1`,
-  );
+  const [s, secrets] = await Promise.all([
+    one(
+      `business_settings?tenant_id=eq.${tenantId}&select=payment_provider,mpesa_consumer_key,mpesa_consumer_secret,mpesa_passkey,` +
+        `mpesa_shortcode,mpesa_till_number,mpesa_environment,mpesa_account_reference,mpesa_transaction_type,business_name,` +
+        `paystack_secret_key,business_email&limit=1`,
+    ),
+    db(`integration_secrets?tenant_id=eq.${tenantId}&name=in.(daraja_consumer_key,daraja_consumer_secret,daraja_passkey)&select=name,value`).catch(() => []),
+  ]);
+  if (!s) return s;
+  const sec = Object.fromEntries((secrets || []).map((r) => [r.name, decryptSecret(r.value)]));
+  return {
+    ...s,
+    mpesa_consumer_key: sec.daraja_consumer_key || decryptSecret(s.mpesa_consumer_key),
+    mpesa_consumer_secret: sec.daraja_consumer_secret || decryptSecret(s.mpesa_consumer_secret),
+    mpesa_passkey: sec.daraja_passkey || decryptSecret(s.mpesa_passkey),
+  };
 }
 
 /** Marks a sale paid or failed; only a pending sale changes. */
@@ -101,23 +122,34 @@ function normalizePhone(raw) {
 
 // ------------------------------------------------------------------ Daraja
 
-function darajaKeys(settings) {
+/**
+ * Daraja settings of a company. Paybill: shortcode = the paybill. Till (Buy Goods): shortcode =
+ * the store (head office) number the passkey belongs to, partyB = the till customers pay; a till
+ * without a separate store number uses the till for both.
+ */
+export function darajaKeys(settings) {
   const till = str(settings?.mpesa_till_number);
   const paybill = str(settings?.mpesa_shortcode);
-  const shortcode = till || paybill;
+  const transactionType = str(settings?.mpesa_transaction_type) || (till ? "CustomerBuyGoodsOnline" : "CustomerPayBillOnline");
+  const isTill = transactionType === "CustomerBuyGoodsOnline";
+  const shortcode = isTill ? (paybill || till) : (paybill || till);
   return {
     consumerKey: str(settings?.mpesa_consumer_key),
     consumerSecret: str(settings?.mpesa_consumer_secret),
     passkey: str(settings?.mpesa_passkey),
     shortcode,
-    transactionType: str(settings?.mpesa_transaction_type) || (till ? "CustomerBuyGoodsOnline" : "CustomerPayBillOnline"),
+    partyB: isTill ? (till || shortcode) : shortcode,
+    isTill,
+    transactionType,
     accountReference: str(settings?.mpesa_account_reference),
-    baseUrl: str(settings?.mpesa_environment) === "sandbox" ? "https://sandbox.safaricom.co.ke" : "https://api.safaricom.co.ke",
+    environment: str(settings?.mpesa_environment) === "sandbox" ? "sandbox" : "live",
+    baseUrl: darajaBase(settings?.mpesa_environment),
   };
 }
+const keysComplete = (k) => !!(k.consumerKey && k.consumerSecret && k.passkey && /^\d{5,7}$/.test(k.shortcode) && /^\d{5,7}$/.test(k.partyB));
 
 const darajaTokens = new Map();
-async function darajaToken(keys) {
+export async function darajaToken(keys) {
   const cacheKey = `${keys.baseUrl}|${keys.consumerKey}`;
   const cached = darajaTokens.get(cacheKey);
   if (cached && cached.expires > Date.now()) return cached.token;
@@ -134,11 +166,8 @@ async function darajaToken(keys) {
 }
 
 function darajaPassword(keys) {
-  const now = new Date(Date.now() + 3 * 3600_000); // Safaricom expects Nairobi time
-  const pad = (n) => String(n).padStart(2, "0");
-  const timestamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}` +
-    `${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}`;
-  return { timestamp, password: Buffer.from(`${keys.shortcode}${keys.passkey}${timestamp}`).toString("base64") };
+  const timestamp = darajaTimestamp(); // Safaricom expects Nairobi time
+  return { timestamp, password: stkPassword(keys.shortcode, keys.passkey, timestamp) };
 }
 
 async function darajaQuery(keys, checkoutId) {
@@ -151,10 +180,146 @@ async function darajaQuery(keys, checkoutId) {
     signal: AbortSignal.timeout(12000),
   });
   const payload = await response.json().catch(() => ({}));
-  const code = str(payload?.ResultCode);
-  if (!code) return { status: "pending" };
-  if (code === "0") return { status: "completed", payload };
-  return { status: code === "1032" ? "cancelled" : "failed", payload: { message: str(payload?.ResultDesc), code } };
+  // While the customer has not answered, Safaricom replies with an errorCode and no ResultCode.
+  const status = darajaOutcome(payload?.ResultCode);
+  if (status === "pending") return { status };
+  if (status === "completed") return { status, payload };
+  return { status, payload: { message: str(payload?.ResultDesc), code: str(payload?.ResultCode) } };
+}
+
+/** Sends one STK prompt with the company's own keys. Returns { checkoutId } or { error }. */
+async function darajaStk(keys, { phone, amount, reference, description, callbackUrl }) {
+  const token = await darajaToken(keys);
+  const { timestamp, password } = darajaPassword(keys);
+  let result;
+  try {
+    const response = await fetch(`${keys.baseUrl}/mpesa/stkpush/v1/processrequest`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        BusinessShortCode: keys.shortcode, Password: password, Timestamp: timestamp, TransactionType: keys.transactionType,
+        Amount: amount, PartyA: phone, PartyB: keys.partyB, PhoneNumber: phone, CallBackURL: callbackUrl,
+        AccountReference: keys.isTill ? keys.partyB : reference, TransactionDesc: str(description).slice(0, 13) || "Payment",
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    result = await response.json().catch(() => ({}));
+  } catch {
+    return { unknown: true, error: "Payment request outcome is unknown. Check before charging again." };
+  }
+  const checkoutId = str(result?.CheckoutRequestID);
+  if (str(result?.ResponseCode) !== "0" || !checkoutId) return { error: str(result?.errorMessage || result?.ResponseDescription || result?.CustomerMessage) || "M-Pesa did not accept this payment." };
+  return { checkoutId };
+}
+
+/** True when the company's own Daraja app is the active gateway and complete. */
+export async function darajaReady(tenantId) {
+  const s = await shopSettings(tenantId).catch(() => null);
+  return str(s?.payment_provider) === "daraja" && keysComplete(darajaKeys(s));
+}
+
+/** Checks a company's Daraja keys with Safaricom (OAuth only: nothing is charged). */
+export async function darajaCheckKeys(tenantId) {
+  const keys = darajaKeys(await shopSettings(tenantId));
+  if (!keysComplete(keys)) return { ok: false, error: "Save the shortcode, consumer key, consumer secret and passkey first." };
+  darajaTokens.delete(`${keys.baseUrl}|${keys.consumerKey}`);
+  try { await darajaToken(keys); return { ok: true, environment: keys.environment }; }
+  catch (e) { return { ok: false, error: str(e?.message) }; }
+}
+
+/**
+ * Registers the C2B confirmation / validation addresses for the company's shortcode, so
+ * payments customers make themselves (paybill + invoice number as account) reach the app.
+ */
+export async function darajaRegisterC2b(tenantId, { confirmUrl, validateUrl }) {
+  const keys = darajaKeys(await shopSettings(tenantId));
+  if (!keysComplete(keys)) return { ok: false, error: "Save the Daraja keys first." };
+  const token = await darajaToken(keys);
+  const response = await fetch(`${keys.baseUrl}/mpesa/c2b/v2/registerurl`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ ShortCode: keys.partyB, ResponseType: "Completed", ConfirmationURL: confirmUrl, ValidationURL: validateUrl }),
+    signal: AbortSignal.timeout(20000),
+  }).catch(() => null);
+  const payload = response ? await response.json().catch(() => ({})) : {};
+  const desc = str(payload?.ResponseDescription || payload?.errorMessage);
+  const ok = str(payload?.ResponseCode) === "0" || /success/i.test(desc);
+  return { ok, already: !ok && /already/i.test(desc), description: desc || (response ? `Safaricom replied ${response.status}` : "No answer from Safaricom"), shortcode: keys.partyB, type: keys.isTill ? "till" : "paybill" };
+}
+
+// ------------------------------------------------- invoices through the company's own Daraja
+
+/**
+ * M-Pesa prompt for what a customer owes on an invoice, with the company's own Daraja app.
+ * Same contract as sendmoney.pushInvoiceForShop (which hands Daraja companies over to this):
+ * the request is kept in invoice_mpesa_requests (checkout id "daraja:<id>") and the payment
+ * is recorded by settle_invoice_mpesa once Safaricom confirms it.
+ */
+export async function pushInvoiceDaraja(tenantId, invoiceId, rawPhone, amountWanted, requestedBy = "portal") {
+  if (!UUID.test(str(invoiceId))) return { error: "Invalid invoice", status: 400 };
+  if (await isDemoTenant(tenantId)) return { error: "Payments are switched off in the demo company.", status: 403 };
+  const phone = kenyaMsisdn(rawPhone);
+  if (!phone) return { error: "Enter a valid Kenyan M-Pesa number", status: 400 };
+  const [settings, inv, open] = await Promise.all([
+    shopSettings(tenantId),
+    one(`invoices?id=eq.${invoiceId}&tenant_id=eq.${tenantId}&select=id,invoice_number,total,amount_paid,status,customer_id&limit=1`),
+    one(`invoice_mpesa_requests?invoice_id=eq.${invoiceId}&status=in.(initiating,pending)&created_at=gt.${new Date(Date.now() - 120000).toISOString()}&select=id&limit=1`),
+  ]);
+  const keys = darajaKeys(settings);
+  if (str(settings?.payment_provider) !== "daraja" || !keysComplete(keys)) return { error: "M-Pesa prompts are not switched on. Pay using the details shown.", status: 409 };
+  if (!inv || ["draft", "void", "paid"].includes(inv.status)) return { error: "This invoice cannot be paid online", status: 409 };
+  if (open) return { success: true, request_id: open.id, resumed: true };
+  const due = Math.floor(Number(inv.total) - Number(inv.amount_paid));
+  const amount = Math.floor(Number(amountWanted) || due);
+  if (amount < 1 || amount > due || amount > 150000) return { error: `Pay between KES 1 and ${Math.min(due, 150000).toLocaleString()}`, status: 400 };
+  const [req] = await db("invoice_mpesa_requests", { method: "POST", prefer: "return=representation", body: { tenant_id: tenantId, invoice_id: inv.id, customer_id: inv.customer_id, phone, amount, requested_by: requestedBy } });
+  const search = new URLSearchParams({ r: req.id });
+  if (CALLBACK_TOKEN) search.set("token", CALLBACK_TOKEN);
+  const r = await darajaStk(keys, {
+    phone, amount, reference: darajaReference(keys.accountReference, inv.invoice_number), description: `Inv ${str(inv.invoice_number)}`,
+    callbackUrl: `${PUBLIC_ORIGIN}/api/payments/daraja/invoice-callback?${search}`,
+  }).catch((e) => ({ error: str(e?.message) }));
+  if (!r.checkoutId) {
+    // An interrupted request may still have reached the phone: keep it open for the reconciler, never resend.
+    await db(`invoice_mpesa_requests?id=eq.${req.id}`, { method: "PATCH", body: r.unknown ? { provider_status: { error: r.error } } : { status: "failed", provider_status: { error: str(r.error).slice(0, 300) } } }).catch(() => {});
+    return { error: r.error || "M-Pesa did not answer. Try again.", status: 502 };
+  }
+  await db(`invoice_mpesa_requests?id=eq.${req.id}`, { method: "PATCH", body: { checkout_request_id: `daraja:${r.checkoutId}`, status: "pending", checked_at: new Date().toISOString() } });
+  return { success: true, request_id: req.id };
+}
+
+/** Settles one Daraja invoice prompt from Safaricom's answer (callback receipt when there is one). */
+export async function reconcileInvoiceDaraja(request, receiptHint = "") {
+  const checkoutId = str(request.checkout_request_id).replace(/^daraja:/, "");
+  if (!checkoutId) return "pending";
+  const keys = darajaKeys(await shopSettings(request.tenant_id));
+  if (!keysComplete(keys)) return "pending";
+  const outcome = await darajaQuery(keys, checkoutId).catch(() => ({ status: "pending" }));
+  if (outcome.status === "pending") {
+    if (Date.now() - Date.parse(request.created_at) > 600000) {
+      await db("rpc/settle_invoice_mpesa", { method: "POST", body: { p_request: request.id, p_status: "failed", p_receipt: null, p_provider: { timeout: true } } });
+      return "failed";
+    }
+    return "pending";
+  }
+  const receipt = outcome.status === "completed" ? (str(receiptHint) || `DARAJA-${checkoutId}`).slice(0, 60) : null;
+  await db("rpc/settle_invoice_mpesa", { method: "POST", body: { p_request: request.id, p_status: outcome.status, p_receipt: receipt, p_provider: outcome.payload || {} } });
+  return outcome.status;
+}
+
+/** Safaricom's invoice callback: the receipt number is taken from it, the outcome is re-read from Safaricom. */
+async function darajaInvoiceCallback(query, body) {
+  if (CALLBACK_TOKEN && query.get("token") !== CALLBACK_TOKEN) return { error: "Forbidden", status: 401 };
+  const id = str(query.get("r"));
+  if (UUID.test(id)) {
+    const r = await one(`invoice_mpesa_requests?id=eq.${id}&select=*&limit=1`);
+    if (r?.status === "pending" && str(r.checkout_request_id).startsWith("daraja:")) {
+      const items = body?.Body?.stkCallback?.CallbackMetadata?.Item || [];
+      const receipt = str((items.find((x) => x?.Name === "MpesaReceiptNumber") || {}).Value);
+      await reconcileInvoiceDaraja(r, /^[A-Z0-9]{8,12}$/.test(receipt) ? receipt : "").catch(() => {});
+    }
+  }
+  return { ResultCode: 0, ResultDesc: "Accepted" };
 }
 
 async function darajaPush(req, body) {
@@ -178,47 +343,24 @@ async function darajaPush(req, body) {
     return { error: "This shop changed payment gateways. Refresh the POS before taking payment.", status: 409 };
   }
   const keys = darajaKeys(settings);
-  if (!keys.consumerKey || !keys.consumerSecret || !keys.passkey || !/^\d{5,7}$/.test(keys.shortcode)) {
-    return { error: "Daraja credentials are not configured. Open Settings, Payment Gateways.", status: 400 };
+  if (!keysComplete(keys)) {
+    return { error: "Daraja credentials are not configured. Open System → Connections → M-Pesa.", status: 400 };
   }
 
   // Reserve first so a retry can never send a second prompt for this sale.
   await db(`transactions?id=eq.${sale.id}&status=eq.pending`, { method: "PATCH", body: { mpesa_ref: "daraja:initiating" } });
 
-  const token = await darajaToken(keys);
-  const { timestamp, password } = darajaPassword(keys);
   const search = new URLSearchParams({ sale: sale.id });
   if (CALLBACK_TOKEN) search.set("token", CALLBACK_TOKEN);
-  const isTill = keys.transactionType === "CustomerBuyGoodsOnline";
-  const reference = (keys.accountReference || settings?.business_name || "POS").replace(/[^A-Za-z0-9]/g, "").slice(0, 12) || "POS";
-  let result;
-  try {
-    const response = await fetch(`${keys.baseUrl}/mpesa/stkpush/v1/processrequest`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        BusinessShortCode: keys.shortcode,
-        Password: password,
-        Timestamp: timestamp,
-        TransactionType: keys.transactionType,
-        Amount: amount,
-        PartyA: phone,
-        PartyB: keys.shortcode,
-        PhoneNumber: phone,
-        CallBackURL: `${PUBLIC_ORIGIN}/api/payments/daraja/callback?${search}`,
-        AccountReference: isTill ? keys.shortcode : reference,
-        TransactionDesc: `Sale ${sale.id.slice(0, 8)}`,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-    result = await response.json().catch(() => ({}));
-  } catch {
-    return { error: "Payment request outcome is unknown. Check this sale before charging again.", status: 503, prompt_sent: null };
-  }
-  const checkoutId = str(result?.CheckoutRequestID);
-  if (str(result?.ResponseCode) !== "0" || !checkoutId) {
-    await settleSale(sale.id, "failed", null, { message: str(result?.errorMessage || result?.ResponseDescription || "M-Pesa rejected the request") });
-    return { error: str(result?.errorMessage || result?.ResponseDescription) || "M-Pesa did not accept this payment.", status: 400, prompt_sent: false };
+  const result = await darajaStk(keys, {
+    phone, amount, reference: darajaReference(keys.accountReference, settings?.business_name, "GARAGE"), description: `Sale ${sale.id.slice(0, 8)}`,
+    callbackUrl: `${PUBLIC_ORIGIN}/api/payments/daraja/callback?${search}`,
+  });
+  if (result.unknown) return { error: "Payment request outcome is unknown. Check this sale before charging again.", status: 503, prompt_sent: null };
+  const checkoutId = str(result.checkoutId);
+  if (!checkoutId) {
+    await settleSale(sale.id, "failed", null, { message: str(result.error || "M-Pesa rejected the request") });
+    return { error: result.error || "M-Pesa did not accept this payment.", status: 400, prompt_sent: false };
   }
   await db(`transactions?id=eq.${sale.id}&status=eq.pending`, { method: "PATCH", body: { mpesa_ref: `daraja:${checkoutId}` } });
   return { success: true, checkout_request_id: checkoutId, provider: "daraja" };
@@ -291,7 +433,7 @@ async function paystackInitialize(req, body) {
   const email = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(str(body.email)) ? str(body.email)
     : /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(str(settings?.business_email)) ? str(settings.business_email)
     : "customer@jmsurf.co.ke";
-  const callback = /^https:\/\/([a-z0-9-]+\.)*jmsurfgarage\.co\.ke(\/|$)/i.test(str(body.callback_url))
+  const callback = /^https:\/\/([a-z0-9-]+\.)*garage\.jmsurf\.co\.ke(\/|$)/i.test(str(body.callback_url))
     ? str(body.callback_url) : `${PUBLIC_ORIGIN}/`;
   const channels = Array.isArray(body.channels) ? body.channels.filter((c) => ["card", "mobile_money", "bank"].includes(c)) : undefined;
   const payload = await paystack(secret, "/transaction/initialize", {
@@ -351,6 +493,7 @@ const ROUTES = {
   "/api/payments/daraja/stk-push": (req, body) => darajaPush(req, body),
   "/api/payments/daraja/status": (req, body) => darajaStatus(req, body),
   "/api/payments/daraja/callback": (req, body, query) => darajaCallback(query),
+  "/api/payments/daraja/invoice-callback": (req, body, query) => darajaInvoiceCallback(query, body),
   "/api/payments/paystack/initialize": (req, body) => paystackInitialize(req, body),
   "/api/payments/paystack/verify": (req, body) => paystackVerify(req, body),
 };
@@ -394,6 +537,13 @@ export function startGatewayReconciler() {
         } catch (error) {
           console.error("[gateways] reconciliation failed", sale.id, error?.message);
         }
+      }
+      // Invoice prompts sent with a company's own Daraja app (nobody may be watching the screen).
+      const prompts = await db(
+        `invoice_mpesa_requests?status=eq.pending&checkout_request_id=like.daraja:*&select=*&order=created_at.asc&limit=30`,
+      ).catch(() => []);
+      for (const r of prompts || []) {
+        try { await reconcileInvoiceDaraja(r); } catch (error) { console.error("[gateways] invoice prompt", r.id, error?.message); }
       }
     } catch (error) {
       console.error("[gateways] reconciliation batch failed", error?.message);

@@ -9,7 +9,13 @@
 // POST /api/cc-billing/status {id}        checks a payment (and applies it)
 // POST /api/cc-billing/admin              platform owner: every subscription and payment, JMSURF Pay account
 // A paid subscription switches the Call Centre on in the company's DASH (cc_apply_payment).
+//
+// JMSURF Garage: the Call Centre keeps its companies, logins and billing in DASH's database
+// and calls DASH's server for billing, never this one. Garage links to it through
+// garage-integrations.js (callcentre/*), so these routes and the job stay OFF here unless
+// CC_BILLING_ENABLED=1 (kept only so a future Garage-hosted Call Centre can switch them on).
 // ---------------------------------------------------------------------------
+const ENABLED = process.env.CC_BILLING_ENABLED === "1";
 import { sendMoneyApi } from "./sendmoney.js";
 import { isDemoTenant } from "./demo.js";
 
@@ -161,6 +167,7 @@ export async function handleCcBilling(req, res, pathname, readJsonBody) {
   const cors = { "Access-Control-Allow-Origin": CC_ORIGINS.has(origin) ? origin : "https://app.jmsurfcallcentre.co.ke", "Access-Control-Allow-Headers": "Authorization, Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS", Vary: "Origin" };
   if (req.method === "OPTIONS") { res.writeHead(204, cors); return res.end(); }
   const send = (status, body) => { res.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store", ...cors }); res.end(JSON.stringify(body)); };
+  if (!ENABLED) return send(404, { error: "Call Centre billing is handled by JMSURF DASH" });
   try {
     const fn = ROUTES[pathname];
     if (!fn || req.method !== "POST") throw new HttpError(404, "Unknown route");
@@ -176,7 +183,7 @@ export async function handleCcBilling(req, res, pathname, readJsonBody) {
 
 /** Checks pending payments every minute and lapses ended subscriptions daily. */
 export function startCcBilling() {
-  if (!URL_ || !KEY) return;
+  if (!ENABLED || !URL_ || !KEY) return;
   let busy = false; let lastExpire = 0;
   setInterval(async () => {
     if (busy) return; busy = true;

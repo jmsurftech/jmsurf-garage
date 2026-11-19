@@ -2,7 +2,7 @@
 // Invoice payment links (public, no login): /pay/<token> in the app calls
 //
 //   GET  /api/pub/pay?t=<token>          the invoice summary, balance and the ways to pay
-//   POST /api/pub/pay/mpesa              M-Pesa prompt for the balance (JMSURF PAY), via
+//   POST /api/pub/pay/mpesa              M-Pesa prompt for the balance (JMSURF PAY or own Daraja), via
 //                                        pushInvoiceForShop: the same flow as the portal and
 //                                        "M-Pesa prompt" on the invoice (settle_invoice_mpesa)
 //   POST /api/pub/pay/mpesa-status       is that prompt paid yet
@@ -90,7 +90,7 @@ async function load(token) {
   const [inv, co, bs] = await Promise.all([
     one(`invoices?id=eq.${link.invoice_id}&tenant_id=eq.${link.tenant_id}&select=id,invoice_number,customer_id,customer_name,customer_email,customer_phone,issue_date,due_date,items,subtotal,tax,discount,shipping,adjustment,total,amount_paid,status`),
     one(`tenants?id=eq.${link.tenant_id}&select=id,business_name,logo_url,is_active,deleted_at`),
-    one(`business_settings?tenant_id=eq.${link.tenant_id}&select=business_name,business_phone,business_email,currency,payment_provider,paystack_secret_key,mpesa_till_number,mpesa_shortcode,mpesa_account_reference`),
+    one(`business_settings?tenant_id=eq.${link.tenant_id}&select=business_name,business_phone,business_email,currency,payment_provider,paystack_secret_key,mpesa_till_number,mpesa_shortcode,mpesa_account_reference,mpesa_transaction_type`),
   ]);
   if (!inv || !co || co.is_active === false || co.deleted_at || ["draft", "void"].includes(inv.status)) throw new HttpError(404, "This payment link is not valid");
   return { link, inv, co, bs: bs || {} };
@@ -101,7 +101,11 @@ const balanceOf = (inv) => Math.max(0, Math.round((Number(inv.total || 0) - Numb
 async function options(ctx) {
   const provider = str(ctx.bs.payment_provider);
   const demo = await isDemoTenant(ctx.link.tenant_id);
-  const mpesa = !demo && provider === "jmsurf" && !!(await one(`sendmoney_tenants?tenant_id=eq.${ctx.link.tenant_id}&select=tenant_id`).catch(() => null));
+  // JMSURF PAY (linked Till / Paybill / bank) or the company's own Daraja app.
+  const mpesa = !demo && (
+    (provider === "jmsurf" && !!(await one(`sendmoney_tenants?tenant_id=eq.${ctx.link.tenant_id}&select=tenant_id`).catch(() => null))) ||
+    (provider === "daraja" && await (await import("./gateways.js")).darajaReady(ctx.link.tenant_id).catch(() => false))
+  );
   const card = !demo && provider === "paystack" && /^sk_(live|test)_/.test(str(ctx.bs.paystack_secret_key));
   return { demo, mpesa, card };
 }
@@ -126,6 +130,7 @@ async function info(req, q) {
       demo: opt.demo, mpesa: balance >= 1 && opt.mpesa, card: balance >= 1 && opt.card,
       phone: str(inv.customer_phone) || null, email: str(inv.customer_email) || null,
       // Paying by hand: the company's own Till or Paybill, with the invoice number as account.
+      // (A till company may keep its store number in mpesa_shortcode: the till is what customers pay.)
       till: till || null, paybill: !till && paybill ? paybill : null, account: !till && paybill ? (str(bs.mpesa_account_reference) || inv.invoice_number) : null,
     },
   };
