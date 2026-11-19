@@ -84,7 +84,7 @@ export default function WhatsAppInbox() {
         <Panel flush className={cn(active && "hidden lg:block")} bodyClassName="flex h-[calc(100svh-210px)] min-h-[420px] flex-col">
           <div className="space-y-2 border-b border-border p-2">
             <SearchBox value={q} onChange={setQ} placeholder="Search name or number" className="sm:max-w-none" />
-            <Segmented value={filter} onChange={setFilter} options={[
+            <Segmented value={filter} onChange={(v) => setFilter(v as "open" | "unread" | "closed")} options={[
               { value: "open", label: "Open" },
               { value: "unread", label: "Unread", count: (list.data || []).filter((c) => c.unread > 0).length },
               { value: "closed", label: "Closed" },

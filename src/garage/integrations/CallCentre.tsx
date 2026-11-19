@@ -63,7 +63,7 @@ export default function CallCentrePage() {
         <StatTile label="Call Centre" value={cc?.linked ? "Linked" : "Not opened yet"} hint={cc?.linked_at ? `since ${new Date(cc.linked_at).toLocaleDateString("en-KE")}` : undefined} icon={Headset} tone={cc?.linked ? "success" : "muted"} />
         <StatTile label="Missed-call SMS" value={cc?.missed_sms === false ? "Off" : "On"} icon={MessageCircle} tone="info" />
       </StatGrid>
-      <Panel title="Missed calls to call back" icon={PhoneMissed} flush actions={<Segmented value={tab} onChange={setTab} options={[{ value: "open", label: "To call" }, { value: "done", label: "Done" }]} />}>
+      <Panel title="Missed calls to call back" icon={PhoneMissed} flush actions={<Segmented value={tab} onChange={(v) => setTab(v as "open" | "done")} options={[{ value: "open", label: "To call" }, { value: "done", label: "Done" }]} />}>
         {list.isLoading ? <div className="flex justify-center p-6"><Loader2 className="h-5 w-5 animate-spin" /></div>
           : rows.length === 0 ? <EmptyState icon={PhoneCall} title={tab === "open" ? "Nobody is waiting for a call back" : "No callbacks done yet"} description="Missed calls from the Call Centre land here with the customer's name." />
           : (

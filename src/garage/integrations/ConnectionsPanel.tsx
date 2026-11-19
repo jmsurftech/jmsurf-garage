@@ -80,7 +80,7 @@ function MpesaSection({ s, canManage, refresh }: { s: ConnectionStatus; canManag
     <Panel title="M-Pesa" icon={Smartphone} description="How customers pay invoices, job cards and the till by M-Pesa."
       actions={<State ok={active === "daraja" ? d.connected : s.mpesa.jmsurf.connected} on={active === "daraja" ? "Own Daraja app" : "JMSURF PAY"} off="Not set up" />}>
       <div className="space-y-4">
-        <Segmented value={mode} onChange={setMode} options={[{ value: "jmsurf", label: "JMSURF PAY (recommended)" }, { value: "daraja", label: "My own Daraja app" }]} />
+        <Segmented value={mode} onChange={(v) => setMode(v as "jmsurf" | "daraja")} options={[{ value: "jmsurf", label: "JMSURF PAY (recommended)" }, { value: "daraja", label: "My own Daraja app" }]} />
         {mode === "jmsurf" ? (
           <div className="space-y-2 text-sm">
             {s.mpesa.jmsurf.connected

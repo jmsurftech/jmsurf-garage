@@ -447,6 +447,13 @@ async function matchC2b(row, invoiceId = null) {
     target = matchInvoiceRef(row.account_ref, invoices)?.id || null;
   }
   if (!target) {
+    // A till / POS sale paid through a Daraja prompt is announced here too: it is already recorded on the sale.
+    const since = new Date(Date.parse(row.trans_time || row.created_at || new Date().toISOString()) - 15 * 60_000).toISOString();
+    const sale = await one(`transactions?tenant_id=eq.${row.tenant_id}&payment_method=eq.mpesa&mpesa_ref=like.daraja:*&total=eq.${Number(row.amount)}&created_at=gte.${enc(since)}&select=id&order=created_at.desc&limit=1`).catch(() => null);
+    if (sale) {
+      await db(`garage_mpesa_c2b?id=eq.${row.id}`, { method: "PATCH", prefer: "return=minimal", body: { status: "matched", note: "Paid at the till through the M-Pesa prompt" } });
+      return { status: "matched", sale_id: sale.id };
+    }
     const note = row.account_ref ? `No open invoice ${row.account_ref} was found. Apply it to the right invoice.` : "No account number was entered. Apply it to the right invoice.";
     await db(`garage_mpesa_c2b?id=eq.${row.id}`, { method: "PATCH", prefer: "return=minimal", body: { status: "unmatched", note } });
     await db("shop_notifications", { method: "POST", prefer: "return=minimal", body: {

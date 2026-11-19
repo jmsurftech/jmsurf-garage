@@ -155,7 +155,7 @@ create policy garage_callbacks_read on public.garage_callbacks for select to aut
 /** Server-side: a paybill / till payment becomes a payment applied to its invoice (once). */
 create or replace function public.garage_settle_c2b(p_c2b uuid, p_invoice uuid)
 returns text language plpgsql security definer set search_path = public as $$
-declare c public.garage_mpesa_c2b; i public.invoices; num text; pid uuid; amt numeric;
+declare c public.garage_mpesa_c2b; i public.invoices; num text; pid uuid; amt numeric; r public.invoice_mpesa_requests;
 begin
   select * into c from public.garage_mpesa_c2b where id = p_c2b for update;
   if not found then raise exception 'Payment not found'; end if;
@@ -165,6 +165,25 @@ begin
   -- A prompt (STK) payment on the same paybill is announced here too: never record it twice.
   if exists (select 1 from public.payments_received p where p.tenant_id = c.tenant_id and p.reference = c.trans_id) then
     update public.garage_mpesa_c2b set status = 'matched', invoice_id = i.id, note = 'Already recorded (payment prompt)' where id = c.id;
+    return 'matched';
+  end if;
+  -- The same payment made through a Daraja prompt on this invoice (same amount, last 15 minutes): it is
+  -- settled by the prompt, never twice; its stand-in reference becomes the real M-Pesa code.
+  select * into r from public.invoice_mpesa_requests q
+   where q.tenant_id = c.tenant_id and q.invoice_id = i.id and q.amount = c.amount
+     and q.checkout_request_id like 'daraja:%' and q.status in ('pending', 'completed')
+     and (q.mpesa_receipt is null or q.mpesa_receipt like 'DARAJA-%')
+     and q.created_at > coalesce(c.trans_time, c.created_at) - interval '15 minutes'
+   order by q.created_at desc limit 1;
+  if found then
+    if r.status = 'completed' then
+      update public.invoice_mpesa_requests set mpesa_receipt = c.trans_id where id = r.id;
+      if r.payment_id is not null then
+        update public.payments_received set reference = c.trans_id where id = r.payment_id and reference like 'DARAJA-%';
+      end if;
+    end if;
+    update public.garage_mpesa_c2b set status = 'matched', invoice_id = i.id, payment_id = r.payment_id,
+      note = 'Paid through the M-Pesa prompt on ' || i.invoice_number where id = c.id;
     return 'matched';
   end if;
   amt := least(c.amount, greatest(0, i.total - i.amount_paid));

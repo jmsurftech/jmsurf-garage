@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { createHmac } from "node:crypto";
 import { describe, expect, it, afterEach } from "vitest";
 import {

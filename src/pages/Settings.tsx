@@ -702,7 +702,7 @@ function PaymentGatewaysTab({ canManage }: { canManage: boolean }) {
       } finally { setSaving(false); }
       return;
     }
-    if (form.payment_provider === "daraja") {
+    if ((form.payment_provider as string) === "daraja") {
       const isTill = form.daraja_type === "till";
       const code = isTill ? form.daraja_till_number : form.daraja_shortcode;
       if (!/^\d{5,7}$/.test(String(code || ""))) {
@@ -741,7 +741,7 @@ function PaymentGatewaysTab({ canManage }: { canManage: boolean }) {
       // 1. Save provider choice + Paystack creds in business_settings.
       //    SECURITY: secret fields are only included when the user typed a new value;
       //    otherwise we leave the stored value untouched (the browser never received it).
-      const isDaraja = form.payment_provider === "daraja";
+      const isDaraja = (form.payment_provider as string) === "daraja";
       const payload: any = {
         payment_provider: form.payment_provider,
         paystack_public_key: form.paystack_public_key || "",
