@@ -5,19 +5,23 @@
  * scripts/prerender.mjs writes one HTML file per public page: the page's own head
  * tags and structured data, plus a plain, semantic copy of the same text the page
  * shows, inside <div id="root">. The app replaces it as soon as it starts, so every
- * visitor (person or crawler) gets the same page. Text here mirrors Landing.tsx,
- * Solutions.tsx, Solution.tsx, Register.tsx, Login.tsx and Legal.tsx; keep them in step
- * (src/seo/pages.test.ts checks the headings still exist in those pages).
+ * visitor (person or crawler) gets the same page. The home and pricing words come
+ * from src/seo/homeContent.ts, which the live pages render too; module pages come
+ * from src/lib/modules.ts (src/seo/pages.test.ts checks they stay in step).
  *
  * Also builds sitemap.xml, llms.txt and llms-full.txt from the same data.
  */
-import { MODULES, MODULE_BY_KEY, moduleName, type ModuleDef } from "@/lib/modules";
+import { MODULE_BY_KEY, MODULE_CATEGORIES, PUBLIC_MODULES, type ModuleDef } from "@/lib/modules";
+import { BUNDLE_MODULES, DEFAULT_CATALOGUE, EXTRA_BRANCH_PRICE, bundleListPrice } from "@/lib/garagePlans";
 import { JMSURF_FAMILY, PUBLIC_PLANS, SITE_ORIGIN, SUITE_AUDIENCE, suiteFaqs, suiteShort } from "@/lib/siteFacts";
 import { UPDATED, privacySections, termsSections, type Section } from "@/pages/legalText";
+import { HOME, HOME_HEADINGS } from "./homeContent";
 import {
-  HOME_META, LOGIN_META, OG_IMAGE, PRIVACY_META, REGISTER_META, SOLUTIONS_META, TERMS_META,
+  HOME_META, LOGIN_META, OG_IMAGE, PRICING_META, PRIVACY_META, REGISTER_META, SOLUTIONS_META, TERMS_META,
   canonicalUrl, suiteMeta, type PageMeta,
 } from "./meta";
+
+export { HOME, HOME_HEADINGS };
 
 export interface SeoPage extends PageMeta {
   /** Extra paths that show the same page (canonical stays `path`). */
@@ -35,9 +39,10 @@ export interface SeoPage extends PageMeta {
   inSitemap: boolean;
 }
 
-const SUITES = MODULES.length;
-const APPS = MODULES.reduce((a, m) => a + m.apps.length, 0);
+const MODS = PUBLIC_MODULES;
+const PAID = MODS.filter((m) => !m.included);
 const kes = (n: number) => `KES ${Math.round(n).toLocaleString("en-KE")}`;
+const SALE_PLANS = PUBLIC_PLANS;
 
 export const esc = (v: unknown) => String(v ?? "")
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -75,17 +80,17 @@ const software = {
   url: `${SITE_ORIGIN}/`,
   image: OG_IMAGE,
   applicationCategory: "BusinessApplication",
-  applicationSubCategory: "ERP and business management",
+  applicationSubCategory: "Garage management software",
   operatingSystem: "Web",
-  description: "All-in-one cloud business management (ERP) for businesses worldwide: accounting, invoicing, inventory, CRM, HR and Kenyan payroll, projects, manufacturing, POS and a call centre in one login, with M-Pesa and KRA eTIMS built in.",
-  areaServed: ["KE", "Worldwide"],
+  description: "Garage management software for Kenya: job cards, customers and vehicles, estimates approved online, parts stock, M-Pesa payments, KRA eTIMS invoices and SMS updates, with modules for spares shops, imports, car yards, body shops, car washes, tyres, fleets, towing and car hire.",
+  areaServed: ["KE"],
   publisher: { "@id": ORG_ID },
-  offers: PUBLIC_PLANS.map((p) => ({
+  offers: SALE_PLANS.filter((p) => !p.quoteOnly).map((p) => ({
     "@type": "Offer",
-    name: `${p.name} (monthly, per company)`,
-    price: String(p.price_monthly),
+    name: `${p.name} (monthly, per garage)`,
+    price: String(p.price),
     priceCurrency: "KES",
-    description: `${p.description} Up to ${p.max_users} users. Prices exclude VAT. 14 days free.`,
+    description: `${p.blurb} Up to ${p.users} users. Prices exclude VAT. 14 days free.`,
     url: `${SITE_ORIGIN}/register`,
   })),
 };
@@ -110,6 +115,11 @@ function webPage(meta: PageMeta, extra: object = {}) {
   };
 }
 
+const faqPage = (qs: [string, string][]) => ({
+  "@type": "FAQPage",
+  mainEntity: qs.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
+});
+
 /* ------------------------------------------------------------------ shared chrome */
 
 const linkCls = "font-semibold text-primary hover:underline";
@@ -118,22 +128,23 @@ function header(): string {
   return `<header class="border-b border-border bg-background"><div class="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-4 sm:px-6">`
     + `<a href="/" class="font-display text-lg font-extrabold tracking-tight text-foreground">JMSURF Garage</a>`
     + `<nav aria-label="Main" class="flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold text-muted-foreground">`
-    + `<a href="/solutions">Suites</a><a href="/#worldwide">Built for the world</a><a href="/#migrate">Move in</a><a href="/#pricing">Pricing</a>`
-    + `<a href="/api/demo/start">Live demo</a><a href="/login">Sign in</a><a href="/register" class="text-primary">Start free</a></nav></div></header>`;
+    + `<a href="/#who">Who it is for</a><a href="/#how">How it works</a><a href="/solutions">Modules</a><a href="/pricing">Pricing</a>`
+    + `<a href="/login">Sign in</a><a href="/register" class="text-primary">Start free</a></nav></div></header>`;
 }
 
 function footer(): string {
   const cols: [string, [string, string][]][] = [
-    ["Product", [["Suites", "/solutions"], ["Pricing", "/#pricing"], ["Garage AI", "/solutions/ai"], ["Move in", "/#migrate"], ["Start free", "/register"]]],
-    ["Suites", [["JMSURF BOOKS", "/solutions/books"], ["JMSURF CRM", "/solutions/crm"], ["JMSURF COMMERCE", "/solutions/commerce"], ["JMSURF HRM", "/solutions/hrm"], ["JMSURF CALL CENTRE", "/solutions/callcentre"], ["All suites", "/solutions"]]],
+    ["Product", [["Modules", "/solutions"], ["Pricing", "/pricing"], ["How it works", "/#how"], ["Start free", "/register"], ["Sign in", "/login"]]],
+    ["Modules", [["Garage Core", "/solutions/garage_core"], ["Workshop Pro", "/solutions/workshop_pro"], ["Parts & Stock", "/solutions/inventory"], ["Body & Paint", "/solutions/body_paint"], ["Car Wash", "/solutions/car_wash"], ["All modules", "/solutions"]]],
     ["Legal", [["Terms of service", "/terms"], ["Privacy policy", "/privacy"], ["System status", "/status"]]],
   ];
   return `<footer class="border-t border-border bg-card px-4 py-12 text-sm text-muted-foreground sm:px-6"><div class="mx-auto max-w-7xl">`
-    + `<p class="font-display font-bold text-foreground">JMSURF Garage</p><p class="mt-2 max-w-xs">The all-in-one business management system for businesses around the world.</p>`
+    + `<p class="font-display font-bold text-foreground">JMSURF Garage</p><p class="mt-2 max-w-xs">Garage management software for Kenya, from the roadside fundi to the dealer.</p>`
     + `<div class="mt-8 grid gap-8 sm:grid-cols-3">`
     + cols.map(([t, links]) => `<div><p class="font-display font-bold text-foreground">${esc(t)}</p><ul class="mt-3 space-y-2">${links.map(([l, h]) => `<li><a href="${h}">${esc(l)}</a></li>`).join("")}</ul></div>`).join("")
     + `</div>${familyHtml()}`
-    + `<p class="mt-8">© ${new Date().getFullYear()} JMSURF Garage. All rights reserved. Powered by <a href="https://jmsurf.co.ke" class="font-bold text-foreground">JMSURF TECHNOLOGIES</a>. Made in Kenya for the world.</p>`
+    + `<p class="mt-8">JMSURF TECHNOLOGIES LTD is registered with the ODPC (Kenya) as a Data Controller and Data Processor, reg. no. 194-9812-26EB.</p>`
+    + `<p class="mt-2">© ${new Date().getFullYear()} JMSURF Garage. All rights reserved. Powered by <a href="https://jmsurf.co.ke" class="font-bold text-foreground">JMSURF TECHNOLOGIES</a>.</p>`
     + `</div></footer>`;
 }
 
@@ -152,150 +163,117 @@ const p = (t: string) => `<p class="mt-3 text-muted-foreground">${esc(t)}</p>`;
 const ul = (items: string[]) => `<ul class="mt-3 list-disc space-y-1 pl-5">${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`;
 const cards = (items: { t: string; d: string }[]) => items.map((c) => `${h3(c.t)}${p(c.d)}`).join("");
 const cta = (label = "Start free for 14 days", href = "/register") => `<p class="mt-6"><a href="${href}" class="${linkCls}">${esc(label)}</a></p>`;
+const faqHtml = (qs: [string, string][]) => qs.map(([q, a]) => `<details class="mt-3" open><summary class="font-display font-bold">${esc(q)}</summary>${p(a)}</details>`).join("");
 
-/* ------------------------------------------------------------------ home (mirrors Landing.tsx) */
+/* ------------------------------------------------------------------ plans */
 
-export const HOME = {
-  eyebrow: "JMSURF Garage · Business software for the world",
-  headline: "Your whole business, one dashboard.",
-  lead: "Accounting, stock, sales, CRM, HR & payroll, projects, a till and a call centre sharing one login, one customer list and one set of books. M-Pesa and KRA eTIMS built in.",
-  countries: ["Kenya", "Uganda", "Tanzania", "Rwanda", "Burundi", "South Sudan", "Ethiopia", "Somalia", "DR Congo", "Nigeria", "Ghana", "South Africa", "Zambia", "Malawi", "Zimbabwe", "Botswana", "Namibia", "Mozambique", "Cameroon", "Senegal", "Côte d'Ivoire", "Egypt", "Morocco", "Djibouti", "UAE", "Saudi Arabia", "Qatar", "United Kingdom", "United States", "Canada", "Germany", "India"],
-  statement: "Most businesses run on a dozen tools that never talk to each other. JMSURF Garage puts your money, stock, sales, people and customers in one place: one login, one ledger, one truth.",
-  oneLogin: [
-    { t: "Every suite, one login", d: "Accounting, stock, CRM, HR, projects, the till and the call centre sit in one sidebar. No second password, no switching apps." },
-    { t: "Your own address", d: "yourcompany.garage.jmsurf.co.ke on day one, your own domain whenever you like." },
-    { t: "Every company, one login", d: "Run several companies and switch in one click. Accountants manage every client the same way." },
-    { t: "Every suite shares the same data", d: "A sale at the till, a deal in CRM, a call and a timesheet all land on the same customer and in the same books." },
-    { t: "Made for the phone in your pocket", d: "Installs like an app on any phone, fast on 3G, and the till keeps selling when the internet drops." },
-  ],
-  africa: [
-    { t: "Tax & compliance", d: "VAT and withholding tax, KRA eTIMS e-invoicing, PAYE, NSSF, SHIF, Housing Levy and NITA. Tax rules per country." },
-    { t: "Every currency", d: "Bill in KES, UGX, TZS, NGN, ZAR, USD, EUR, GBP, AED, INR and every other currency, with the exchange rate on each document." },
-    { t: "SMS & WhatsApp", d: "Invoices, statements, payslips and reminders by SMS and WhatsApp, because that is where your customers are." },
-    { t: "Works on low data", d: "Fast on 3G, installs like an app on any phone, and the point of sale keeps selling when the internet drops." },
-    { t: "Local support", d: "Real people in Nairobi on phone and WhatsApp who understand mobile money, local tax and how growing businesses run." },
-    { t: "Pay your way", d: "Pay your subscription by M-Pesa in Kenya, or in USD from anywhere else. No pricing surprises." },
-  ],
-  payments: ["M-Pesa STK, Till & Paybill", "Airtel Money", "MTN MoMo", "EVC Plus · Zaad · Sahal", "Bank transfer & EFT", "Visa & Mastercard", "Flutterwave", "Paystack", "Pesapal", "Kopo Kopo", "IntaSend", "Chapa", "Stripe", "PayPal"],
-  workflows: [
-    { t: "Approvals", d: "Purchases, expenses, discounts and leave go to the right manager, approved from a phone." },
-    { t: "Recurring everything", d: "Invoices, bills, expenses, subscriptions and journals that create themselves on schedule." },
-    { t: "Smart reminders", d: "Overdue invoices, low stock, expiring contracts and certificates trigger SMS, email and in-app alerts." },
-    { t: "Payroll in minutes", d: "Attendance and leave flow into payroll; payslips go out by email and SMS; bank and M-Pesa files ready." },
-    { t: "Automations", d: "When a deal is won, create the project, the invoice and the welcome SMS without lifting a finger." },
-    { t: "Reports & dashboards", d: "Profit and loss, balance sheet, cash flow, ageing, stock, sales, HR and project reports, to Excel or PDF." },
-  ],
-  migrateWhat: ["Customers and vendors", "Items and stock", "Chart of accounts", "Quotes and sales orders", "Invoices and credit notes", "Payments received", "Bills and expenses", "Payments made", "Manual journals", "CRM leads and employees"],
-  migrateSteps: [
-    { t: "Connect or export", d: "Connect your previous cloud accounting system by API in a few clicks, or upload its standard export files." },
-    { t: "Everything comes across", d: "Contacts, items, accounts, documents and payments are mapped automatically, in the right order, with no retyping." },
-    { t: "Check and go live", d: "Trial balance, receivables and stock match before you switch over. Our team helps you all the way." },
-  ],
-  security: [
-    { t: "Encrypted everywhere", d: "TLS on every connection; secrets encrypted at rest." },
-    { t: "Two-step sign-in", d: "Authenticator-app MFA for staff and customers." },
-    { t: "Roles & permissions", d: "Every person sees only what their role allows." },
-    { t: "Company isolation", d: "Database-level separation: one company can never see another's data." },
-    { t: "Backups & standby", d: "Automatic backups and a live standby server in another country." },
-    { t: "Full audit trail", d: "Every change recorded: who, what and when." },
-  ],
-};
-
-/** The section headings on the home page, as shown (highlighted words joined in). */
-export const HOME_HEADINGS = {
-  countries: "Ready for business wherever you trade.",
-  suites: "Every app a business needs. Switch on what you use.",
-  oneLogin: "Not a bundle of apps. One system.",
-  africa: "Built in Nairobi. Ready for the world.",
-  workflows: "The busywork runs itself.",
-  migrate: "Switching systems? Bring your history.",
-  pricing: "Simple plans. No surprises.",
-  security: "Bank-grade protection, by default.",
-  final: "Run it all from one dashboard.",
+const planIncludes = (code: string) => {
+  const pl = SALE_PLANS.find((x) => x.code === code)!;
+  const mods = pl.includes.map((k) => MODULE_BY_KEY[k]?.name).filter(Boolean) as string[];
+  return ["Garage Core: job cards, estimates, M-Pesa, eTIMS invoices, SMS", ...mods];
 };
 
 function planHtml(): string {
-  return `<div class="mt-6 grid gap-6 sm:grid-cols-2">` + PUBLIC_PLANS.map((pl) => {
-    const incl = pl.all_modules ? [`All ${SUITES} suites, including Garage AI and the Call Centre`] : pl.included_modules.map(moduleName);
-    return `<div>${h3(pl.name)}${p(pl.description || "")}`
-      + `<p class="mt-2 font-display text-xl font-extrabold">${kes(pl.price_monthly)} / month <span class="text-sm font-normal text-muted-foreground">or ${kes(pl.price_annually || pl.price_monthly * 10)} / year</span></p>`
-      + `<p class="text-xs text-muted-foreground">Up to ${pl.max_users} users · per company</p>`
-      + ul(["JMSURF BOOKS (accounting, sales, purchases, banking)", ...incl, "Customer portal, documents, approvals", "Your own address and custom domain"])
-      + `</div>`;
-  }).join("") + `</div>`;
+  return `<div class="mt-6 grid gap-6 sm:grid-cols-2">` + SALE_PLANS.map((pl) => `<div>${h3(pl.name)}${p(pl.blurb)}`
+    + `<p class="mt-2 font-display text-xl font-extrabold">${pl.quoteOnly ? "Priced for you" : `${kes(pl.price)} / month`}`
+    + (pl.quoteOnly ? "" : ` <span class="text-sm font-normal text-muted-foreground">or ${kes(pl.priceYear)} / year</span>`) + `</p>`
+    + `<p class="text-xs text-muted-foreground">${pl.users >= 999999 ? "Any number of users" : `Up to ${pl.users} users`} · ${pl.branches >= 999 ? "many branches" : `${pl.branches} branch${pl.branches === 1 ? "" : "es"}`}</p>`
+    + ul(pl.bundle ? ["Pro plus every garage module", `Normally ${kes(bundleListPrice(DEFAULT_CATALOGUE))} a month`] : planIncludes(pl.code))
+    + `</div>`).join("") + `</div>`;
 }
+
+function modulePriceHtml(): string {
+  return MODULE_CATEGORIES.map((c) => {
+    const list = PAID.filter((m) => m.category === c);
+    if (!list.length) return "";
+    return h3(c) + `<ul class="mt-3 space-y-1">${list.map((m) => {
+      const inc = (m.includedIn || []).map((k) => SALE_PLANS.find((x) => x.code === k)?.name).filter(Boolean);
+      return `<li><a href="/solutions/${m.key}" class="${linkCls}">${esc(m.name)}</a>: ${kes(m.price)} / month${inc.length ? ` (included in ${esc(inc.join(" and "))})` : ""}. ${esc(m.tagline)}</li>`;
+    }).join("")}</ul>`;
+  }).join("");
+}
+
+/* ------------------------------------------------------------------ home (mirrors Landing.tsx) */
 
 function homeBody(): string {
   return wrap(
     `<section><h1 class="font-display text-4xl font-extrabold tracking-tight sm:text-6xl"><span class="lx-eyebrow">${esc(HOME.eyebrow)}</span> <span class="mt-4 block">${esc(HOME.headline)}</span></h1>`
     + p(HOME.lead)
-    + `<p class="mt-6 flex flex-wrap gap-4"><a href="/register" class="${linkCls}">Start free for 14 days</a><a href="/api/demo/start" class="${linkCls}">Try the live demo</a></p>`
-    + `<ul class="mt-6 flex flex-wrap gap-x-6 gap-y-1 text-sm font-semibold"><li>${SUITES} suites</li><li>${APPS}+ apps</li><li>14 days free</li><li>1 login</li></ul></section>`
-    + `<section aria-label="Countries">${h2(HOME_HEADINGS.countries)}${p("Local currencies, local tax and mobile money wherever you trade, with billing in shillings or USD.")}<p class="mt-3 text-sm">${HOME.countries.map(esc).join(" · ")}</p></section>`
-    + `<section>${p(HOME.statement)}</section>`
-    + `<section id="suites">${h2(HOME_HEADINGS.suites)}${p("JMSURF BOOKS is your base. Add suites from inside your workspace whenever you need them, each free for 14 days.")}`
-    + `<ul class="mt-4 space-y-2">${MODULES.map((m) => `<li><a href="/solutions/${m.key}" class="${linkCls}">${esc(m.name)}</a>: ${esc(m.tagline)}</li>`).join("")}</ul>`
-    + `<p class="mt-4"><a href="/solutions" class="${linkCls}">See every suite</a></p></section>`
-    + `<section>${h2(HOME_HEADINGS.oneLogin)}${p("Most business suites give you a different link, login and screen for every product. JMSURF Garage opens everything from one place: same sidebar, same search, same customer, same numbers.")}${cards(HOME.oneLogin)}`
-    + ul(["Android and iPhone", "Tablets at the counter", "Any laptop or desktop", "Receipt printers and scanners"]) + `</section>`
-    + `<section id="worldwide">${h2(HOME_HEADINGS.africa)}${p("Wherever you trade, JMSURF Garage works the way you do: local payments, local tax, every currency and real people on support.")}`
-    + `<ol class="mt-2">${HOME.africa.map((c) => `<li>${h3(c.t)}${p(c.d)}</li>`).join("")}</ol>`
-    + h3("Payment methods") + `<p class="mt-3 text-sm">${HOME.payments.map(esc).join(" · ")}</p></section>`
-    + `<section>${h2(HOME_HEADINGS.workflows)}${p("Every workflow a growing business needs, connected across every suite.")}${cards(HOME.workflows)}</section>`
-    + `<section id="migrate">${h2(HOME_HEADINGS.migrate)}${p("Built for companies moving from other accounting and business software, or from spreadsheets. Your history, balances and documents come across, so nothing is lost.")}`
-    + h3("What moves across") + ul(HOME.migrateWhat)
-    + `<ol class="mt-2">${HOME.migrateSteps.map((s, i) => `<li><p class="mt-6 text-xs font-bold uppercase tracking-widest text-primary">Step ${i + 1}</p>${h3(s.t)}${p(s.d)}</li>`).join("")}</ol></section>`
-    + `<section id="pricing">${h2(HOME_HEADINGS.pricing)}${p("Start with JMSURF BOOKS and add suites from inside your workspace as you grow, or take everything with All-in-One. Every plan starts with 14 days free.")}`
-    + planHtml() + p("More suites can be added any time from System → Modules in your workspace. Prices exclude VAT. Yearly: 2 months free.") + `</section>`
-    + `<section>${h2(HOME_HEADINGS.security)}${p("Your books, your staff and your customers' details are guarded the way a bank guards accounts, on every plan.")}${cards(HOME.security)}</section>`
-    + `<section>${h2(HOME_HEADINGS.final)}${p("Join the businesses moving to JMSURF Garage. Free for 14 days, set up in a minute.")}`
+    + `<p class="mt-6 flex flex-wrap gap-4"><a href="/register" class="${linkCls}">Start free for 14 days</a><a href="/pricing" class="${linkCls}">See prices</a></p>`
+    + `<ul class="mt-6 flex flex-wrap gap-x-6 gap-y-1 text-sm font-semibold">${HOME.stats.map((s) => `<li>${esc(s.v)} ${esc(s.l)}</li>`).join("")}</ul></section>`
+    + `<section id="who">${h2(HOME_HEADINGS.who)}${p("One system that grows with you: start small, add modules as you grow.")}${cards(HOME.who)}</section>`
+    + `<section id="how">${h2(HOME_HEADINGS.flow)}${p("Garage Core follows every car through your gate, the same way every time.")}`
+    + `<ol class="mt-2">${HOME.flow.map((s, i) => `<li><p class="mt-6 text-xs font-bold uppercase tracking-widest text-primary">Step ${i + 1}</p>${h3(s.t)}${p(s.d)}</li>`).join("")}</ol></section>`
+    + `<section>${h2(HOME_HEADINGS.kenya)}${cards(HOME.kenya)}</section>`
+    + `<section id="modules">${h2(HOME_HEADINGS.modules)}${p("Garage Core is in every plan. Add a module for each thing your business does, each free for 14 days.")}`
+    + `<ul class="mt-4 space-y-2">${MODS.map((m) => `<li><a href="/solutions/${m.key}" class="${linkCls}">${esc(m.name)}</a>: ${esc(m.tagline)}</li>`).join("")}</ul>`
+    + `<p class="mt-4"><a href="/solutions" class="${linkCls}">See every module</a></p></section>`
+    + `<section id="pricing">${h2(HOME_HEADINGS.pricing)}${p("Choose a plan by the size of your garage, then add modules. Every plan starts with 14 days free; pay yearly and get 2 months free.")}`
+    + planHtml() + `<p class="mt-4"><a href="/pricing" class="${linkCls}">Module prices and the price calculator</a></p></section>`
+    + `<section>${h2(HOME_HEADINGS.security)}${cards(HOME.security)}</section>`
+    + `<section id="faq">${h2(HOME_HEADINGS.faq)}${faqHtml(HOME.faq)}</section>`
+    + `<section>${h2(HOME_HEADINGS.final)}${p("Set up in a few minutes. Free for 14 days, no card needed.")}`
     + `<p class="mt-4 flex flex-wrap gap-4"><a href="/register" class="${linkCls}">Start free for 14 days</a><a href="/login" class="${linkCls}">Sign in</a></p></section>`,
   );
 }
 
-/* ------------------------------------------------------------------ suites (mirrors Solutions.tsx / Solution.tsx) */
+/* ------------------------------------------------------------------ pricing (mirrors Pricing.tsx) */
+
+function pricingBody(): string {
+  return wrap(
+    `<p class="text-xs font-bold uppercase tracking-widest text-primary">Pricing</p>`
+    + `<h1 class="mt-4 font-display text-4xl font-extrabold tracking-tight sm:text-6xl">Pay for your size. Add what you do.</h1>`
+    + p("Every plan includes Garage Core. Prices are per garage per month in Kenya shillings, VAT excluded. Pay yearly and get 2 months free. Everything is free for 14 days.")
+    + `<section>${h2("Plans")}${planHtml()}</section>`
+    + `<section>${h2("Modules")}${p("Turn modules on or off any time in System → Modules & billing. A module you turn on is billed from that day; one you turn off runs to the end of the period you paid for.")}${modulePriceHtml()}</section>`
+    + `<section>${h2("Extras")}${ul([`Extra branch: ${kes(EXTRA_BRANCH_PRICE)} a month each`, "SMS: bought in bundles from inside your workspace", `All modules bundle: ${BUNDLE_MODULES.length} modules with Pro for ${kes(SALE_PLANS.find((x) => x.bundle)?.price || 0)} a month`])}</section>`
+    + `<section>${h2("Billing questions")}${faqHtml(HOME.pricingFaq)}</section>`
+    + cta(),
+  );
+}
+
+/* ------------------------------------------------------------------ modules (mirrors Solutions.tsx / Solution.tsx) */
 
 function solutionsBody(): string {
   return wrap(
-    `<p class="text-xs font-bold uppercase tracking-widest text-primary">${SUITES} suites · ${APPS}+ apps</p>`
-    + `<h1 class="mt-4 font-display text-4xl font-extrabold tracking-tight sm:text-6xl">Every suite. One login.</h1>`
-    + p("JMSURF BOOKS is your base. Switch on any other suite from inside your workspace, each free for 14 days, and it shares your customers, stock and books from the first minute.")
-    + MODULES.map((m) => `<section><h2 class="mt-10 font-display text-2xl font-extrabold tracking-tight"><a href="/solutions/${m.key}">${esc(suiteShort(m.name))}</a></h2>`
-      + `<p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">${m.included ? "Included" : esc(m.category)} · ${m.apps.length} apps</p>`
+    `<p class="text-xs font-bold uppercase tracking-widest text-primary">${MODS.length} modules · one login</p>`
+    + `<h1 class="mt-4 font-display text-4xl font-extrabold tracking-tight sm:text-6xl">Every module your garage needs.</h1>`
+    + p("Garage Core is in every plan. Switch on any other module from inside your workspace, each free for 14 days, and it shares your customers, vehicles, parts and invoices from the first minute.")
+    + MODS.map((m) => `<section><h2 class="mt-10 font-display text-2xl font-extrabold tracking-tight"><a href="/solutions/${m.key}">${esc(suiteShort(m.name))}</a></h2>`
+      + `<p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">${m.included ? "In every plan" : esc(m.category)}</p>`
       + p(m.tagline) + ul(m.features.slice(0, 3)) + `</section>`).join("")
     + cta(),
   );
 }
 
 function related(m: ModuleDef): ModuleDef[] {
-  const same = MODULES.filter((x) => x.key !== m.key && x.category === m.category);
-  const base = MODULES.filter((x) => ["books", "ai", "crm", "inventory"].includes(x.key) && x.key !== m.key && !same.includes(x));
+  const same = MODS.filter((x) => x.key !== m.key && x.category === m.category);
+  const base = MODS.filter((x) => ["garage_core", "workshop_pro", "inventory", "accounting"].includes(x.key) && x.key !== m.key && !same.includes(x));
   return [...same, ...base].slice(0, 4);
 }
 
 function suiteBody(m: ModuleDef): string {
   const short = suiteShort(m.name);
-  const idx = MODULES.findIndex((x) => x.key === m.key);
-  const prev = MODULES[(idx - 1 + MODULES.length) % MODULES.length], next = MODULES[(idx + 1) % MODULES.length];
+  const idx = MODS.findIndex((x) => x.key === m.key);
+  const prev = MODS[(idx - 1 + MODS.length) % MODS.length], next = MODS[(idx + 1) % MODS.length];
   return wrap(
-    `<nav aria-label="Breadcrumb" class="text-xs font-bold uppercase tracking-widest text-muted-foreground"><a href="/">Home</a> / <a href="/solutions">All suites</a> / ${esc(m.name)}</nav>`
+    `<nav aria-label="Breadcrumb" class="text-xs font-bold uppercase tracking-widest text-muted-foreground"><a href="/">Home</a> / <a href="/solutions">All modules</a> / ${esc(m.name)}</nav>`
     + `<p class="mt-6 text-xs font-bold uppercase tracking-widest text-primary">${esc(m.category)}</p>`
-    + `<h1 class="mt-2 font-display text-4xl font-extrabold tracking-tight sm:text-6xl">JMSURF ${esc(short)}</h1>`
+    + `<h1 class="mt-2 font-display text-4xl font-extrabold tracking-tight sm:text-6xl">${esc(m.name)}</h1>`
     + `<p class="mt-4 text-lg font-medium">${esc(m.tagline)}</p>` + p(m.description)
-    + `<p class="mt-6 flex flex-wrap gap-4"><a href="${m.included ? "/register" : `/register?app=${m.key}`}" class="${linkCls}">${m.included ? "Start free for 14 days" : `Start with ${esc(short)} free`}</a><a href="/api/demo/start" class="${linkCls}">See it in the live demo</a></p>`
-    + `<p class="mt-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">14 days free · No card · ${m.apps.length} apps</p>`
-    + `<section>${h2(`${m.apps.length} apps, one suite.`)}${p(`Switch on ${m.name} and all of these appear in your menu together.`)}${cards(m.apps.map((x) => ({ t: x.name, d: x.desc })))}</section>`
-    + `<section>${h2("Everything you expect, and the local bits.")}${ul(m.features)}</section>`
+    + `<p class="mt-6 flex flex-wrap gap-4"><a href="/register" class="${linkCls}">Start free for 14 days</a><a href="/pricing" class="${linkCls}">See prices</a></p>`
+    + `<section>${h2("What is inside.")}${cards(m.apps.map((x) => ({ t: x.name, d: x.desc })))}</section>`
+    + `<section>${h2("What you get.")}${ul(m.features)}</section>`
     + `<section>${h2(`${short} works with everything else.`)}${cards([
-      { t: "One set of books", d: "Every sale, cost and payment lands in the same ledger, ready for reports." },
-      { t: "M-Pesa & SMS built in", d: "Collect payments and send messages without extra tools." },
-      { t: "Garage AI included", d: "Ask questions about your data and let it draft the work." },
-      { t: "Roles & audit trail", d: "Each person sees only what they should; every change is recorded." },
+      { t: "One customer and vehicle list", d: "Every job, sale and payment lands on the same customer and car." },
+      { t: "M-Pesa and SMS built in", d: "Collect payments and send updates without extra tools." },
+      { t: "KRA eTIMS invoices", d: "Every invoice signed for KRA, with VAT worked out." },
+      { t: "Roles and history", d: "Each person sees only what they should; every change is recorded." },
     ])}<ul class="mt-6 space-y-2">${related(m).map((r) => `<li><a href="/solutions/${r.key}" class="${linkCls}">${esc(r.name)}</a>: ${esc(r.tagline)}</li>`).join("")}</ul></section>`
     + `<section>${h2("Made for businesses like yours.")}${ul(SUITE_AUDIENCE[m.category])}</section>`
-    + `<section>${h2("Questions")}${suiteFaqs(m).map(([q, a]) => `<details class="mt-3" open><summary class="font-display font-bold">${esc(q)}</summary>${p(a)}</details>`).join("")}</section>`
-    + `<nav aria-label="More suites" class="mt-12 flex flex-wrap justify-between gap-4"><a href="/solutions/${prev.key}" class="${linkCls}">Previous suite: ${esc(prev.name)}</a><a href="/solutions/${next.key}" class="${linkCls}">Next suite: ${esc(next.name)}</a></nav>`
-    + `<section>${h2(HOME_HEADINGS.final)}${p("Join the businesses moving to JMSURF Garage. Free for 14 days, set up in a minute.")}${cta()}</section>`,
+    + `<section>${h2("Questions")}${faqHtml(suiteFaqs(m))}</section>`
+    + `<nav aria-label="More modules" class="mt-12 flex flex-wrap justify-between gap-4"><a href="/solutions/${prev.key}" class="${linkCls}">Previous module: ${esc(prev.name)}</a><a href="/solutions/${next.key}" class="${linkCls}">Next module: ${esc(next.name)}</a></nav>`
+    + `<section>${h2(HOME_HEADINGS.final)}${p("Set up in a few minutes. Free for 14 days, no card needed.")}${cta()}</section>`,
   );
 }
 
@@ -305,9 +283,9 @@ function registerBody(): string {
   return wrap(
     `<h1 class="font-display text-3xl font-bold tracking-tight">Start your free trial</h1>`
     + p("14 days free. No card required.")
-    + ul(["Your company is ready in about a minute", "Books, inventory, CRM, HR, projects and 50+ apps", "Bring your data from your old system or Excel"])
-    + h2("Business and contact details")
-    + p("Enter your business name, your name, email, phone, country and currency, and choose your JMSURF Garage address (yourcompany.garage.jmsurf.co.ke). Then pick the apps you want and set your password.")
+    + ul(["Tell us your garage's size and what you do", "See your monthly price before you start", "Every module you choose is free for 14 days"])
+    + h2("Your garage")
+    + p("Enter your garage name, your name, email and phone, and choose your address. Then pick your size, tick what your business does, check the price and set your password.")
     + `<p class="mt-6">Already have an account? <a href="/login" class="${linkCls}">Sign in</a></p>`,
   );
 }
@@ -315,7 +293,7 @@ function registerBody(): string {
 function loginBody(): string {
   return wrap(
     `<h1 class="font-display text-3xl font-bold tracking-tight">Sign in</h1>`
-    + p("One login for every company you run. Sign in with your email and password, or go straight to your company address (yourcompany.garage.jmsurf.co.ke).")
+    + p("Staff sign in at app.garage.jmsurf.co.ke with their email and password and land in their garage. One login works for every garage you run.")
     + `<p class="mt-6">New to JMSURF Garage? <a href="/register" class="${linkCls}">Start free</a> · <a href="/reset-password" class="${linkCls}">Forgot password?</a></p>`,
   );
 }
@@ -348,22 +326,23 @@ function page(meta: PageMeta, body: string, jsonld: object[], opts: Partial<SeoP
 }
 
 export function buildSeoPages(): SeoPage[] {
-  const home = page(HOME_META, homeBody(), [organization, website, software, webPage(HOME_META, { about: { "@id": APP_ID } })], {
-    aliases: ["/pricing", "/features"],
-    ogTitle: "JMSURF Garage | Your whole business. One dashboard.",
-    ogDescription: "The all-in-one business management system, made in Kenya for the world: books, stock, CRM, HR and payroll, POS and more in one login. M-Pesa and KRA eTIMS built in.",
+  const home = page(HOME_META, homeBody(), [organization, website, software, webPage(HOME_META, { about: { "@id": APP_ID } }), faqPage(HOME.faq)], {
+    aliases: ["/features"],
+    ogTitle: "JMSURF Garage | Run your garage from your phone",
+    ogDescription: "Job cards, estimates customers approve online, parts, M-Pesa and KRA eTIMS invoices for every garage in Kenya, from the roadside fundi to the dealer.",
   });
+  const pricing = page(PRICING_META, pricingBody(), [organization, website, software, webPage(PRICING_META, { about: { "@id": APP_ID } }),
+    breadcrumbs([["Home", "/"], ["Pricing", "/pricing"]]), faqPage(HOME.pricingFaq)]);
   const solutions = page(SOLUTIONS_META, solutionsBody(), [organization, website, software,
-    webPage(SOLUTIONS_META, { "@type": "CollectionPage" }), breadcrumbs([["Home", "/"], ["All suites", "/solutions"]])]);
-  const suites = MODULES.map((m) => {
+    webPage(SOLUTIONS_META, { "@type": "CollectionPage" }), breadcrumbs([["Home", "/"], ["All modules", "/solutions"]])]);
+  const suites = MODS.map((m) => {
     const meta = suiteMeta(m.key)!;
     return page(meta, suiteBody(m), [organization, website, software, webPage(meta, { about: { "@id": APP_ID } }),
-      breadcrumbs([["Home", "/"], ["All suites", "/solutions"], [m.name, meta.path]]),
-      { "@type": "FAQPage", mainEntity: suiteFaqs(m).map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) },
+      breadcrumbs([["Home", "/"], ["All modules", "/solutions"], [m.name, meta.path]]), faqPage(suiteFaqs(m)),
     ], { ogTitle: `${m.name} · JMSURF Garage`, ogDescription: meta.description });
   });
   return [
-    home, solutions, ...suites,
+    home, pricing, solutions, ...suites,
     page(REGISTER_META, registerBody(), [organization, website, software, webPage(REGISTER_META), breadcrumbs([["Home", "/"], ["Start free", "/register"]])],
       { aliases: ["/signup"] }),
     page(LOGIN_META, loginBody(), [organization, website], { aliases: ["/staff-login"] }),
@@ -381,30 +360,37 @@ export function sitemapXml(pages: SeoPage[], lastmod: string): string {
 }
 
 export function llmsTxt(): string {
-  const plans = PUBLIC_PLANS.map((pl) => `- ${pl.name}: ${kes(pl.price_monthly)} per month or ${kes(pl.price_annually || pl.price_monthly * 10)} per year, up to ${pl.max_users} users. ${pl.description}`);
+  const plans = SALE_PLANS.map((pl) => pl.quoteOnly
+    ? `- ${pl.name}: priced on request. ${pl.blurb}`
+    : `- ${pl.name}: ${kes(pl.price)} per month or ${kes(pl.priceYear)} per year, up to ${pl.users} users, ${pl.branches} branch${pl.branches === 1 ? "" : "es"}. ${pl.blurb}`);
+  const mods = PAID.map((m) => `- ${m.name}: ${kes(m.price)} per month${(m.includedIn || []).length ? ` (included in ${(m.includedIn || []).map((k) => SALE_PLANS.find((x) => x.code === k)?.name).join(" and ")})` : ""}`);
   return [
     "# JMSURF Garage",
     "",
-    "> JMSURF Garage (https://garage.jmsurf.co.ke) is an all-in-one cloud business management system (ERP) for businesses in Kenya and around the world. "
-    + `Accounting, invoicing, inventory, CRM, HR and Kenyan payroll (PAYE, NSSF, SHIF, Housing Levy), projects, manufacturing, marketing, point of sale, e-commerce and a call centre share one login and one set of books, in ${SUITES} suites with ${APPS}+ apps. `
-    + "Customers pay by M-Pesa (STK push, Till, Paybill), Airtel Money, card or bank; KRA eTIMS e-invoicing is built in; each company gets its own address (yourcompany.garage.jmsurf.co.ke) or custom domain. 14 days free, no card. Made by JMSURF TECHNOLOGIES LTD, Nairobi, Kenya.",
+    "> JMSURF Garage (https://garage.jmsurf.co.ke) is garage management software for Kenya, for every kind of motor business from the roadside fundi to the dealer. "
+    + "Garage Core (in every plan) covers job cards, customers and vehicles, estimates that customers approve online, M-Pesa payments, KRA eTIMS invoices, SMS updates, basic stock and the owner's dashboard. "
+    + "Modules add workshop inspections and a bay board, parts stock and purchasing, accounting, payroll, insurance claims, a spares POS, an online parts shop, imports and landed cost, a vehicle yard, body and paint, car wash, tyres, fleet contracts, towing, car hire and a WhatsApp inbox. "
+    + "Staff work at app.garage.jmsurf.co.ke; each garage also gets its own address (yourgarage.garage.jmsurf.co.ke) or custom domain for its customers. 14 days free, no card. Made by JMSURF TECHNOLOGIES LTD, Nairobi, Kenya.",
     "",
     "## Key pages",
-    `- [Home](${SITE_ORIGIN}/): what JMSURF Garage does, built-for-the-world features, moving in from other systems, pricing and security`,
-    `- [All suites](${SITE_ORIGIN}/solutions): every suite with its apps and main features`,
-    ...MODULES.map((m) => `- [${m.name}](${SITE_ORIGIN}/solutions/${m.key}): ${m.tagline}`),
-    `- [Start free](${SITE_ORIGIN}/register): create a company, 14 days free with no card`,
-    `- [Live demo](${SITE_ORIGIN}/api/demo/start): open a ready-made demo company`,
+    `- [Home](${SITE_ORIGIN}/): who it is for, how a car moves through the garage, M-Pesa and eTIMS, modules, plans and questions`,
+    `- [Pricing](${SITE_ORIGIN}/pricing): plans, module prices, extra branches and the All modules bundle`,
+    `- [All modules](${SITE_ORIGIN}/solutions): every module with what it does`,
+    ...MODS.map((m) => `- [${m.name}](${SITE_ORIGIN}/solutions/${m.key}): ${m.tagline}`),
+    `- [Start free](${SITE_ORIGIN}/register): set up a garage, 14 days free with no card`,
     `- [Terms of Service](${SITE_ORIGIN}/terms) and [Privacy Policy](${SITE_ORIGIN}/privacy)`,
     "",
     "## Pricing",
-    "KES per company, VAT excluded. Every plan includes JMSURF BOOKS and starts with 14 days free; yearly billing gives 2 months free. Other suites can be switched on from inside the workspace.",
+    `KES per garage per month, VAT excluded. Every plan includes Garage Core and starts with 14 days free; yearly payment is 10 times the monthly price (2 months free). Extra branches are ${kes(EXTRA_BRANCH_PRICE)} a month each; SMS are bought in bundles.`,
     ...plans,
+    "",
+    "Modules:",
+    ...mods,
     "",
     "## Contact",
     `- Website: ${SITE_ORIGIN}/ (WhatsApp and phone details are on the website)`,
     `- Sign up: ${SITE_ORIGIN}/register`,
-    `- Sign in: ${SITE_ORIGIN}/login`,
+    "- Sign in: https://app.garage.jmsurf.co.ke/login",
     "",
     "## Other JMSURF products",
     ...JMSURF_FAMILY.map((f) => `- [${f.name}](${f.url}): ${f.what}`),
@@ -417,7 +403,7 @@ export function llmsFullTxt(pages: SeoPage[]): string {
     ...pages.filter((pg) => pg.inSitemap).map((pg) => `### ${pg.title}\n${canonicalUrl(pg.path)}\n\n${pg.text}\n`)].join("\n");
 }
 
-/** Kept here so the page list and the suite list cannot drift apart. */
-export const SUITE_KEYS = Object.keys(MODULE_BY_KEY);
+/** Kept here so the page list and the module list cannot drift apart. */
+export const SUITE_KEYS = MODS.map((m) => m.key);
 
 export { canonicalUrl, OG_IMAGE } from "./meta";

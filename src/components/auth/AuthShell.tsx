@@ -78,7 +78,7 @@ export default function AuthShell({
                 {logoUrl ? <img src={logoUrl} alt="JMSURF Garage" className="h-20 w-20 rounded-2xl object-contain shadow-lg shadow-primary/25" /> : <DashMark className="h-20 w-20 drop-shadow-lg" />}
               </Link>
               <p className="mb-2 flex items-center gap-2 font-display text-sm font-extrabold tracking-tight text-foreground">
-                JMSURF <span className="text-primary">DASH</span>
+                JMSURF <span className="text-primary">GARAGE</span>
                 {variant === "admin" && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary ring-1 ring-primary/20">Platform</span>}
                 {badge}
               </p>

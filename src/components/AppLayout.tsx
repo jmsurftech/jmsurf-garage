@@ -46,12 +46,12 @@ import { SystemNav, isSystemPath } from "@/pages/settings/SystemShell";
 /**
  * Pages that belong to a paid suite outside /apps (the /apps pages check this themselves).
  * Without the suite switched on (trial, paid, comped or in the package) the page shows how to switch it on,
- * whatever way the person got there (menu, link, typed address). JMSURF BOOKS pages are always open.
+ * whatever way the person got there (menu, link, typed address). Garage Core pages are always open.
  */
 const SUITE_PAGES: [string, string][] = [
   ["/crm", "crm"], ["/hrm", "hrm"], ["/pos", "commerce"], ["/sales/online-orders", "commerce"],
   ["/inventory/stock", "inventory"], ["/inventory/transfer", "inventory"], ["/marketing/sms", "marketing"],
-  ["/callcentre", "callcentre"], ["/ai", "ai"],
+  ["/callcentre", "callcentre"], ["/ai", "ai"], ["/accounting", "accounting"],
 ];
 const suiteForPath = (path: string) => SUITE_PAGES.find(([p]) => path === p || path.startsWith(p + "/"))?.[1] || null;
 
@@ -61,8 +61,8 @@ function SuiteOff({ suite, canSwitch }: { suite: string; canSwitch: boolean }) {
   return (
     <div className="mx-auto max-w-xl py-16 text-center">
       <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-lg" style={{ background: mod?.color || "hsl(var(--primary))" }}><Icon className="h-8 w-8" /></span>
-      <h1 className="mt-4 font-display text-2xl font-bold">{mod?.name || "This suite"} is switched off</h1>
-      <p className="mt-2 text-muted-foreground">{mod?.tagline || ""} {canSwitch ? "Switch it on in Modules: the first 14 days are free and your records are kept." : "Ask your company administrator to switch it on in Modules."}</p>
+      <h1 className="mt-4 font-display text-2xl font-bold">{mod?.name || "This module"} is switched off</h1>
+      <p className="mt-2 text-muted-foreground">{mod?.tagline || ""} {canSwitch ? "Switch it on in Modules: the first 14 days are free and your records are kept." : "Ask the owner, or someone with billing rights, to switch it on in Modules & billing."}</p>
       {canSwitch && <Link to={`/modules?app=${suite}`} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 font-semibold text-primary-foreground">Open in Modules <ChevronRight className="h-4 w-4" /></Link>}
     </div>
   );
@@ -248,7 +248,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [bizSettings ? 1 : 0]);
   const allowed = (path: string, module?: string) => {
     if (servicesOnly && STOCK_PATHS.includes(path)) return false;
-    if (focusApp && path !== "/settings" && (!module || suiteOf(module) === "books")) return false;
+    if (focusApp && path !== "/settings" && (!module || suiteOf(module) === "garage_core")) return false;
     if (module && !hasModule(module)) return false;
     const perm = NAV_PERMISSION_MAP[path];
     if (perm && !hasPermission(perm)) return false;

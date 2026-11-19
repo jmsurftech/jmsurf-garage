@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       injectRegister: null,
       filename: "sw.js",
-      includeAssets: ["favicon.svg", "favicon.ico", "jm-favicon.ico", "jm-icon-32.png", "jm-icon-180.png", "jm-icon-192.png", "jm-icon-512.png", "jm-icon-maskable-512.png"],
+      includeAssets: ["favicon.svg", "garage-logo.svg", "garage-wordmark.svg", "favicon.ico", "jm-favicon.ico", "jm-icon-32.png", "jm-icon-180.png", "jm-icon-192.png", "jm-icon-512.png", "jm-icon-maskable-512.png"],
       devOptions: { enabled: false },
       workbox: {
         cleanupOutdatedCaches: true,
@@ -102,9 +102,9 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       manifest: {
-        name: "JMSURF Garage - All-in-One Business Management",
+        name: "JMSURF Garage - Garage Management",
         short_name: "JMSURF Garage",
-        description: "Books, inventory, CRM, HRM, projects and more for businesses everywhere",
+        description: "Job cards, estimates, parts, M-Pesa and KRA eTIMS invoices for garages in Kenya",
         theme_color: "#a8121b",
         background_color: "#f6f6f7",
         display: "standalone",

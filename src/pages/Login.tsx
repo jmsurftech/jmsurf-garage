@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { safeNextPath } from "@/lib/safeNext";
-import { ROOT_HOST, tenantUrl, PLATFORM_ORIGIN } from "@/lib/host";
+import { ROOT_HOST, companyUrl, PLATFORM_ORIGIN } from "@/lib/host";
 import { goToCompany, listMyCompanies, type MyCompany } from "@/lib/companySwitch";
 import { OrbSpinner } from "@/components/orbs";
 
@@ -58,7 +58,7 @@ export default function Login() {
     setLoading(true);
     try {
       const tenant = await resolveTenantBySlug(clean);
-      if (tenant) window.location.href = tenantUrl(clean, "/login");
+      if (tenant) window.location.href = companyUrl(clean, "/login");
       else toast({ title: "Company not found", description: `No company uses ${clean}.${ROOT_HOST}`, variant: "destructive" });
     } catch {
       toast({ title: "Error", description: "Could not check that address", variant: "destructive" });

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTenant } from "@/hooks/useTenant";
 import { useAuth } from "@/hooks/useAuth";
-import { listMyCompanies, switchCompany } from "@/lib/companySwitch";
+import { handoffUrl, listMyCompanies, switchCompany } from "@/lib/companySwitch";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
 import { cn } from "@/lib/utils";
@@ -30,7 +30,7 @@ export default function CompanySwitcher({ className }: { className?: string }) {
     setBusy(c.linked_user_id + c.tenant_id);
     try {
       const r = await erpApi("session/switch-account", { user_id: c.linked_user_id, tenant_id: c.tenant_id });
-      window.location.assign(`${tenantUrl(r.slug, "/auth/handoff")}#th=${encodeURIComponent(r.th)}&next=${encodeURIComponent("/dashboard")}`);
+      window.location.assign(handoffUrl(r.slug, r.th, "/dashboard"));
     } catch (e) { toast.error(friendlyError(e)); setBusy(null); }
   };
 

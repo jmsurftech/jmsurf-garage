@@ -7,7 +7,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     { q: "What should I set up first?", to: "/dashboard", a: ["The dashboard shows 'Set up your dashboard' with the steps: company details and logo, bring your data, switch on your apps, invite your team, get paid by M-Pesa and send your first invoice.", "Each step opens the right screen and ticks itself off when done."] },
     { q: "How do I move around the system?", a: ["The menu on the left groups everything by area. Star any page (the star appears when you point at it) to pin it under Favourites at the top.", "Press Ctrl+K anywhere for Quick find: pages, customers, items and documents.", "Choose another menu layout in your profile menu or System → Theme: one sidebar, two sidebars (apps on the left, pages beside them), a top menu or a bottom dock."] },
     { q: "Where are the settings?", to: "/settings", a: ["Press System at the bottom of the menu. Settings open as a page of their own with their own menu (search it at the top); press Close to go back to where you were."] },
-    { q: "Can I use only one app, like CRM?", to: "/modules", a: ["Yes. Sign up from the app's 'Use only…' button on the website, or open Modules and choose 'Use on its own'. The menu then shows only that app (and any other you switch on). 'Show the full suite' brings everything back."] },
+    { q: "How do modules and billing work?", to: "/modules", a: ["Your plan sets the size of your garage; modules add what your business does. In System → Modules & billing, switch a module on and it works at once: free for 14 days the first time, then added to your bill from that day. Switch it off and it keeps working to the end of the period you paid for; your records are kept and can still be read. Only the owner, or someone with billing rights, can do this."] },
     { q: "Is there a demo I can try?", a: ["Yes: 'Try the live demo' on the website opens a sample company with data. Anything you change there is put back every night and nothing is sent to anyone."] },
   ] },
   { id: "dashboard", title: "Dashboard & reports", icon: "LayoutDashboard", articles: [
@@ -65,7 +65,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     { q: "Calendar and meetings", to: "/calendar", a: ["Invite colleagues to meetings; they are reminded before it starts (by bell, email, SMS or WhatsApp as your company chooses)."] },
   ] },
   { id: "callcentre", title: "Call Centre", icon: "Headset", articles: [
-    { q: "Calling from DASH", a: ["With the Call Centre switched on, a phone button sits in the corner. It signs in with your DASH login, rings for incoming calls and dials any number; click-to-call on customers uses it too."] },
+    { q: "Calling from JMSURF Garage", a: ["With the Call Centre switched on, a phone button sits in the corner. It signs in with your JMSURF Garage login, rings for incoming calls and dials any number; click-to-call on customers uses it too."] },
     { q: "Setting up the line", to: "/callcentre", a: ["In the Call Centre's Settings, connect your Africa's Talking voice number and paste the callback link. Add agents, phone menus and queues."] },
     { q: "Messages and billing", a: ["The Call Centre's Messages page holds SMS conversations with callers. Billing shows your plan and this month's minutes and cost: airtime is charged by Africa's Talking, the plan by JMSURF."] },
   ] },
@@ -77,7 +77,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     { q: "What can Garage AI do?", to: "/ai", a: ["Ask about your business in plain words (sales, debtors, stock) by typing or speaking, and let it draft invoices, reminders and tasks, always with your confirmation. Open it from the sparkle button in the top bar."] },
   ] },
   { id: "website", title: "Website & online shop", icon: "Globe", articles: [
-    { q: "Your website and shop", to: "/settings?tab=shop", a: ["Publish a website and online shop on your own address. Items marked 'Show on online shop' (when eCommerce is on) are listed for sale; orders and payments come into DASH."] },
+    { q: "Your website and shop", to: "/settings?tab=shop", a: ["Publish a website and online shop on your own address. Items marked 'Show on online shop' (when eCommerce is on) are listed for sale; orders and payments come into JMSURF Garage."] },
     { q: "Customer portal", to: "/settings?tab=portal", a: ["Customers sign in to see invoices and statements and pay online."] },
   ] },
   { id: "data", title: "Data, import & backups", icon: "DatabaseBackup", articles: [
@@ -100,6 +100,6 @@ export const HELP_TOPICS: HelpTopic[] = [
     { q: "Is my data safe?", a: ["Each company's data is separate, connections are encrypted, and data is backed up and copied to a second data centre."] },
   ] },
   { id: "mobile", title: "Phone & offline", icon: "Smartphone", articles: [
-    { q: "Using DASH on a phone", a: ["Everything works on a phone: the bottom bar has the main pages and Menu opens everything else. Install it as an app from the browser menu (Add to Home screen)."] },
+    { q: "Using JMSURF Garage on a phone", a: ["Everything works on a phone: the bottom bar has the main pages and Menu opens everything else. Install it as an app from the browser menu (Add to Home screen)."] },
   ] },
 ];

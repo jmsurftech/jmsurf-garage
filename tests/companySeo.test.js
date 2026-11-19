@@ -17,9 +17,9 @@ test("public website pages are indexed only when the website is on", () => {
 
 test("indexable page canonical points at itself; noindex page loses it", () => {
   const out = indexableHtml(page, "https://shop.garage.jmsurf.co.ke", "/shop/");
-  assert.match(out, /<link rel="canonical" href="https:\/\/shop\.jmsurfgarage\.co\.ke\/shop" \/>/);
+  assert.match(out, /<link rel="canonical" href="https:\/\/shop\.garage\.jmsurf\.co\.ke\/shop" \/>/);
   assert.match(out, /name="robots" content="index, follow, max-image-preview:large"/);
-  assert.match(out, /og:url" content="https:\/\/shop\.jmsurfgarage\.co\.ke\/shop"/);
+  assert.match(out, /og:url" content="https:\/\/shop\.garage\.jmsurf\.co\.ke\/shop"/);
   const no = noindexHtml(page, "noindex, nofollow");
   assert.doesNotMatch(no, /canonical/);
   assert.match(no, /content="noindex, nofollow"/);
@@ -29,9 +29,9 @@ test("company robots.txt and sitemap", () => {
   const on = companyRobotsTxt("https://shop.garage.jmsurf.co.ke", true);
   assert.match(on, /Allow: \//);
   assert.match(on, /Disallow: \/checkout/);
-  assert.match(on, /Sitemap: https:\/\/shop\.jmsurfgarage\.co\.ke\/sitemap\.xml/);
+  assert.match(on, /Sitemap: https:\/\/shop\.garage\.jmsurf\.co\.ke\/sitemap\.xml/);
   assert.doesNotMatch(companyRobotsTxt("https://x", false), /Sitemap/);
   const xml = companySitemap("https://shop.garage.jmsurf.co.ke", "2026-11-05");
-  assert.match(xml, /<loc>https:\/\/shop\.jmsurfgarage\.co\.ke\/shop<\/loc>/);
+  assert.match(xml, /<loc>https:\/\/shop\.garage\.jmsurf\.co\.ke\/shop<\/loc>/);
   assert.doesNotMatch(xml, /login|cart|checkout/);
 });

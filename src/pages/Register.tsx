@@ -1,28 +1,21 @@
 import AuthShell from "@/components/auth/AuthShell";
-import { SELLS_OPTIONS, type Sells } from "@/lib/sells";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { REGISTER_META } from "@/seo/meta";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Building2, Store, Lock, ArrowLeft, ArrowRight, Check, Shirt, Wine, Droplets, Eye, EyeOff } from "lucide-react";
+import { Building2, Store, Lock, ArrowLeft, ArrowRight, Check, Eye, EyeOff } from "lucide-react";
 import { friendlyError } from "@/lib/friendlyError";
-import { BUSINESS_TYPES, type BusinessType } from "@/lib/businessType";
 import { ROOT_HOST, isReservedSubdomain, tenantUrl } from "@/lib/host";
-import { MODULES } from "@/lib/modules";
+import { ADDON_MODULES } from "@/lib/modules";
+import { BUSINESS_KINDS, SIZES, kes, modulesForKinds, planByCode, priceBox, TRIAL_DAYS } from "@/lib/garagePlans";
+import { useGarageCatalogue } from "@/hooks/useGarageCatalogue";
 import { track } from "@/lib/tracking";
 import { goToCompany, listMyCompanies } from "@/lib/companySwitch";
-import { HEARD_FROM, HEARD_NEEDS_DETAIL, COMPANY_SIZES, GOALS } from "@/lib/signupOptions";
+import { HEARD_FROM, HEARD_NEEDS_DETAIL } from "@/lib/signupOptions";
 
-const INDUSTRIES = [
-  "Retail & wholesale", "Professional services", "Manufacturing", "Construction & real estate", "Hospitality & restaurants",
-  "Healthcare & pharmacy", "Education", "Logistics & transport", "Agriculture & agribusiness", "NGO & non-profit",
-  "Technology & telecoms", "Salon, spa & beauty", "Automotive", "Financial services & SACCO", "Energy & utilities", "Other",
-];
-/** Apps offered at sign-up (each starts a 14-day trial). */
-const SIGNUP_APPS = ["inventory", "crm", "hrm", "projects", "expense", "commerce", "service", "marketing", "manufacturing", "contracts"];
 /** Version of the Terms of Service and Privacy Policy accepted at sign-up (must match public.current_terms_version()). */
 const TERMS_VERSION = "2026-11-14";
 import { sendVerificationEmail, sendWelcomeEmail, sendSignupAlert, releaseOrphanLogin } from "@/lib/platformEmail";
@@ -47,42 +40,30 @@ function guessCountry(): string {
 }
 
 
-const TYPE_ICONS: Record<BusinessType, typeof Store> = {
-  general: Store,
-  liquor: Wine,
-  clothing: Shirt,
-  water: Droplets,
-};
-
-const TYPE_INDUSTRY: Record<BusinessType, string> = {
-  general: "Retail",
-  liquor: "Liquor Store",
-  clothing: "Fashion & Apparel",
-  water: "Water Refill",
-};
-
 export default function Register() {
   const [step, setStep] = useState(1);
   const nav = useNavigate();
-  // /register?app=crm: sign up for one app and use it on its own (no accounting menus until wanted).
+  // /register?plan=business&modules=car_wash,tyres (from the pricing and module pages).
   const [params] = useSearchParams();
-  const soloApp = MODULES.find((m) => m.key === params.get("app") && !m.included) || null;
-  const [solo, setSolo] = useState(!!soloApp);
+  const catalogue = useGarageCatalogue();
+  const askedPlan = String(params.get("plan") || "");
+  const startPlan = SIZES.some((z) => z.code === askedPlan) || askedPlan === "all_modules" ? askedPlan : "starter";
+  const startModules = String(params.get("modules") || params.get("app") || "").split(",").filter((k) => ADDON_MODULES.some((m) => m.key === k));
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
     businessName: "", businessEmail: "", businessPhone: "", businessAddress: "",
     contactName: "",
-    industry: "Retail & wholesale",
-    modules: (soloApp ? [soloApp.key] : ["inventory", "crm"]) as string[],
-    businessType: "general" as BusinessType,
-    sells: "both" as Sells,
+    industry: "Automotive",
+    planCode: startPlan,
+    kinds: [] as string[],
+    modules: startModules as string[],
     storeSlug: "",
     password: "", confirmPassword: "",
     country: guessCountry(),
     currency: countryByCode(guessCountry())?.currency || "KES",
-    jobTitle: "", companySize: "", website: "", heardFrom: "", heardDetail: "", goals: [] as string[],
+    jobTitle: "", website: "", heardFrom: "", heardDetail: "",
   });
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
@@ -92,6 +73,17 @@ export default function Register() {
   const [marketing, setMarketing] = useState(false);
 
   const set = (key: string, val: string | number) => setForm(f => ({ ...f, [key]: val }));
+
+  // Ticking a kind of business ticks its modules; unticking it drops the ones no other ticked kind needs.
+  const toggleKind = (key: string) => setForm((f) => {
+    const kinds = f.kinds.includes(key) ? f.kinds.filter((k) => k !== key) : [...f.kinds, key];
+    const before = new Set(modulesForKinds(f.kinds));
+    const after = new Set(modulesForKinds(kinds));
+    const kept = f.modules.filter((m) => after.has(m) || !before.has(m));
+    return { ...f, kinds, modules: [...kept, ...[...after].filter((m) => !kept.includes(m))] };
+  });
+  const box = useMemo(() => priceBox(catalogue, form.planCode === "enterprise" ? "pro" : form.planCode, form.modules), [catalogue, form.planCode, form.modules]);
+  const trialEnd = new Date(Date.now() + TRIAL_DAYS * 86400000).toLocaleDateString("en-KE", { day: "numeric", month: "long", year: "numeric" });
 
   const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -105,7 +97,7 @@ export default function Register() {
   };
   const canNext = () => {
     if (step === 1) return form.businessName && form.businessEmail && form.businessPhone && form.contactName && form.storeSlug.length >= 3 && slugAvailable === true;
-    if (step === 2) return !!form.industry && !!form.companySize && !!form.heardFrom && (!HEARD_NEEDS_DETAIL.includes(form.heardFrom) || !!form.heardDetail.trim());
+    if (step === 2) return !!form.planCode && !!form.heardFrom && (!HEARD_NEEDS_DETAIL.includes(form.heardFrom) || !!form.heardDetail.trim());
     if (step === 3) return form.businessEmail && form.password && form.password === form.confirmPassword && form.password.length >= 6 && agreed;
     return false;
   };
@@ -126,21 +118,25 @@ export default function Register() {
             business_phone: form.businessPhone,
             business_address: form.businessAddress,
             industry: form.industry,
-            business_type: form.businessType,
+            business_type: "general",
             contact_name: form.contactName,
             contact_email: form.businessEmail,
             contact_phone: form.businessPhone,
-            plan_id: null,
+            // The size picks the base plan (the database also matches plan_code; Enterprise starts on Pro).
+            plan_id: planByCode(catalogue, form.planCode === "enterprise" ? "pro" : form.planCode).id || null,
+            plan_code: form.planCode,
+            business_kinds: form.kinds,
             custom_users: 0,
             billing_cycle: "monthly",
             store_slug: form.storeSlug,
             country: form.country,
             currency: form.currency,
-            start_apps: form.modules,
-            sells: form.sells,
-            job_title: form.jobTitle || null, company_size: form.companySize, website: form.website || null,
-            heard_from: form.heardFrom, heard_detail: form.heardDetail || null, goals: form.goals,
-            focus_app: solo && soloApp ? soloApp.key : null,
+            // Every chosen module starts its 14-day trial with the garage (modules in the plan need none).
+            start_apps: form.modules.filter((k) => !box.plan.includes.includes(k)),
+            sells: "both",
+            job_title: form.jobTitle || null, company_size: SIZES.find((z) => z.code === form.planCode)?.hint || null, website: form.website || null,
+            heard_from: form.heardFrom, heard_detail: form.heardDetail || null,
+            focus_app: null,
             // Checked again by the database: no company is created without these.
             terms_accepted: agreed,
             terms_version: TERMS_VERSION,
@@ -190,11 +186,11 @@ export default function Register() {
 
       // Signed in straight away: start the chosen apps' trials and open the
       // new company's own address, already signed in.
-      track("CompleteRegistration", { content_name: form.industry, status: true });
+      track("CompleteRegistration", { content_name: form.planCode, value: box.total, currency: "KES", status: true });
       if (data.session) {
         // The first visit switches the chosen apps on (and single-app use) from the sign-up details.
         const mine = await listMyCompanies().catch(() => []);
-        await goToCompany(mine[0]?.slug || form.storeSlug, solo && soloApp ? soloApp.home : "/dashboard?welcome=1");
+        await goToCompany(mine[0]?.slug || form.storeSlug, "/dashboard?welcome=1");
         return;
       }
       // Company addresses (<slug>.garage.jmsurf.co.ke) are served by the wildcard
@@ -215,7 +211,7 @@ export default function Register() {
 
   const inputClass = "fi h-11";
   const labelClass = "text-sm font-medium block mb-1.5";
-  const stepTitles = ["Company", "Apps", "Password"];
+  const stepTitles = ["Garage", "Plan", "Password"];
 
   return (
     <>
@@ -231,12 +227,12 @@ export default function Register() {
         <meta property="og:image" content="https://garage.jmsurf.co.ke/og-image.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="JMSURF Garage: all-in-one business management for businesses everywhere" />
+        <meta property="og:image:alt" content="JMSURF Garage: garage management software for Kenya" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:image" content="https://garage.jmsurf.co.ke/og-image.png" />
       </Helmet>
     <AuthShell wide title="Start your free trial" subtitle="14 days free. No card required."
-      points={["Your company is ready in about a minute", "Books, inventory, CRM, HR, projects and 50+ apps", "Bring your data from your old system or Excel"]}
+      points={["Your garage is ready in a few minutes", "Job cards, estimates, M-Pesa and eTIMS invoices", "See your monthly price before you start"]}
       footer={<>Already have an account? <Link to="/login" className="font-semibold text-primary hover:underline">Sign in</Link></>}>
 
         <div className="mb-6 flex items-center justify-center gap-3 lg:justify-start">
@@ -258,10 +254,10 @@ export default function Register() {
         <div className="rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-7">
           {step === 1 && (
             <div className="space-y-5">
-              <h2 className="text-lg font-semibold">Business and contact details</h2>
+              <h2 className="text-lg font-semibold">Your garage and contact details</h2>
               <div className="grid sm:grid-cols-2 gap-4">
-                <div><label className={labelClass}>Business name *</label>
-                  <input value={form.businessName} onChange={e => { set("businessName", e.target.value); if (!slugTouched) { const sug = slugify(e.target.value).slice(0, 30); set("storeSlug", sug); if (sug.length >= 3) checkSlug(sug); } }} className={inputClass} placeholder="Your business name" /></div>
+                <div><label className={labelClass}>Garage or business name *</label>
+                  <input value={form.businessName} onChange={e => { set("businessName", e.target.value); if (!slugTouched) { const sug = slugify(e.target.value).slice(0, 30); set("storeSlug", sug); if (sug.length >= 3) checkSlug(sug); } }} className={inputClass} placeholder="Enter business name" /></div>
                 <div><label className={labelClass}>Your full name *</label>
                   <input value={form.contactName} onChange={e => set("contactName", e.target.value)} className={inputClass} placeholder="Enter full name" /></div>
               </div>
@@ -269,7 +265,7 @@ export default function Register() {
                 <div><label className={labelClass}>Email *</label>
                   <input type="email" value={form.businessEmail} onChange={e => set("businessEmail", e.target.value)} className={inputClass} placeholder="Enter email address" /></div>
                 <div><label className={labelClass}>Phone *</label>
-                  <input value={form.businessPhone} onChange={e => set("businessPhone", e.target.value)} className={inputClass} placeholder="Enter phone number" /></div>
+                  <input value={form.businessPhone} onChange={e => set("businessPhone", e.target.value)} className={inputClass} placeholder="07XXXXXXXX" inputMode="tel" /></div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div><label className={labelClass}>Country *</label>
@@ -288,14 +284,14 @@ export default function Register() {
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div><label className={labelClass}>Your job title</label>
-                  <input value={form.jobTitle} onChange={e => set("jobTitle", e.target.value)} className={inputClass} placeholder="e.g. Owner, Finance manager" /></div>
+                  <input value={form.jobTitle} onChange={e => set("jobTitle", e.target.value)} className={inputClass} placeholder="Enter your job title (optional)" /></div>
                 <div><label className={labelClass}>Website</label>
-                  <input value={form.website} onChange={e => set("website", e.target.value)} className={inputClass} placeholder="www.yourcompany.co.ke (optional)" /></div>
+                  <input value={form.website} onChange={e => set("website", e.target.value)} className={inputClass} placeholder="Enter website (optional)" /></div>
               </div>
               <div><label className={labelClass}>Business address</label>
-                <input value={form.businessAddress} onChange={e => set("businessAddress", e.target.value)} className={inputClass} placeholder="Street, City, Country" /></div>
+                <input value={form.businessAddress} onChange={e => set("businessAddress", e.target.value)} className={inputClass} placeholder="Enter location, e.g. street and town" /></div>
               <div>
-                <label className={labelClass}>Your JMSURF Garage address *</label>
+                <label className={labelClass}>Your garage address for customers *</label>
                 <div className="flex items-stretch">
                   <input
                     value={form.storeSlug}
@@ -308,7 +304,7 @@ export default function Register() {
                     className={`fi h-11 flex-1 rounded-r-none ${
                       slugAvailable === true ? "!border-success" : slugAvailable === false ? "!border-destructive" : ""
                     }`}
-                    placeholder="yourcompany"
+                    placeholder="yourgarage"
                   />
                   <span className="flex items-center rounded-r-xl border border-l-0 border-input bg-muted px-3 text-sm text-muted-foreground">.{ROOT_HOST}</span>
                 </div>
@@ -320,93 +316,89 @@ export default function Register() {
           )}
 
           {step === 2 && (
-            <div className="space-y-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <h2 className="text-lg font-semibold">Company size *</h2>
-                  <select className={inputClass + " mt-2"} value={form.companySize} onChange={(e) => set("companySize", e.target.value)}>
-                    <option value="">Choose…</option>{COMPANY_SIZES.map((x) => <option key={x}>{x}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold">How did you hear about us? *</h2>
-                  <select className={inputClass + " mt-2"} value={form.heardFrom} onChange={(e) => set("heardFrom", e.target.value)}>
-                    <option value="">Choose…</option>{HEARD_FROM.map((x) => <option key={x}>{x}</option>)}
-                  </select>
-                  {HEARD_NEEDS_DETAIL.includes(form.heardFrom) && <input className={inputClass + " mt-2"} value={form.heardDetail} onChange={(e) => set("heardDetail", e.target.value)} placeholder={form.heardFrom === "Other" ? "Tell us where" : "Who or which one?"} />}
-                </div>
-              </div>
+            <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-semibold">What do you want to do with JMSURF Garage?</h2>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {GOALS.map((g) => { const on = form.goals.includes(g); return <button type="button" key={g} onClick={() => setForm((f) => ({ ...f, goals: on ? f.goals.filter((x) => x !== g) : [...f.goals, g] }))} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${on ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>{g}</button>; })}
-                </div>
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold">Your industry</h2>
-                <select className={inputClass + " mt-2"} value={form.industry} onChange={(e) => set("industry", e.target.value)}>
-                  {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}
-                </select>
-              </div>
-              {soloApp && (
-                <div className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white" style={{ background: soloApp.color }}><soloApp.icon className="h-5 w-5" /></span>
-                    <div className="min-w-0 flex-1"><p className="font-semibold">{soloApp.name}</p><p className="text-sm text-muted-foreground">{soloApp.tagline}</p></div>
-                  </div>
-                  <label className="mt-3 flex items-start gap-2 text-sm"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary" checked={solo} onChange={(e) => setSolo(e.target.checked)} />
-                    <span>Use {soloApp.name.replace("JMSURF ", "")} on its own. Only its screens show; add the accounting suite or other apps whenever you like.</span></label>
-                </div>
-              )}
-              {!(soloApp && solo) && <div>
-                <h2 className="text-lg font-semibold">What do you sell?</h2>
-                <div className="mt-2 mb-5 grid gap-2 sm:grid-cols-3">
-                  {SELLS_OPTIONS.map((o) => (
-                    <button type="button" key={o.value} onClick={() => setForm((f) => ({ ...f, sells: o.value, modules: o.value === "services" ? f.modules.filter((x) => x !== "inventory") : f.modules }))}
-                      className={`rounded-xl border-2 p-3 text-left transition ${form.sells === o.value ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
-                      <span className="block text-sm font-semibold">{o.label}</span><span className="block text-xs text-muted-foreground">{o.hint}</span>
-                    </button>
-                  ))}
-                </div>
-                <h2 className="text-lg font-semibold">Which apps do you want?</h2>
-                <p className="text-sm text-muted-foreground">JMSURF BOOKS (accounting, sales, purchases, banking, reports) is always included. Each app below is free for 14 days; add or remove any time.</p>
+                <h2 className="text-lg font-semibold">How big is your garage? *</h2>
+                <p className="text-sm text-muted-foreground">This sets your base plan. You can move up or down later.</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {SIGNUP_APPS.map((k) => MODULES.find((m) => m.key === k)!).map((m) => {
-                    const on = form.modules.includes(m.key);
+                  {SIZES.map((z) => {
+                    const pl = planByCode(catalogue, z.code);
+                    const on = form.planCode === z.code;
                     return (
-                      <button type="button" key={m.key} onClick={() => setForm((f) => ({ ...f, modules: on ? f.modules.filter((x) => x !== m.key) : [...f.modules, m.key] }))}
+                      <button type="button" key={z.code} onClick={() => setForm((f) => ({ ...f, planCode: z.code }))}
                         className={`flex items-start gap-3 rounded-xl border-2 p-3 text-left transition ${on ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white" style={{ background: m.color }}><m.icon className="h-4 w-4" /></span>
-                        <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">{m.name}</span><span className="block text-xs text-muted-foreground">{m.tagline}</span></span>
-                        <span className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${on ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>{on && <Check className="h-3.5 w-3.5" />}</span>
+                        <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${on ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>{on && <Check className="h-3.5 w-3.5" />}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold">{z.label}</span>
+                          <span className="block text-xs text-muted-foreground">{z.hint}</span>
+                        </span>
+                        <span className="shrink-0 text-right text-xs font-semibold">{pl.quoteOnly ? "Priced for you" : <>{pl.name}<span className="block font-normal text-muted-foreground">{kes(pl.price)}/mo</span></>}</span>
                       </button>
                     );
                   })}
                 </div>
-              </div>}
-            </div>
-          )}
+                {form.planCode === "enterprise" && <p className="mt-2 rounded-xl bg-muted p-3 text-sm text-muted-foreground">You start on Pro with every module you choose, free for 14 days. We call you to agree your Enterprise price.</p>}
+              </div>
 
-          {false && (
-            <div className="space-y-5">
-              <h2 className="text-lg font-semibold">What kind of company is this?</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {BUSINESS_TYPES.map(bt => {
-                  const Icon = TYPE_ICONS[bt.key];
-                  const active = form.businessType === bt.key;
-                  return (
-                    <button key={bt.key} onClick={() => {
-                      set("businessType", bt.key);
-                      set("industry", TYPE_INDUSTRY[bt.key]);
-                    }}
-                      className={`p-5 rounded-xl border-2 text-center transition ${
-                        active ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"
-                      }`}>
-                      <Icon className={`w-7 h-7 mx-auto mb-3 ${active ? "text-primary" : "text-muted-foreground"}`} />
-                      <span className={`block text-sm font-semibold ${active ? "text-primary" : "text-foreground"}`}>{bt.label}</span>
-                    </button>
-                  );
-                })}
+              <div>
+                <h2 className="text-lg font-semibold">What does your business do?</h2>
+                <p className="text-sm text-muted-foreground">Tick all that apply. We tick the matching modules for you.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {BUSINESS_KINDS.map((k) => {
+                    const on = form.kinds.includes(k.key);
+                    return (
+                      <button type="button" key={k.key} onClick={() => toggleKind(k.key)}
+                        className={`rounded-full border px-3.5 py-2 text-sm font-medium transition ${on ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
+                        {on && <Check className="-ml-0.5 mr-1 inline h-3.5 w-3.5" />}{k.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+                <div>
+                  <h2 className="text-lg font-semibold">Modules</h2>
+                  <p className="text-sm text-muted-foreground">Garage Core (job cards, estimates, M-Pesa, eTIMS invoices, SMS) is always included. Untick or add any module; each is free for 14 days.</p>
+                  <div className="mt-3 divide-y divide-border rounded-xl border border-border">
+                    {ADDON_MODULES.filter((m) => !catalogue.off.has(m.key) && m.key !== "callcentre").map((m) => {
+                      const on = form.modules.includes(m.key);
+                      const inPlan = box.plan.includes.includes(m.key);
+                      return (
+                        <label key={m.key} className="flex cursor-pointer items-start gap-3 p-3">
+                          <input type="checkbox" className="mt-1 h-4 w-4 accent-[hsl(var(--primary))]" checked={on || inPlan} disabled={inPlan}
+                            onChange={() => setForm((f) => ({ ...f, modules: on ? f.modules.filter((x) => x !== m.key) : [...f.modules, m.key] }))} />
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white" style={{ background: m.color }}><m.icon className="h-4 w-4" /></span>
+                          <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">{m.name}</span><span className="block text-xs text-muted-foreground">{m.tagline}</span></span>
+                          <span className="shrink-0 text-right text-xs font-semibold">{inPlan ? <span className="text-primary">In {box.plan.name}</span> : <>{kes(catalogue.prices[m.key] ?? m.price)}<span className="block font-normal text-muted-foreground">/ month</span></>}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+                <aside className="lg:sticky lg:top-4 lg:self-start">
+                  <div className="rounded-2xl border border-border bg-muted/40 p-4" aria-live="polite">
+                    <h3 className="font-semibold">Your monthly price</h3>
+                    <ul className="mt-3 space-y-1.5 text-sm">
+                      {box.lines.map((l) => <li key={l.key} className="flex justify-between gap-3"><span className="min-w-0">{l.label}{l.note && <span className="text-muted-foreground"> · {l.note}</span>}</span><b className="shrink-0">{kes(l.amount)}</b></li>)}
+                    </ul>
+                    <p className="mt-3 flex justify-between border-t border-border pt-3 text-base font-extrabold"><span>Total</span><span>{kes(box.total)} / month</span></p>
+                    {box.bundleSaves > 0 && box.bundle && (
+                      <button type="button" onClick={() => setForm((f) => ({ ...f, planCode: box.bundle!.code }))} className="mt-2 w-full rounded-lg bg-primary/10 px-3 py-2 text-left text-xs font-semibold text-primary">
+                        {box.bundle.name} is {kes(box.bundleSaves)} cheaper a month. Switch to it.
+                      </button>
+                    )}
+                    <p className="mt-3 text-xs text-muted-foreground">Nothing to pay today. Everything you chose is free for 14 days; the first bill is on {trialEnd}. Pay yearly later and get 2 months free. Prices exclude VAT.</p>
+                  </div>
+                </aside>
+              </div>
+
+              <div>
+                <h2 className="text-lg font-semibold">How did you hear about us? *</h2>
+                <select className={inputClass + " mt-2"} value={form.heardFrom} onChange={(e) => set("heardFrom", e.target.value)}>
+                  <option value="">Choose…</option>{HEARD_FROM.map((x) => <option key={x}>{x}</option>)}
+                </select>
+                {HEARD_NEEDS_DETAIL.includes(form.heardFrom) && <input className={inputClass + " mt-2"} value={form.heardDetail} onChange={(e) => set("heardDetail", e.target.value)} placeholder={form.heardFrom === "Other" ? "Enter where you heard about us" : "Enter who or which one"} />}
               </div>
             </div>
           )}
@@ -437,7 +429,7 @@ export default function Register() {
                 {form.confirmPassword && form.password !== form.confirmPassword && <p className="text-red-600 text-xs mt-1.5">Passwords do not match</p>}
               </div>
               <div className="rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm">
-                You will go straight into your new company. We also email you a link to confirm your address.
+                You will go straight into your garage at app.garage.jmsurf.co.ke. We also email you a link to confirm your email.
               </div>
               <label className="flex items-start gap-3 text-sm">
                 <input type="checkbox" required checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[hsl(var(--primary))]" />

@@ -1,5 +1,6 @@
 # JMSURF Garage website (https://garage.jmsurf.co.ke)
-# Company addresses serve their own robots.txt and sitemap (public website pages only); app. and dash. are noindex.
+# Garage management software for Kenya. Each garage's own address serves its own robots.txt and sitemap
+# (its public website pages only); the staff workspace (app.) and the super admin (admin.) are noindex.
 
 User-agent: *
 Allow: /

@@ -1,23 +1,23 @@
 /**
- * /solutions: every suite on one page, grouped and filterable, each card opening
- * its own page (/solutions/<suite>). No module prices (owner's rule).
+ * /solutions: every garage module on one page, grouped and filterable, each card
+ * opening its own page (/solutions/<module>). Prices are on /pricing.
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Check, Layers } from "lucide-react";
-import { MODULES, MODULE_CATEGORIES, type ModuleCategory } from "@/lib/modules";
+import { PUBLIC_MODULES as MODULES, MODULE_CATEGORIES, type ModuleCategory } from "@/lib/modules";
 import { Orbs, GridGlow } from "@/components/brand/Orbs";
-import { Nav, Footer, FinalCta, Eyebrow, Hl, CTA } from "@/pages/Landing";
+import { Nav, Footer, FinalCta, Eyebrow, Hl, CTA, useSiteContact, WhatsAppButton } from "@/pages/Landing";
 import { track } from "@/lib/tracking";
 import { SOLUTIONS_META } from "@/seo/meta";
 import { cn } from "@/lib/utils";
 
-const APPS = MODULES.reduce((a, m) => a + m.apps.length, 0);
 const short = (n: string) => n.replace(/^(JMSURF|DASH) /, "");
 
 export default function Solutions() {
+  const contact = useSiteContact();
   const [cat, setCat] = useState<ModuleCategory | "all">("all");
   useEffect(() => { window.scrollTo(0, 0); }, []);
   const list = useMemo(() => MODULES.filter((m) => cat === "all" || m.category === cat), [cat]);
@@ -29,7 +29,7 @@ export default function Solutions() {
         <title>{SOLUTIONS_META.title}</title>
         <meta name="description" content={SOLUTIONS_META.description} />
         <link rel="canonical" href="https://garage.jmsurf.co.ke/solutions" />
-        <meta property="og:title" content="All suites · JMSURF Garage" />
+        <meta property="og:title" content="All modules · JMSURF Garage" />
         <meta property="og:url" content="https://garage.jmsurf.co.ke/solutions" />
       </Helmet>
       <Nav />
@@ -40,15 +40,15 @@ export default function Solutions() {
           <div className="lx-grain" />
           <div className="relative mx-auto max-w-5xl px-4 text-center sm:px-6">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <Eyebrow>{MODULES.length} suites · {APPS}+ apps</Eyebrow>
+              <Eyebrow>{MODULES.length} modules · one login</Eyebrow>
             </motion.div>
             <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.1 }}
               className="mt-6 font-display text-[2.5rem] font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-7xl">
-              Every suite.<br /><Hl>One login.</Hl>
+              Every module your <Hl>garage needs.</Hl>
             </motion.h1>
             <motion.p initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.25 }}
               className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              JMSURF BOOKS is your base. Switch on any other suite from inside your workspace, each free for 14 days, and it shares your customers, stock and books from the first minute.
+              Garage Core is in every plan. Switch on any other module from inside your workspace, each free for 14 days, and it shares your customers, vehicles, parts and invoices from the first minute.
             </motion.p>
           </div>
         </section>
@@ -60,7 +60,7 @@ export default function Solutions() {
                 <button key={c} onClick={() => setCat(c)}
                   className={cn("relative shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors", cat === c ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
                   {cat === c && <motion.span layoutId="sol-cat" className="absolute inset-0 rounded-full bg-primary" transition={{ type: "spring", stiffness: 400, damping: 34 }} />}
-                  <span className="relative">{c === "all" ? "All suites" : c}</span>
+                  <span className="relative">{c === "all" ? "All modules" : c}</span>
                 </button>
               ))}
             </div>
@@ -78,7 +78,7 @@ export default function Solutions() {
                       <span className="flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" style={{ background: m.color, boxShadow: `0 12px 24px -12px ${m.color}` }}>
                         <m.icon className="h-6 w-6" />
                       </span>
-                      <span className="rounded-full border border-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{m.included ? "Included" : m.category}</span>
+                      <span className="rounded-full border border-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{m.included ? "In every plan" : m.category}</span>
                     </div>
                     <h2 className="relative mt-5 font-display text-2xl font-extrabold tracking-tight">{short(m.name)}</h2>
                     <p className="relative mt-2 text-[15px] leading-relaxed text-muted-foreground">{m.tagline}</p>
@@ -86,7 +86,7 @@ export default function Solutions() {
                       {m.features.slice(0, 3).map((f) => <li key={f} className="flex gap-2 text-sm text-foreground/80"><Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: m.color }} />{f}</li>)}
                     </ul>
                     <div className="relative mt-auto flex items-center justify-between pt-6">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><Layers className="h-3.5 w-3.5" />{m.apps.length} apps</span>
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><Layers className="h-3.5 w-3.5" />{m.category}</span>
                       <span className="inline-flex items-center gap-1 text-sm font-bold" style={{ color: m.color }}>Explore <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
                     </div>
                   </Link>
@@ -94,11 +94,12 @@ export default function Solutions() {
               ))}
             </AnimatePresence>
           </motion.div>
-          <div className="mt-14 flex justify-center px-4"><CTA /></div>
+          <div className="mt-14 flex flex-col items-center justify-center gap-3 px-4 sm:flex-row"><CTA /><Link to="/pricing" className="inline-flex items-center justify-center rounded-full bg-card px-6 py-3.5 font-display text-[15px] font-bold ring-1 ring-border hover:bg-muted">See prices</Link></div>
         </section>
         <FinalCta />
       </main>
-      <Footer phone="0712 504 593" email="support@jmsurf.co.ke" />
+      <Footer phone={contact.phone} email={contact.email} />
+      <WhatsAppButton wa={contact.wa} />
     </div>
   );
 }

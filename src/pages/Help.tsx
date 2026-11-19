@@ -10,7 +10,7 @@ import { Rocket, LayoutDashboard, Receipt, ShoppingCart, Truck, Package, Buildin
 const Icons = { Rocket, LayoutDashboard, Receipt, ShoppingCart, Truck, Package, Building2, Landmark, Handshake, UserRoundCog, FolderKanban, Headset, Bell, Sparkles, Globe, DatabaseBackup, Settings, CreditCard, ShieldCheck, Smartphone };
 import { Link } from "react-router-dom";
 import { HELP_TOPICS, type HelpArticle } from "@/lib/helpContent";
-import { MODULES } from "@/lib/modules";
+import { PUBLIC_MODULES as MODULES } from "@/lib/modules";
 import { PageHeader, SearchBox, Panel, EmptyState } from "@/components/kit";
 import PageHead from "@/components/PageHead";
 import { useTenant } from "@/hooks/useTenant";
@@ -27,8 +27,8 @@ const TOPICS: Topic[] = [
   ...MODULES.map((m) => ({
     id: `suite-${m.key}`, title: m.name.replace(/^JMSURF /, ""), icon: m.icon,
     articles: [
-      { q: `What is in ${m.name}?`, a: [m.description, ...(m.features?.length ? [m.features.join(" · ")] : [])], to: m.home },
-      ...m.apps.map((x) => ({ q: x.name, a: [x.desc], to: x.home })),
+      { q: `What is in ${m.name}?`, a: [m.description, ...(m.features?.length ? [m.features.join(" · ")] : [])], to: m.home || `/modules?app=${m.key}` },
+      ...m.apps.map((x) => ({ q: x.name, a: [x.desc], to: x.home || `/modules?app=${m.key}` })),
     ],
   })),
 ];

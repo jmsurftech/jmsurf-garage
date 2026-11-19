@@ -57,6 +57,8 @@ const port = Number(process.env.PORT || 3000);
 // https://garage.jmsurf.co.ke; otherwise each shop lives on <slug>.garage.jmsurf.co.ke.
 const SHOP_ORIGIN = (process.env.SHOP_ORIGIN || "").replace(/\/+$/, "");
 const shopOrigin = (slug) => SHOP_ORIGIN || `https://${slug}.garage.jmsurf.co.ke`;
+/** Staff sign in and work on app.garage.jmsurf.co.ke (the company comes from the membership): links in staff emails go there. */
+const STAFF_ORIGIN = SHOP_ORIGIN || (process.env.APP_ORIGIN || "https://app.garage.jmsurf.co.ke").replace(/\/+$/, "");
 
 // Backend address used to verify the signed-in user and read the saved
 // email settings. Falls back to the values baked in at build time.
@@ -191,7 +193,7 @@ async function companyAddress(req) {
 /** The address the visitor used (a shop worker may forward it). */
 function shopHost(req) {
   const fwd = String(req.headers["x-forwarded-host"] || "").split(",")[0].trim();
-  const raw = /\.jmsurfgarage\.co\.ke$/i.test(fwd.split(":")[0]) ? fwd : req.headers.host;
+  const raw = /\.garage\.jmsurf\.co\.ke$/i.test(fwd.split(":")[0]) ? fwd : req.headers.host;
   return String(raw || "").split(":")[0].trim().toLowerCase();
 }
 
@@ -883,7 +885,7 @@ async function recentlyRegisteredShop(email) {
 function safeTarget(value, fallback = SHOP_ORIGIN ? `${SHOP_ORIGIN}/login` : "https://garage.jmsurf.co.ke/login") {
   const candidate = String(value || "").trim();
   if (SHOP_ORIGIN && (candidate === SHOP_ORIGIN || candidate.startsWith(`${SHOP_ORIGIN}/`))) return candidate;
-  return /^https:\/\/([a-z0-9-]+\.)*jmsurfgarage\.co\.ke(\/|$)/i.test(candidate) ? candidate : fallback;
+  return /^https:\/\/([a-z0-9-]+\.)*garage\.jmsurf\.co\.ke(\/|$)/i.test(candidate) ? candidate : fallback;
 }
 
 // --- Account verification -----------------------------------------------------
@@ -999,9 +1001,9 @@ async function shopResetUrl(userId) {
   const [profile] = await adminRows(`profiles?user_id=eq.${encodeURIComponent(userId)}&select=tenant_id&limit=1`);
   if (profile?.tenant_id) {
     const [tenant] = await adminRows(`tenants?id=eq.${encodeURIComponent(profile.tenant_id)}&select=slug&limit=1`);
-    if (tenant?.slug) return `${shopOrigin(tenant.slug)}/reset-password`;
+    if (tenant?.slug) return `${STAFF_ORIGIN}/reset-password`;
   }
-  return SHOP_ORIGIN ? `${SHOP_ORIGIN}/reset-password` : "https://garage.jmsurf.co.ke/reset-password";
+  return `${STAFF_ORIGIN}/reset-password`;
 }
 
 /**
@@ -1213,21 +1215,20 @@ async function handleEmailWelcome(req, res) {
   const registered = await recentlyRegisteredShop(email);
   if (!registered) return sendJson(res, 200, { ok: true, skipped: true });
   const name = String(registered.tenant.contact_name || registered.tenant.business_name || "there").slice(0, 120);
-  const loginUrl = registered.tenant.slug
-    ? `${shopOrigin(registered.tenant.slug)}/login`
-    : "https://garage.jmsurf.co.ke/login";
+  const loginUrl = `${STAFF_ORIGIN}/login`;
+  const siteUrl = registered.tenant.slug ? shopOrigin(registered.tenant.slug) : "";
   const html = emailShell(
-    "Your shop is ready",
-    `<p style="margin:0 0 14px;font-size:15px;line-height:22px;">Hi ${esc(name)}, your JMSURF Garage shop is set up and ready to use.</p>
-<p style="margin:0 0 22px;"><a href="${esc(loginUrl)}" style="background-color:#f97316;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:6px;font-size:15px;display:inline-block;">Open your shop</a></p>
-<p style="margin:0;font-size:14px;line-height:21px;color:#4b5563;">Your shop address: ${esc(loginUrl)}</p>`,
+    "Your garage is ready",
+    `<p style="margin:0 0 14px;font-size:15px;line-height:22px;">Hi ${esc(name)}, your JMSURF Garage workspace is set up and ready to use. Every module you chose is free for 14 days.</p>
+<p style="margin:0 0 22px;"><a href="${esc(loginUrl)}" style="background-color:#a8121b;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:6px;font-size:15px;display:inline-block;">Open your garage</a></p>
+<p style="margin:0;font-size:14px;line-height:21px;color:#4b5563;">Sign in at ${esc(loginUrl)}${siteUrl ? `<br>Your customers' page: ${esc(siteUrl)}` : ""}</p>`,
   );
 
   const result = await deliverSavedSmtp({
     to: email,
     subject: "Welcome to JMSURF Garage",
     html,
-    text: `Hi ${name}, your JMSURF Garage shop is ready.\n\nOpen your shop: ${loginUrl}`,
+    text: `Hi ${name}, your JMSURF Garage workspace is ready.\n\nSign in: ${loginUrl}${siteUrl ? `\nYour customers' page: ${siteUrl}` : ""}`,
   });
   return sendJson(res, 200, result);
 }
@@ -1495,9 +1496,9 @@ createServer(async (req, res) => {
   const url = req.url || "/";
   const [pathname, search] = url.split("?");
 
-  // admin.<root> is a familiar alias for the super admin, which lives on dash.<root>.
+  // The super admin lives on admin.<root>; dash.<root> is an old alias that moves there.
   const hostOnly = String(req.headers.host || "").toLowerCase().split(":")[0];
-  if (hostOnly === "admin.garage.jmsurf.co.ke") {
+  if (hostOnly === "dash.garage.jmsurf.co.ke") {
     // Browsers that cached the website here keep an old service worker; a redirected
     // worker script is refused, so hand them one that clears itself and reloads.
     if (pathname === "/sw.js") {

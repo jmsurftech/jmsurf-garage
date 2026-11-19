@@ -23,7 +23,7 @@ const STAGES = [
 ] as const;
 const SOURCES = ["manual", "signup", "website", "demo", "referral", "event", "social", "call"];
 type Lead = { id: string; name: string; company: string | null; email: string | null; phone: string | null; country: string | null; source: string; stage: string; value: number; tags: string[]; notes: string | null; next_follow_up: string | null; tenant_id: string | null; lost_reason: string | null; created_at: string; product?: string; heard_from?: string | null; details?: Record<string, any> };
-const PRODUCT_LABEL: Record<string, string> = { dash: "DASH", callcentre: "Call Centre", mail: "Mail", isp: "ISP", sms: "SMS", rms: "RMS", pay: "Pay", other: "Other" };
+const PRODUCT_LABEL: Record<string, string> = { dash: "Garage", callcentre: "Call Centre", mail: "Mail", isp: "ISP", sms: "SMS", rms: "RMS", pay: "Pay", other: "Other" };
 const kes = (n: number) => `KES ${Math.round(Number(n || 0)).toLocaleString("en-KE")}`;
 
 async function adminApi<T = any>(path: string, body: any): Promise<T> {

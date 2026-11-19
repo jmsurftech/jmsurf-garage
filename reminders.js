@@ -110,7 +110,8 @@ function messageFor(stage, sub, tenant, cfg, support) {
     kind: trial ? "free trial" : `${str(sub.plan_name) || ""} package`.trim(),
     days, dayword: days === 1 ? "day" : "days",
     date: end.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Nairobi" }),
-    link: `${process.env.SHOP_ORIGIN || `https://${tenant.slug}.garage.jmsurf.co.ke`}/billing`,
+    // Staff renew on the workspace address (app.), where the company comes from the sign-in.
+    link: `${process.env.SHOP_ORIGIN || process.env.APP_ORIGIN || "https://app.garage.jmsurf.co.ke"}/billing`,
     support,
   };
   const key = stage === "0" ? "today" : stage.startsWith("-") ? "before" : "after";

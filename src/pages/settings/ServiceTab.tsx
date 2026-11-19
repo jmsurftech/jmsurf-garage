@@ -54,7 +54,7 @@ export default function ServiceTab({ canManage }: { canManage: boolean }) {
 
   return (
     <div className="space-y-5">
-      <Panel title="Helpdesk mailbox" icon={Mail} description="Emails to your support address become tickets; replies from DASH thread back onto them.">
+      <Panel title="Helpdesk mailbox" icon={Mail} description="Emails to your support address become tickets; replies from JMSURF Garage thread back onto them.">
         {off("helpdesk", "JMSURF SERVICE")}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Mail server (IMAP)"><input className="fi" disabled={!canManage} value={sec("helpdesk").imap_host || ""} onChange={(x) => upd("helpdesk", { imap_host: x.target.value.trim() })} placeholder="mail.yourcompany.co.ke" /></Field>
@@ -72,7 +72,7 @@ export default function ServiceTab({ canManage }: { canManage: boolean }) {
           className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm font-medium"><Plug className="h-4 w-4" /> {busy === "test" ? "Checking…" : "Save and check now"}</button>
       </Panel>
 
-      <Panel title="Website live chat" icon={MessagesSquare} description="A chat bubble for any website. Chats arrive in Live Chat and are answered from DASH.">
+      <Panel title="Website live chat" icon={MessagesSquare} description="A chat bubble for any website. Chats arrive in Live Chat and are answered from JMSURF Garage.">
         {off("live_chat", "JMSURF SERVICE")}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Title"><input className="fi" disabled={!canManage} value={sec("chat").title || ""} onChange={(x) => upd("chat", { title: x.target.value })} placeholder="Chat with us" /></Field>
@@ -80,7 +80,7 @@ export default function ServiceTab({ canManage }: { canManage: boolean }) {
           <div className="sm:col-span-2"><Field label="Greeting"><input className="fi" disabled={!canManage} value={sec("chat").greeting || ""} onChange={(x) => upd("chat", { greeting: x.target.value })} placeholder="Hi! Leave your name and question and we'll answer right here." /></Field></div>
         </div>
         <div className="mt-3"><Toggle label="Show the chat bubble" checked={!!sec("chat").enabled} disabled={!canManage} onChange={(v) => upd("chat", { enabled: v })} /></div>
-        <p className="mt-3 text-xs text-muted-foreground">Paste this before &lt;/body&gt; on any website (your DASH website shows it automatically):</p>
+        <p className="mt-3 text-xs text-muted-foreground">Paste this before &lt;/body&gt; on any website (your JMSURF Garage website shows it automatically):</p>
         <div className="mt-1 flex items-center gap-2 rounded-xl border border-border bg-muted/40 p-2"><code className="min-w-0 flex-1 truncate text-xs">{snippet}</code><button onClick={() => copy(snippet)} className="icon-btn" aria-label="Copy"><Copy className="h-4 w-4" /></button></div>
       </Panel>
 

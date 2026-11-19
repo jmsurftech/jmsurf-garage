@@ -18,7 +18,7 @@ const dur = (s?: number | null) => { const n = Math.round(Number(s || 0)); retur
 
 /** Opens JMSURF CALL CENTRE already signed in (its own session), optionally dialling a number. */
 export async function openCallCentre(next = "/", dial?: string) {
-  // Dialling happens right here in DASH, on the phone in the corner.
+  // Dialling happens right here in JMSURF Garage, on the phone in the corner.
   if (dial) { callNumber(dial); return; }
   const win = window.open("", "jmsurf-callcentre");
   try {
@@ -46,7 +46,7 @@ export function CustomerCalls({ customerId }: { customerId: string }) {
   );
 }
 
-/** DASH → JMSURF CALL CENTRE: today's calls, callbacks and the way into the call centre app. */
+/** JMSURF Garage → JMSURF CALL CENTRE: today's calls, callbacks and the way into the call centre app. */
 export default function CallCentre() {
   const { has } = useModules();
   const tenantId = useTenantId();

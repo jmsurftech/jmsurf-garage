@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="512" height="512" role="img" aria-label="JMSURF Garage">
+  <title>JMSURF Garage</title>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d0202c"/><stop offset="1" stop-color="#a8121b"/></linearGradient>
+    <mask id="wrench-cut">
+      <rect width="128" height="128" fill="#fff"/>
+      <g transform="translate(88 64) rotate(40)"><rect x="-5.5" y="-44" width="11" height="20" rx="2" fill="#000"/></g>
+    </mask>
+  </defs>
+  <rect width="128" height="128" rx="26" fill="url(#g)"/>
+  <!-- The JMSURF J -->
+  <path d="M42 26h17v52c0 20-11 31-29 31-13 0-23-6-29-18l15-8c3 7 8 11 15 11 7 0 11-5 11-15V26Z" fill="#fff"/>
+  <!-- An open-end wrench -->
+  <g mask="url(#wrench-cut)" fill="#fff">
+    <g transform="translate(88 64) rotate(40)">
+      <circle cx="0" cy="-26" r="15"/>
+      <rect x="-6.5" y="-26" width="13" height="52" rx="6.5"/>
+    </g>
+  </g>
+  <!-- Charcoal road line under the wrench -->
+  <rect x="66" y="104" width="46" height="6" rx="3" fill="#1f2329" opacity=".55"/>
+</svg>

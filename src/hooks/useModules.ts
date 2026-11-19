@@ -17,7 +17,7 @@ export interface ActiveModule {
 const INCLUDED = MODULES.filter((m) => m.included).map((m) => m.key);
 
 /**
- * The modules this company can use right now (JMSURF BOOKS is always on).
+ * The modules this company can use right now (Garage Core is always on).
  * Switching a module on or off anywhere updates every open screen.
  */
 export function useModules() {
@@ -67,7 +67,7 @@ export function useModules() {
 
   return {
     modules: query.data || [],
-    /** True when the module may be used (always true for JMSURF BOOKS parts). */
+    /** True when the module may be used (always true for Garage Core parts). */
     has: (key?: string | null) => !key || active.has(suiteOf(key)),
     active,
     /** On and paid for (a trial does not count). */

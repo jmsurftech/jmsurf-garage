@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 import { PagedRows } from "@/components/Pager";
 const sb = supabase as any;
-const ORIGIN = typeof window !== "undefined" ? window.location.origin.replace(/\/\/[^.]+\.(jmsurfgarage\.co\.ke)/, "//$1") : "https://garage.jmsurf.co.ke";
+const ORIGIN = typeof window !== "undefined" ? window.location.origin.replace(/\/\/[^.]+\.(garage\.jmsurf\.co\.ke)/, "//$1") : "https://garage.jmsurf.co.ke";
 const BASE = `${ORIGIN}/api/v1`;
 const EVENTS: [string, string][] = [
   ["invoice.created", "Invoice created"], ["invoice.paid", "Invoice fully paid"], ["invoice.updated", "Invoice changed"],
