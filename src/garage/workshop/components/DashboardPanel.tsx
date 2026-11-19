@@ -81,7 +81,7 @@ export default function GarageDashboardPanel({ posToday = 0, posMpesaToday = 0 }
           <Link to={to("/garage/jobs/new")} className="inline-flex h-8 items-center gap-1 rounded-xl bg-primary px-2.5 text-xs font-semibold text-primary-foreground"><Plus className="h-3.5 w-3.5" />Check in</Link>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Tile label="Sales today" value={formatKES(g.invoiced + posToday)} icon={Wallet} tone="success" hint={posToday ? `invoices + till` : "invoices"} />
         <Tile label="M-Pesa received" value={formatKES(g.mpesa + posMpesaToday)} icon={Smartphone} tone="success" />
         <Tile label="Cars in" value={g.open} icon={Car} to={to("/garage")} hint={`${g.bookingsToday} booked today`} />
