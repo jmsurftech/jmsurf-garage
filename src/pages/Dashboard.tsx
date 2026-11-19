@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { tenantPath } from "@/lib/host";
 import { methodLabel, itemsSummary } from "@/lib/exportUtils";
 import { Orb } from "@/components/Orb";
+import GarageDashboardPanel from "@/garage/workshop/components/DashboardPanel";
 
 /** Local calendar date (not UTC), so sales after midnight belong to the right day. */
 const localDay = (d: Date | string) => {
@@ -176,6 +177,9 @@ export default function Dashboard() {
     <div className="space-y-6">
       <PageHead title="Today · JMSURF Garage" description="Live sales, stock and cashflow overview for your store." noindex />
       <TrialBanner />
+
+      {/* Garage: today's money, cars in / ready / waiting, owed to and by the garage, alerts */}
+      <GarageDashboardPanel posToday={todayTotal} posMpesaToday={today.filter((t: any) => t.payment_method === "mpesa").reduce((s: number, t: any) => s + Number(t.total || 0), 0)} />
 
       {/* Greeting + actions */}
       <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-card p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
