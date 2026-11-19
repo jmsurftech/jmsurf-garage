@@ -79,7 +79,12 @@ export default function JobCard() {
     const problem = moveProblem(status, to, job);
     if (problem && to !== "ready" && to !== "collected") return toast({ title: "Not moved", description: problem, variant: "destructive" });
     // Ready goes through the quality check; quality check opens its checklist.
-    if (to === "ready" || to === "quality_check") { if (to === "quality_check") await patch({ status: to }); setTab("qc"); return; }
+    if (to === "ready" || to === "quality_check") {
+      if (to === "quality_check") await patch({ status: to });
+      else toast({ title: "Finish the quality check", description: "Tick the list, then press “Passed: car ready” at the bottom." });
+      setTab("qc");
+      return;
+    }
     if (to === "collected") { setTab("money"); return toast({ title: "Release the car at the gate", description: "The gate pass checks payment first." }); }
     await patch({ status: to }, `Moved to ${STATUS_LABEL[to]}`);
   };
@@ -261,7 +266,7 @@ export default function JobCard() {
           </Panel>
           <Panel title="Money">
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">All work</span><span className="tabular-nums">{money(job.estimate_total)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">All quoted</span><span className="tabular-nums">{money(job.estimate_total)}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Approved</span><b className="tabular-nums">{money(job.approved_total)}</b></div>
               <button type="button" onClick={() => setTab("money")} className="text-xs font-medium text-primary">Invoices, M-Pesa and gate pass →</button>
             </div>

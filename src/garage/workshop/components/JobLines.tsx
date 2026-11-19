@@ -246,7 +246,7 @@ export default function JobLines({ data, onChange, readOnly }: { data: any; onCh
       {lines.length > 0 && (
         <div className="flex flex-wrap justify-end gap-x-5 gap-y-1 text-sm">
           <span className="text-muted-foreground">Labour {money(totals.labour)} · Parts {money(totals.parts)} · Other {money(totals.other)}</span>
-          <span>All work <b className="tabular-nums">{money(totals.total)}</b></span>
+          <span>All quoted <b className="tabular-nums">{money(totals.total)}</b></span>
           <span className="text-success">Approved <b className="tabular-nums">{money(approved.total)}</b></span>
         </div>
       )}

@@ -35,8 +35,12 @@ export default function JobQC({ data, onChange }: { data: any; onChange: () => v
       if (pass) {
         if (job.status === "in_progress") must(await sb.from("garage_jobs").update({ status: "quality_check" }).eq("id", job.id));
         must(await sb.from("garage_jobs").update({ status: "ready" }).eq("id", job.id));
-        if (tell && job.customer?.phone) await wsApi("send-job", { job_id: job.id, kind: "ready" }).catch((e) => toast({ title: "Ready message not sent", description: e.message, variant: "destructive" }));
-        toast({ title: "Passed: the car is ready" });
+        let smsProblem = "";
+        if (tell && job.customer?.phone) await wsApi("send-job", { job_id: job.id, kind: "ready" }).catch((e) => { smsProblem = e?.message || "the message could not be sent"; });
+        // One toast: a second one would hide the first, and the owner must see when the SMS did not go.
+        toast(smsProblem
+          ? { title: "Passed: the car is ready, but the SMS did not go", description: smsProblem, variant: "destructive" }
+          : { title: "Passed: the car is ready" });
       } else {
         if (job.status === "quality_check") await sb.from("garage_jobs").update({ status: "in_progress" }).eq("id", job.id);
         toast({ title: "Sent back to the workshop" });

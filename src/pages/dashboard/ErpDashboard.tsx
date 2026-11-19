@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import GetStarted from "@/components/GetStarted";
+import GarageDashboardPanel from "@/garage/workshop/components/DashboardPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantId } from "@/hooks/useTenantId";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,7 +35,7 @@ function greeting() {
 export default function ErpDashboard() {
   const tenantId = useTenantId();
   const { role, profile } = useAuth() as any;
-  const firstName = String(profile?.display_name || "").trim().split(/s+/)[0] || "";
+  const firstName = String(profile?.display_name || "").trim().split(/\s+/)[0] || "";
   const [params, setParams] = useSearchParams();
   const view: View = VIEWS.some(([k]) => k === params.get("view")) ? (params.get("view") as View) : "overview";
   const setView = (v: View) => setParams(v === "overview" ? {} : { view: v }, { replace: true });
@@ -98,6 +99,8 @@ export default function ErpDashboard() {
       {view === "overview" && (
         <>
           <GetStarted data={home?.get_started ?? undefined} />
+          {/* Garage: today's money, cars in / ready / waiting, owed to and by the garage, alerts */}
+          <GarageDashboardPanel />
           <Overview lines={lines} loading={isLoading} fetching={isFetching} from={from} to={to} preset={preset} onPreset={onPreset}
             prevRevenue={home ? Number(home.prev_revenue) : null} home={home} books={books} year={year} onSales={() => setView("sales")} onMoney={() => setView("money")} />
         </>

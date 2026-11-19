@@ -63,7 +63,7 @@ export default function ModulesStore() {
   });
   const { data: sub } = useQuery({
     queryKey: ["modules-subscription"],
-    queryFn: async () => (await (supabase as any).from("subscriptions").select("plan_name, price, status, current_period_end, trial_ends_at, plans(all_modules, included_modules)").order("created_at", { ascending: false }).limit(1).maybeSingle()).data,
+    queryFn: async () => (await (supabase as any).from("subscriptions").select("plan_name, price, status, current_period_end, trial_ends_at, plans!plan_id(all_modules, included_modules)").order("created_at", { ascending: false }).limit(1).maybeSingle()).data,
   });
 
   // Every module this company ever switched on (my_modules lists only those on now): a used-up trial is not offered again.
