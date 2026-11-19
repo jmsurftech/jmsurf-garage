@@ -1,13 +1,15 @@
 /**
  * JMSURF Garage addresses.
  *
- *   garage.jmsurf.co.ke / www      website, pricing, sign-up, "find my company"
- *   app.garage.jmsurf.co.ke        sign in once, then go to your company
- *   admin.garage.jmsurf.co.ke       platform super admin
- *   <slug>.garage.jmsurf.co.ke     a company: staff workspace + customer portal
- *   a company's own domain      same as its subdomain (custom domains)
+ *   garage.jmsurf.co.ke / www      website, pricing, sign-up, legal (+ the database API paths)
+ *   app.garage.jmsurf.co.ke        the staff workspace: sign in, and the company comes from the
+ *                                  signed-in membership (switch company in the header)
+ *   admin.garage.jmsurf.co.ke      platform super admin (sys-garage.jmsurfsys.co.ke inside the hub)
+ *   <slug>.garage.jmsurf.co.ke     a company: workspace + its website and customer portal
+ *   a company's own domain         same as its subdomain (custom domains)
  *
  * Local development serves everything on one address with /<slug>/… paths.
+ * Links for staff (emails, SMS) go to app.; links for a garage's customers go to its own address.
  */
 export const ROOT_HOST = "garage.jmsurf.co.ke";
 /** The JMSURF SYSTEMS hub shows the super admin through this address (framed proxy). */
@@ -89,25 +91,42 @@ export function isPlatformHost(host: string = currentHost()): boolean {
   return host === `admin.${ROOT_HOST}` || host === HUB_PLATFORM_HOST;
 }
 
-/** The "sign in and go to your company" address. */
+/** The staff workspace address (app.): the company is the signed-in one. */
 export function isAppHost(host: string = currentHost()): boolean {
   return host === `app.${ROOT_HOST}`;
 }
 
-/** Absolute URL for a company, e.g. https://acme.garage.jmsurf.co.ke/login */
+/** Company screens use clean paths (no /<slug>/ prefix): a company address or app. */
+export function cleanPaths(): boolean {
+  return isSubdomainMode() || isAppHost();
+}
+
+/**
+ * Staff address for a company, e.g. https://app.garage.jmsurf.co.ke/login.
+ * The workspace on app. opens the signed-in company; `co` names the company for
+ * the sign-in hand-over (see companySwitch.acceptHandoff).
+ */
 export function tenantUrl(slug: string, path = "/"): string {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  if (isDevHost()) return `${window.location.origin}/${slug}${p}`;
+  if (FIXED_SHOP) return `${window.location.origin}${p}`;
+  return `https://app.${ROOT_HOST}${p}`;
+}
+
+/** A company's own address (website, customer portal, shop), e.g. https://acme.garage.jmsurf.co.ke/ */
+export function companyUrl(slug: string, path = "/"): string {
   const p = path.startsWith("/") ? path : `/${path}`;
   if (isDevHost()) return `${window.location.origin}/${slug}${p}`;
   return `https://${slug}.${ROOT_HOST}${p}`;
 }
 
 /**
- * In-app path for a company route. On a subdomain the slug is already in the
- * host, so paths stay clean; elsewhere (local) the slug prefix is kept.
+ * In-app path for a company route. On a company address or app. paths stay
+ * clean; elsewhere (local) the slug prefix is kept.
  */
 export function tenantPath(slug: string | null | undefined, path: string): string {
   const p = path.startsWith("/") ? path : `/${path}`;
-  if (isSubdomainMode() || !slug) return p;
+  if (cleanPaths() || !slug) return p;
   return `/${slug}${p}`;
 }
 
@@ -123,9 +142,9 @@ export const PLATFORM_ORIGIN = typeof window !== "undefined" && window.location.
 /** Kept for older screens: the generic sign-in address. */
 export const ERP_ORIGIN = APP_ORIGIN;
 
-/** True where the company workspace runs (company subdomain, custom domain, local). */
+/** True where the company workspace runs (app., company subdomain, custom domain, local). */
 export function isErpHost(host: string = currentHost()): boolean {
-  return getHostSlug(host) !== null || isLocal(host);
+  return getHostSlug(host) !== null || isAppHost(host) || isLocal(host);
 }
 /** True on the public website. */
 export function isSiteHost(host: string = currentHost()): boolean {

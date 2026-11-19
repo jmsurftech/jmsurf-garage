@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/hooks/useTenant";
 import { formatKES } from "@/lib/format";
-import { tenantUrl } from "@/lib/host";
+import { companyUrl } from "@/lib/host";
 import { DeliveryMap, directionsUrl } from "@/components/maps/Maps";
 import {
   ORDER_STATUS, type WaterOrder, useWaterOrders, useRiders, useOrderEvents, orderAction, chargeOrder, useOrderPrompt,
@@ -48,7 +48,7 @@ export default function WaterOrders({ view = "active" }: { view?: "active" | "do
   const today = new Date().toDateString();
   const paidToday = orders.filter((o) => o.status === "paid" && o.paid_at && new Date(o.paid_at).toDateString() === today);
   const open = orders.find((o) => o.id === openId) || null;
-  const portal = tenant?.slug ? tenantUrl(tenant.slug, "/") : null;
+  const portal = tenant?.slug ? companyUrl(tenant.slug, "/") : null;
   const paidAll = orders.filter((o) => o.status === "paid");
 
   if (isLoading) return <PageLoader label="Loading orders…" />;

@@ -32,14 +32,9 @@ const SHOP_ASSIGNABLE_ROLES = new Set([
   "cashier", "stock_manager", "rider", "sales_person", "packaging",
 ]);
 
-/** Login address for a company: its own subdomain when it has one. */
-async function loginUrlFor(tenantId) {
-  let url = `${process.env.SHOP_ORIGIN || "https://garage.jmsurf.co.ke"}/login`;
-  if (tenantId) {
-    const tenant = (await db(`tenants?id=eq.${tenantId}&select=slug&limit=1`)).data?.[0];
-    if (tenant?.slug) url = `${process.env.SHOP_ORIGIN || `https://${tenant.slug}.garage.jmsurf.co.ke`}/login`;
-  }
-  return url;
+/** Login address for staff: the workspace on app.garage.jmsurf.co.ke (one login, the company comes from the membership). */
+async function loginUrlFor(_tenantId) {
+  return `${process.env.SHOP_ORIGIN || process.env.APP_ORIGIN || "https://app.garage.jmsurf.co.ke"}/login`;
 }
 
 /** Emails a temporary password; the person chooses their own at first sign-in. */
@@ -817,7 +812,7 @@ async function connectDomain(req, res, body) {
   if (!HOST_RE.test(host) || host.length > 253) return sendJson(res, 400, { error: "Enter a domain like myshop.co.ke or order.myshop.co.ke" });
   // Only the platform's own addresses are refused. Any other domain (jmsurf.co.ke
   // included) is approved once its DNS points here, which only its owner can do.
-  if (/(^|\.)jmsurfgarage\.co\.ke$|\.sslip\.io$|\.nip\.io$/.test(host)) {
+  if (/(^|\.)garage\.jmsurf\.co\.ke$|\.sslip\.io$|\.nip\.io$/.test(host)) {
     return sendJson(res, 400, { error: "That is a JMSURF Garage address. Use your own domain, e.g. erp.yourcompany.co.ke" });
   }
   const existing = (await db(`tenant_domains?host=ilike.${encodeURIComponent(host)}&select=id,tenant_id,host,status&limit=1`)).data?.[0];

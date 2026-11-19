@@ -50,7 +50,7 @@ const RESERVED = new Set([
 /** Slug of <slug>.garage.jmsurf.co.ke, else null. */
 export function subdomainSlug(rawHost) {
   const host = String(rawHost || "").split(":")[0].trim().toLowerCase();
-  const m = host.match(/^([a-z0-9-]+)\.jmsurfgarage\.co\.ke$/);
+  const m = host.match(/^([a-z0-9-]+)\.garage\.jmsurf\.co\.ke$/);
   return m && !RESERVED.has(m[1]) ? m[1] : null;
 }
 

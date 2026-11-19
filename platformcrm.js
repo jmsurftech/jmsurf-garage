@@ -180,7 +180,8 @@ async function emailTicketReplies() {
     let detail = "";
     if (/@/.test(to)) {
       const slug = str(t.tenants?.slug);
-      const link = slug ? `https://${slug}.garage.jmsurf.co.ke/help?ticket=${m.ticket_id}` : "https://garage.jmsurf.co.ke/login";
+      // Staff work on app. (the company comes from their sign-in).
+      const link = slug ? `https://app.garage.jmsurf.co.ke/help?ticket=${m.ticket_id}` : "https://app.garage.jmsurf.co.ke/login";
       const subject = `Re: [Ticket #${t.number}] ${str(t.subject)}`;
       const text = `Hello ${str(t.opener_name).split(" ")[0] || "there"},
 

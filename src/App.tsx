@@ -16,7 +16,8 @@ import { lazyPage, registerRoutes } from "@/lib/lazyPage";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
-import { getHostSlug, isApexHost, isReservedSubdomain, tenantUrl, isDevHost, isPlatformHost, isAppHost, PLATFORM_ORIGIN, SITE_ORIGIN, ROOT_HOST } from "@/lib/host";
+import { getHostSlug, isApexHost, isReservedSubdomain, tenantUrl, isDevHost, isPlatformHost, isAppHost, PLATFORM_ORIGIN, SITE_ORIGIN, ROOT_HOST, APP_ORIGIN } from "@/lib/host";
+import RequireModule from "@/components/RequireModule";
 import { portal, getToken } from "@/lib/portalApi";
 import { mergeSite } from "@/lib/shopSite";
 import { setCurrency } from "@/lib/format";
@@ -44,12 +45,12 @@ const RESERVED_FIRST_SEGMENTS = new Set([
 
 /**
  * Which JMSURF Garage address this is (see lib/host.ts): the website, the super
- * admin (dash.), the company finder (app.), a company (subdomain / own domain)
- * or local development (everything).
+ * admin (admin.), the staff workspace (app.: sign in, then the company comes from
+ * the membership), a company (subdomain / own domain: workspace + its website and
+ * customer portal) or local development (everything, /<slug>/… paths).
  */
-// admin.<root> is an alias for the super admin on dash.<root> (the server redirects too;
-// this covers browsers whose cached copy of the website answers on admin.).
-if (typeof window !== "undefined" && window.location.hostname === `admin.${ROOT_HOST}`) {
+// The old dash.<root> super admin address moves to admin.<root>.
+if (typeof window !== "undefined" && window.location.hostname === `dash.${ROOT_HOST}`) {
   const p = window.location.pathname === "/" ? "/admin" : window.location.pathname;
   window.location.replace(PLATFORM_ORIGIN + p + window.location.search + window.location.hash);
 }
@@ -57,6 +58,15 @@ const PLATFORM_MODE = isPlatformHost();
 const APP_MODE = isAppHost();
 const DEV_MODE = isDevHost();
 const COMPANY_MODE = !!getHostSlug();
+/** Company screens on clean paths: a company address, or app. (the signed-in company). */
+const WORKSPACE_MODE = COMPANY_MODE || APP_MODE;
+
+/** app.<root>: signed in → the company's dashboard; otherwise sign in. */
+function AppRoot() {
+  const { user, loading } = useAuth();
+  if (loading) return <PageLoader />;
+  return user ? <Navigate to="/dashboard" replace /> : <Login />;
+}
 
 /** Sends the browser to the same path on the other address (website ↔ ERP). */
 function GoTo({ origin }: { origin: string }) {
@@ -269,6 +279,7 @@ const ResetPassword = lazyPage(() => import("@/pages/ResetPassword"));
 const Landing = lazyPage(() => import("@/pages/Landing"));
 const Solution = lazyPage(() => import("@/pages/Solution"));
 const Solutions = lazyPage(() => import("@/pages/Solutions"));
+const Pricing = lazyPage(() => import("@/pages/Pricing"));
 const DemoStart = lazyPage(() => import("@/pages/DemoStart"));
 const Legal = lazyPage(() => import("@/pages/Legal"));
 const Status = lazyPage(() => import("@/pages/Status"));
@@ -858,16 +869,16 @@ const tenantRoutes = [
   { path: "sales/samples", element: <P><SamplesPage /></P> },
   { path: "branches", element: <P><BranchesPage /></P> },
   { path: "accounting", element: <P><Navigate to="/accounting/chart-of-accounts" replace /></P> },
-  { path: "accounting/chart-of-accounts", element: <P><ChartOfAccounts /></P> },
-  { path: "accounting/chart-of-accounts/:id", element: <P><AccountLedger /></P> },
-  { path: "accounting/journals", element: <P><ManualJournals /></P> },
-  { path: "accounting/banking", element: <P><Banking /></P> },
-  { path: "accounting/banking/:id", element: <P><Banking /></P> },
-  { path: "accounting/statements", element: <P><FinancialStatements /></P> },
-  { path: "accounting/opening-balances", element: <P><OpeningBalances /></P> },
-  { path: "accounting/budgets", element: <P><Budgets /></P> },
-  { path: "accounting/lock", element: <P><TransactionLocking /></P> },
-  { path: "accounting/vat-return", element: <P><VatReturnPage /></P> },
+  { path: "accounting/chart-of-accounts", element: <P><RequireModule module="accounting"><ChartOfAccounts /></RequireModule></P> },
+  { path: "accounting/chart-of-accounts/:id", element: <P><RequireModule module="accounting"><AccountLedger /></RequireModule></P> },
+  { path: "accounting/journals", element: <P><RequireModule module="accounting"><ManualJournals /></RequireModule></P> },
+  { path: "accounting/banking", element: <P><RequireModule module="accounting"><Banking /></RequireModule></P> },
+  { path: "accounting/banking/:id", element: <P><RequireModule module="accounting"><Banking /></RequireModule></P> },
+  { path: "accounting/statements", element: <P><RequireModule module="accounting"><FinancialStatements /></RequireModule></P> },
+  { path: "accounting/opening-balances", element: <P><RequireModule module="accounting"><OpeningBalances /></RequireModule></P> },
+  { path: "accounting/budgets", element: <P><RequireModule module="accounting"><Budgets /></RequireModule></P> },
+  { path: "accounting/lock", element: <P><RequireModule module="accounting"><TransactionLocking /></RequireModule></P> },
+  { path: "accounting/vat-return", element: <P><RequireModule module="accounting"><VatReturnPage /></RequireModule></P> },
   { path: "companies", element: <P><Companies /></P> },
   { path: "apps/studio", element: <P><Studio /></P> },
   { path: "notebook", element: <P><NotebookPage /></P> },
@@ -897,7 +908,7 @@ const App = () => (
             {/* Home of each address */}
             <Route path="/" element={
               PLATFORM_MODE ? <Navigate to="/admin" replace />
-                : APP_MODE ? <Login />
+                : APP_MODE ? <AppRoot />
                   : COMPANY_MODE ? <CompanyRoot />
                     : <Landing />
             } />
@@ -932,7 +943,7 @@ const App = () => (
             <Route path="/terms" element={<Legal />} />
             <Route path="/privacy" element={<Legal />} />
             <Route path="/status" element={<Status />} />
-            <Route path="/pricing" element={<Landing />} />
+            <Route path="/pricing" element={<Pricing />} />
             <Route path="/features" element={<Landing />} />
             <Route path="/solutions/:key" element={<Solution />} />
             <Route path="/solutions" element={<Solutions />} />
@@ -952,9 +963,9 @@ const App = () => (
             <Route path="/pay/:token" element={<PayInvoice />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
-            {/* Company address: clean, slug-free routes */}
-            {COMPANY_MODE && <Route path="/pos/display/:sessionId" element={<CustomerDisplay />} />}
-            {COMPANY_MODE && tenantRoutes.map(r => (
+            {/* Company address or app.: clean, slug-free routes */}
+            {WORKSPACE_MODE && <Route path="/pos/display/:sessionId" element={<CustomerDisplay />} />}
+            {WORKSPACE_MODE && tenantRoutes.map(r => (
               <Route key={`host-${r.path}`} path={`/${r.path}`} element={r.element} />
             ))}
             <Route path="/pos/display/local/:sessionId" element={<CustomerDisplay />} />
@@ -990,8 +1001,8 @@ const App = () => (
             ))}
             {DEV_MODE && <Route path="/:slug" element={<TenantSlugRedirect />} />}
 
-            {/* Company pages opened on the website or app address: sign in first */}
-            {!COMPANY_MODE && !DEV_MODE && <Route path="/dashboard" element={<Navigate to="/login" replace />} />}
+            {/* Company pages opened on the website: the workspace runs on app. */}
+            {!WORKSPACE_MODE && !DEV_MODE && <Route path="/dashboard" element={<GoTo origin={APP_ORIGIN} />} />}
 
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cacheTenant, clearCachedBusinessSettings, getCachedTenant, wipeAllOfflineCaches } from "@/lib/offlineDb";
-import { getHostSlug, isSubdomainMode, tenantUrl } from "@/lib/host";
+import { cleanPaths, getHostSlug, isAppHost, isSubdomainMode, tenantUrl } from "@/lib/host";
 import { goToCompany } from "@/lib/companySwitch";
 
 /**
@@ -58,6 +58,8 @@ const RESERVED = ["admin", "whats-new", "login", "register", "reset-password", "
 function getSlugFromPath() {
   const hostSlug = getHostSlug();
   if (hostSlug) return hostSlug;
+  // app.: the company comes from the signed-in membership, never from the path.
+  if (isAppHost()) return null;
   const parts = window.location.pathname.split("/").filter(Boolean);
   if (parts.length === 0) return null;
   const first = parts[0].toLowerCase();
@@ -297,7 +299,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 /** Get the login path for the current tenant */
 export function useTenantLoginPath() {
   const { tenant } = useTenant();
-  if (isSubdomainMode()) return "/login";
+  if (cleanPaths()) return "/login";
   const pathParts = window.location.pathname.split("/").filter(Boolean);
   if (pathParts.length >= 1) {
     const urlSlug = pathParts[0];
