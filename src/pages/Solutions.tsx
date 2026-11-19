@@ -11,6 +11,8 @@ import { PUBLIC_MODULES as MODULES, MODULE_CATEGORIES, type ModuleCategory } fro
 import { Orbs, GridGlow } from "@/components/brand/Orbs";
 import { Nav, Footer, FinalCta, Eyebrow, Hl, CTA, useSiteContact, WhatsAppButton } from "@/pages/Landing";
 import { track } from "@/lib/tracking";
+import GaragePhoto from "@/components/landing/GaragePhoto";
+import { MODULE_PHOTOS, PHOTOS } from "@/lib/photos";
 import { SOLUTIONS_META } from "@/seo/meta";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +53,12 @@ export default function Solutions() {
               Garage Core is in every plan. Switch on any other module from inside your workspace, each free for 14 days, and it shares your customers, vehicles, parts and invoices from the first minute.
             </motion.p>
           </div>
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.35 }}
+            className="relative mx-auto mt-10 hidden max-w-6xl grid-cols-4 gap-3 px-4 sm:grid sm:px-6">
+            {[PHOTOS.workshop, PHOTOS.spares, PHOTOS.yard, PHOTOS.wash].map((ph, i) => (
+              <GaragePhoto key={ph.name} photo={ph} sizes="25vw" className={cn("aspect-[4/3] rounded-3xl ring-1 ring-border", i % 2 && "translate-y-4")} />
+            ))}
+          </motion.div>
         </section>
 
         <section className="relative pb-24">
@@ -74,7 +82,11 @@ export default function Solutions() {
                   <Link to={`/solutions/${m.key}`} onClick={() => track("ViewContent", { content_name: m.key })}
                     className="group relative flex h-full flex-col overflow-hidden rounded-[28px] border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_30px_60px_-30px_rgba(16,18,24,.45)]">
                     <span aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-25 blur-3xl transition-opacity duration-500 group-hover:opacity-50" style={{ background: m.color }} />
-                    <div className="relative flex items-start justify-between gap-3">
+                    {MODULE_PHOTOS[m.key] && (
+                      <GaragePhoto photo={MODULE_PHOTOS[m.key]} sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                        className="-mx-6 -mt-6 mb-[-1.5rem] aspect-[16/8]" imgClassName="transition-transform duration-700 group-hover:scale-105" />
+                    )}
+                    <div className={cn("relative flex items-start justify-between gap-3", MODULE_PHOTOS[m.key] && "items-end")}>
                       <span className="flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6" style={{ background: m.color, boxShadow: `0 12px 24px -12px ${m.color}` }}>
                         <m.icon className="h-6 w-6" />
                       </span>

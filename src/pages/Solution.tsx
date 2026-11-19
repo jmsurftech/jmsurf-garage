@@ -12,6 +12,8 @@ import { PUBLIC_MODULES as MODULES } from "@/lib/modules";
 import { SUITE_AUDIENCE, suiteFaqs } from "@/lib/siteFacts";
 import { suiteMeta } from "@/seo/meta";
 import SuiteVisual from "@/components/landing/SuiteVisual";
+import GaragePhoto from "@/components/landing/GaragePhoto";
+import { MODULE_PHOTOS } from "@/lib/photos";
 import { Orbs } from "@/components/brand/Orbs";
 import { Nav, Footer, FinalCta, Reveal, Eyebrow, Hl, CTA, useSiteContact, WhatsAppButton } from "@/pages/Landing";
 import { track } from "@/lib/tracking";
@@ -33,6 +35,7 @@ export default function Solution() {
   }, [m]);
   if (!m) return <Navigate to="/solutions" replace />;
   const short = m.name.replace(/^JMSURF /, "");
+  const photo = MODULE_PHOTOS[m.key];
   const idx = MODULES.findIndex((x) => x.key === m.key);
   const prev = MODULES[(idx - 1 + MODULES.length) % MODULES.length], next = MODULES[(idx + 1) % MODULES.length];
   const faqs = suiteFaqs(m);
@@ -80,7 +83,15 @@ export default function Solution() {
               </p>
             </div>
             <motion.div initial={{ opacity: 0, y: 40, rotate: -1 }} animate={{ opacity: 1, y: 0, rotate: 0 }} transition={{ duration: 0.9, delay: 0.2 }}>
-              <SuiteVisual m={m} />
+              {photo ? (
+                <div className="relative">
+                  <div aria-hidden className="absolute -inset-4 rounded-[2.5rem] blur-2xl" style={{ background: `linear-gradient(135deg, ${m.color}40, transparent 60%)` }} />
+                  <GaragePhoto photo={photo} eager sizes="(min-width: 1024px) 45vw, 100vw" className="relative aspect-[4/3] rounded-[2rem] shadow-2xl ring-1 ring-border" />
+                  <span className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-2xl border border-border/70 bg-card/95 px-3.5 py-2 font-display text-sm font-bold shadow-xl backdrop-blur">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl text-white" style={{ background: m.color }}><m.icon className="h-4 w-4" /></span>{short}
+                  </span>
+                </div>
+              ) : <SuiteVisual m={m} />}
             </motion.div>
           </div>
         </section>

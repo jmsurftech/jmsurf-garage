@@ -10,6 +10,9 @@ import { useCatalogue, useShopCategories, useSite, shopApi, visitorId } from "..
 import PageHead from "@/components/PageHead";
 import { BrandOrb } from "@/components/Orb";
 import { cn } from "@/lib/utils";
+import { PHOTOS, photoSrc } from "@/lib/photos";
+
+const SHOP_FALLBACK_PHOTOS = [PHOTOS.spares, PHOTOS.parts, PHOTOS.garage, PHOTOS.engine, PHOTOS.wheel, PHOTOS.lift, PHOTOS.inspect];
 
 const CAT_ICON: [RegExp, any][] = [[/food/i, Utensils], [/dog/i, Dog], [/cat/i, Cat], [/fish|aqua/i, Fish], [/bird/i, Bird], [/small|rabbit/i, Rabbit], [/medic|health/i, Pill], [/groom/i, Scissors], [/toy/i, Bone], [/recover|care/i, HeartPulse], [/feed/i, Utensils], [/restrain/i, ShieldCheck], [/access/i, Sparkles]];
 const iconFor = (name: string) => CAT_ICON.find(([r]) => r.test(name))?.[1] || Package;
@@ -24,7 +27,10 @@ export default function Home() {
   // Featured first, then products with photos, newest first.
   const ordered = [...products].sort((a, b) => Number(b.featured) - Number(a.featured) || Number(!!b.images[0]) - Number(!!a.images[0]) || b.created_at.localeCompare(a.created_at));
   const shown = ordered.slice(0, site.products.count);
-  const heroPics = site.hero.images.length ? site.hero.images : withPics.slice(0, 6).map((p) => p.images[0]);
+  // The garage's own hero pictures, else its product photos, else real workshop photos until it adds its own.
+  const heroPics = site.hero.images.length ? site.hero.images
+    : withPics.length ? withPics.slice(0, 6).map((p) => p.images[0])
+    : SHOP_FALLBACK_PHOTOS.map((ph) => photoSrc(ph, "sm"));
   const counts = new Map<string, number>();
   items.forEach((i) => i.category && counts.set(i.category, (counts.get(i.category) || 0) + 1));
   const shownCats = cats.filter((c) => counts.get(c.name));

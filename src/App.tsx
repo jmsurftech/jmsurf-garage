@@ -280,6 +280,7 @@ const Landing = lazyPage(() => import("@/pages/Landing"));
 const Solution = lazyPage(() => import("@/pages/Solution"));
 const Solutions = lazyPage(() => import("@/pages/Solutions"));
 const Pricing = lazyPage(() => import("@/pages/Pricing"));
+const PhotoCredits = lazyPage(() => import("@/pages/PhotoCredits"));
 const DemoStart = lazyPage(() => import("@/pages/DemoStart"));
 const Legal = lazyPage(() => import("@/pages/Legal"));
 const Status = lazyPage(() => import("@/pages/Status"));
@@ -943,6 +944,7 @@ const App = () => (
             <Route path="/terms" element={<Legal />} />
             <Route path="/privacy" element={<Legal />} />
             <Route path="/status" element={<Status />} />
+            <Route path="/photo-credits" element={<PhotoCredits />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/features" element={<Landing />} />
             <Route path="/solutions/:key" element={<Solution />} />

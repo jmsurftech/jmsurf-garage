@@ -20,7 +20,7 @@ export const HOME = {
     { t: "Busy workshop", d: "Bay board, inspections with photos and a phone view for every mechanic." },
     { t: "Dealer service centre", d: "Branches, payroll, accounting and insurance work in one system." },
     { t: "Spares shop", d: "A fast counter till, wholesale price lists and parts stock across stores." },
-    { t: "Importer", d: "Shipments, duty and clearing spread into the true landed cost of each part or car." },
+    { t: "Importer and car yard", d: "Landed cost of every part or car, then cars in stock with repairs, deposits, sales and logbook transfer." },
     { t: "Body shop", d: "Panel and paint stages, photos for the insurer and the excess billed to the customer." },
     { t: "Car wash", d: "A queue by number plate, packages, attendants' commission and M-Pesa at the bay." },
     { t: "Fleets, towing and car hire", d: "Fleet contracts with a portal, tow call-outs by distance and cars out on hire." },

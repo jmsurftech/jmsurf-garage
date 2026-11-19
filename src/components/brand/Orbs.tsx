@@ -16,10 +16,10 @@ export function Orbs({ className, intensity = "normal" }: { className?: string; 
   );
 }
 
-/** A faint grid that fades out towards the edges. */
+/** A soft glow in the brand colour behind a section (owner rule: no square-grid backgrounds anywhere). */
 export function GridGlow({ className }: { className?: string }) {
   return (
-    <div aria-hidden className={cn("pointer-events-none absolute inset-0 opacity-[0.5] [background-image:linear-gradient(hsl(var(--border))_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border))_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_72%)]", className)} />
+    <div aria-hidden className={cn("pointer-events-none absolute inset-0 [background:radial-gradient(60%_50%_at_50%_0%,hsl(var(--primary)/0.10),transparent_70%),radial-gradient(40%_40%_at_85%_60%,hsl(var(--primary)/0.06),transparent_70%)]", className)} />
   );
 }
 

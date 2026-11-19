@@ -136,7 +136,7 @@ function footer(): string {
   const cols: [string, [string, string][]][] = [
     ["Product", [["Modules", "/solutions"], ["Pricing", "/pricing"], ["How it works", "/#how"], ["Start free", "/register"], ["Sign in", "/login"]]],
     ["Modules", [["Garage Core", "/solutions/garage_core"], ["Workshop Pro", "/solutions/workshop_pro"], ["Parts & Stock", "/solutions/inventory"], ["Body & Paint", "/solutions/body_paint"], ["Car Wash", "/solutions/car_wash"], ["All modules", "/solutions"]]],
-    ["Legal", [["Terms of service", "/terms"], ["Privacy policy", "/privacy"], ["System status", "/status"]]],
+    ["Legal", [["Terms of service", "/terms"], ["Privacy policy", "/privacy"], ["System status", "/status"], ["Photo credits", "/photo-credits"]]],
   ];
   return `<footer class="border-t border-border bg-card px-4 py-12 text-sm text-muted-foreground sm:px-6"><div class="mx-auto max-w-7xl">`
     + `<p class="font-display font-bold text-foreground">JMSURF Garage</p><p class="mt-2 max-w-xs">Garage management software for Kenya, from the roadside fundi to the dealer.</p>`

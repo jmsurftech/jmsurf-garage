@@ -15,7 +15,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { DashLogo, DashMark } from "@/components/brand/DashLogo";
 import { Orbs } from "@/components/brand/Orbs";
-import SuiteVisual from "@/components/landing/SuiteVisual";
+import GaragePhoto from "@/components/landing/GaragePhoto";
+import { PHOTOS, WHO_PHOTOS } from "@/lib/photos";
 import { MODULE_BY_KEY, MODULE_CATEGORIES, PUBLIC_MODULES } from "@/lib/modules";
 import { kes } from "@/lib/garagePlans";
 import { useGarageCatalogue } from "@/hooks/useGarageCatalogue";
@@ -137,7 +138,6 @@ export function Nav() {
 /* ------------------------------------------------------------------ hero */
 
 function Hero() {
-  const core = MODULE_BY_KEY.garage_core;
   return (
     <section className="relative overflow-hidden bg-background pb-16 pt-28 sm:pb-24 sm:pt-36">
       <Orbs intensity="subtle" />
@@ -164,11 +164,39 @@ function Hero() {
             ))}
           </ul>
         </div>
-        <motion.div initial={{ opacity: 0, y: 36 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.85, delay: 0.2 }}>
-          <SuiteVisual m={core} />
+        <motion.div initial={{ opacity: 0, y: 36 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.85, delay: 0.2 }} className="relative">
+          <HeroPhoto />
         </motion.div>
       </div>
     </section>
+  );
+}
+
+/** The hero picture: a real workshop with the job's progress floating over it. */
+function HeroPhoto() {
+  const chips: [typeof ClipboardCheck, string, string, string][] = [
+    [ClipboardCheck, "Job card", "Inspection done, photos added", "left-3 top-5 sm:-left-6 sm:top-8"],
+    [Receipt, "eTIMS invoice", "Signed for KRA", "right-3 top-1/2 sm:-right-6"],
+    [BellRing, "Car ready", "SMS sent to the customer", "bottom-5 left-6 sm:-bottom-5 sm:left-10"],
+  ];
+  return (
+    <div className="relative">
+      <div aria-hidden className="absolute -inset-4 rounded-[2.5rem] bg-gradient-to-br from-primary/25 via-transparent to-primary/10 blur-2xl" />
+      <GaragePhoto photo={PHOTOS.hero} eager sizes="(min-width: 1024px) 45vw, 100vw"
+        className="relative aspect-[4/3] rounded-[2rem] shadow-2xl shadow-primary/20 ring-1 ring-border sm:aspect-[5/4]" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 rounded-[2rem] bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+      {chips.map(([Icon, t, d, pos], i) => (
+        <motion.div key={t} initial={{ opacity: 0, y: 14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.6, delay: 0.55 + i * 0.18 }}
+          className={cn("absolute flex max-w-[15rem] items-center gap-3 rounded-2xl border border-border/70 bg-card/95 px-3.5 py-2.5 shadow-xl backdrop-blur", pos)}>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="h-[18px] w-[18px]" /></span>
+          <span className="min-w-0">
+            <span className="block font-display text-sm font-bold leading-tight text-foreground">{t}</span>
+            <span className="block text-xs text-muted-foreground">{d}</span>
+          </span>
+          <Check className="h-4 w-4 shrink-0 text-emerald-600" />
+        </motion.div>
+      ))}
+    </div>
   );
 }
 
@@ -185,10 +213,18 @@ function Who() {
           {HOME.who.map((w, i) => {
             const Icon = WHO_ICONS[i % WHO_ICONS.length];
             return (
-              <Reveal key={w.t} delay={Math.min(i, 6) * 0.04} className="rounded-3xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:shadow-xl">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Icon className="h-5 w-5" /></span>
-                <h3 className="mt-4 font-display text-lg font-bold">{w.t}</h3>
-                <p className="mt-1.5 text-[15px] leading-relaxed text-muted-foreground">{w.d}</p>
+              <Reveal key={w.t} delay={Math.min(i, 6) * 0.04} className="group overflow-hidden rounded-3xl border border-border bg-card transition-all hover:-translate-y-1 hover:shadow-xl">
+                {WHO_PHOTOS[i] && (
+                  <div className="relative">
+                    <GaragePhoto photo={WHO_PHOTOS[i]} sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="aspect-[16/9]" imgClassName="transition-transform duration-700 group-hover:scale-105" />
+                    <span className="absolute -bottom-5 left-6 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-card"><Icon className="h-5 w-5" /></span>
+                  </div>
+                )}
+                <div className={cn("p-6", WHO_PHOTOS[i] && "pt-8")}>
+                  {!WHO_PHOTOS[i] && <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Icon className="h-5 w-5" /></span>}
+                  <h3 className="font-display text-lg font-bold">{w.t}</h3>
+                  <p className="mt-1.5 text-[15px] leading-relaxed text-muted-foreground">{w.d}</p>
+                </div>
               </Reveal>
             );
           })}
@@ -207,7 +243,15 @@ function Flow() {
     <section id="how" className="scroll-mt-20 bg-background py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <SectionTitle eyebrow="How it works" title={<Title text={HOME_HEADINGS.flow} highlight={3} />} text="Garage Core follows every car through your gate, the same way every time." />
-        <ol className="relative mx-auto mt-12 max-w-3xl space-y-4">
+        <div className="mx-auto mt-12 grid max-w-3xl items-start gap-10 lg:max-w-none lg:grid-cols-[1fr_1.1fr]">
+        <div className="hidden lg:sticky lg:top-24 lg:grid lg:gap-4">
+          <GaragePhoto photo={PHOTOS.inspect} sizes="40vw" className="aspect-[4/3] rounded-3xl ring-1 ring-border" />
+          <div className="grid grid-cols-2 gap-4">
+            <GaragePhoto photo={PHOTOS.wheel} sizes="20vw" className="aspect-square rounded-3xl ring-1 ring-border" />
+            <GaragePhoto photo={PHOTOS.engine} sizes="20vw" className="aspect-square rounded-3xl ring-1 ring-border" />
+          </div>
+        </div>
+        <ol className="relative w-full space-y-4">
           <span aria-hidden className="absolute bottom-6 left-[1.4rem] top-6 w-px bg-gradient-to-b from-primary/60 via-primary/20 to-transparent" />
           {HOME.flow.map((s, i) => {
             const Icon = FLOW_ICONS[i % FLOW_ICONS.length];
@@ -225,6 +269,7 @@ function Flow() {
             );
           })}
         </ol>
+        </div>
       </div>
     </section>
   );
@@ -239,6 +284,15 @@ function Kenya() {
     <section className="bg-muted/40 py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <SectionTitle eyebrow="M-Pesa · KRA eTIMS · SMS" title={<Title text={HOME_HEADINGS.kenya} highlight={3} />} />
+        <Reveal className="relative mt-10 overflow-hidden rounded-[2rem] ring-1 ring-border">
+          <GaragePhoto photo={PHOTOS.fundi} sizes="(min-width: 1280px) 1216px, 100vw" className="aspect-[4/3] sm:aspect-[21/8]" />
+          <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent sm:bg-gradient-to-r sm:from-black/75 sm:via-black/35" />
+          <div className="absolute inset-y-0 left-0 flex max-w-lg flex-col justify-end p-6 text-white sm:justify-center sm:p-10">
+            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-white/75">Made in Nairobi</p>
+            <p className="mt-2 font-display text-2xl font-extrabold leading-tight sm:text-4xl">Built for how Kenyan garages really work.</p>
+            <p className="mt-2 hidden text-white/80 sm:block">From the fundi at the roadside to the dealer with branches: M-Pesa, eTIMS and SMS on any phone.</p>
+          </div>
+        </Reveal>
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {HOME.kenya.map((k, i) => {
             const Icon = KENYA_ICONS[i % KENYA_ICONS.length];
@@ -370,6 +424,8 @@ export function Faq({ items, title, id }: { items: [string, string][]; title: Re
 export function FinalCta() {
   return (
     <section className="relative overflow-hidden bg-background py-20 text-center sm:py-28">
+      <GaragePhoto photo={PHOTOS.workshop} sizes="100vw" className="!absolute inset-0 opacity-[0.16] dark:opacity-25" />
+      <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-background via-background/70 to-background" />
       <Orbs intensity="strong" />
       <div className="relative mx-auto max-w-3xl px-4">
         <Reveal><DashMark className="mx-auto h-16 w-16" /></Reveal>
@@ -388,7 +444,7 @@ export function Footer({ phone, email }: { phone: string; email: string }) {
   const cols: [string, [string, string][]][] = [
     ["Product", [["Modules", "/solutions"], ["Pricing", "/pricing"], ["How it works", "/#how"], ["Start free", "/register"], ["Sign in", "https://app.garage.jmsurf.co.ke/login"]]],
     ["Modules", [["Garage Core", "/solutions/garage_core"], ["Workshop Pro", "/solutions/workshop_pro"], ["Parts & Stock", "/solutions/inventory"], ["Body & Paint", "/solutions/body_paint"], ["Car Wash", "/solutions/car_wash"], ["All modules", "/solutions"]]],
-    ["Legal", [["Terms of service", "/terms"], ["Privacy policy", "/privacy"], ["System status", "/status"]]],
+    ["Legal", [["Terms of service", "/terms"], ["Privacy policy", "/privacy"], ["System status", "/status"], ["Photo credits", "/photo-credits"]]],
   ];
   return (
     <footer className="border-t border-border bg-card pb-10 pt-14 text-muted-foreground">

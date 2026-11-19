@@ -1,19 +1,25 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import {
-  Calculator, Receipt, PiggyBank, Landmark, Wallet, BarChart3, FileSpreadsheet, Coins, CreditCard, Smartphone, TrendingUp,
-  Percent, Banknote, ScrollText, Scale, PieChart, type LucideIcon,
-} from "lucide-react";
 import { DashMark } from "@/components/brand/DashLogo";
+import { AUTH_PHOTOS, photoSrcSet } from "@/lib/photos";
 import { Orbs, GridGlow } from "@/components/brand/Orbs";
 import { cn } from "@/lib/utils";
 import PoweredBy from "@/components/PoweredBy";
 
-/** Where each accounting icon floats around the card: [x, y, icon, size, delay, rotate, duration]. */
-const ICONS: [string, string, LucideIcon, number, number, number, number][] = [
-  ["left-[7%]", "top-[14%]", Calculator, 60, 0, -8, 10], ["left-[11%]", "top-[70%]", PiggyBank, 54, 1.6, 6, 12], ["left-[24%]", "top-[40%]", Receipt, 42, 2.4, -4, 13],
-  ["right-[7%]", "top-[12%]", BarChart3, 60, 0.8, 7, 11], ["right-[11%]", "top-[68%]", Wallet, 54, 2, -7, 12], ["right-[24%]", "top-[42%]", Smartphone, 42, 3, 5, 14],
-];
+/** The day's workshop photo behind every sign-in card; md and up only (a picture element skips it on phones). */
+function AuthBackdrop() {
+  const ph = AUTH_PHOTOS[new Date().getDate() % AUTH_PHOTOS.length];
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 hidden md:block">
+      <picture>
+        <source media="(min-width: 768px)" srcSet={photoSrcSet(ph)} sizes="100vw" />
+        <img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="" className="h-full w-full object-cover" style={ph.focus ? { objectPosition: ph.focus } : undefined} />
+      </picture>
+      {/* Tinted with the page colour so the soft card still reads clearly in light and dark. */}
+      <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, color-mix(in srgb, var(--sa-bg, hsl(var(--background))) 84%, transparent), color-mix(in srgb, var(--sa-bg, hsl(var(--background))) 62%, transparent) 50%, color-mix(in srgb, var(--sa-bg, hsl(var(--background))) 88%, transparent))" }} />
+    </div>
+  );
+}
 
 /**
  * Every sign-in style page (company and platform sign-in, sign-up, password
@@ -50,16 +56,8 @@ export default function AuthShell({
         <span className="orb-pulse absolute h-72 w-72 rounded-full bg-info/15 blur-3xl" style={{ animationDelay: "2s", marginLeft: "-30rem", marginTop: "20rem" }} />
         <span className="orb-pulse absolute h-80 w-80 rounded-full bg-primary/20 blur-3xl" style={{ animationDelay: "4s", marginLeft: "30rem", marginTop: "-22rem" }} />
       </div>
-      <div aria-hidden className="pointer-events-none absolute inset-0 hidden md:block">
-        {ICONS.map(([x, y, Icon, size, delay, rot, dur], i) => (
-          <div key={i} className={cn("absolute", x, y)}>
-            <span className="auth-float flex items-center justify-center rounded-2xl border border-border/70 bg-card/80 text-primary shadow-lg shadow-primary/10 backdrop-blur"
-              style={{ width: size, height: size, ["--r" as string]: `${rot}deg`, ["--d" as string]: `${dur}s`, ["--delay" as string]: `${delay}s`, opacity: 0.85 } as React.CSSProperties}>
-              <Icon style={{ width: size * 0.45, height: size * 0.45 }} strokeWidth={1.8} />
-            </span>
-          </div>
-        ))}
-      </div>
+      {/* A real workshop behind the card (tablet and up, so phones skip the download). */}
+      <AuthBackdrop />
 
       <div className={cn("soft-auth-card relative w-full rounded-[32px] border border-border/70 bg-card/95 p-7 shadow-2xl shadow-primary/15 backdrop-blur-xl sm:p-11", wide ? "max-w-3xl" : "max-w-xl")}>
         <div className="mb-7 flex flex-col items-center text-center">
