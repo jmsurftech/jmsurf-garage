@@ -15,6 +15,10 @@ import { toast } from "sonner";
 import { PagedRows } from "@/components/Pager";
 type Mode = "sbx" | "prod";
 
+/** Garage defaults (same as etims.js DEFAULT_*_CLASS): starting points, to be confirmed with KRA. */
+const GARAGE_SERVICE_CLASS = "7818150000";
+const GARAGE_GOODS_CLASS = "2517000000";
+
 /**
  * System → KRA eTIMS. One page: the connection at the top, then (once connected) the KRA activity.
  * Test mode signs in KRA's sandbox and needs no approval; Live needs KRA to approve the device first.
@@ -187,12 +191,13 @@ export default function EtimsTab({ canManage }: { canManage: boolean }) {
           </button>
           {defaults && (
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
-              <Field label="Goods" hint={`Used for goods without a classification · ${f.goods_cls_cd || "5059690800"}`}>
-                <ClassPicker value={f.goods_cls_cd || ""} env={mode} disabled={!canManage} placeholder={f.goods_cls_cd || "5059690800"} onChange={(v) => setF({ ...f, goods_cls_cd: v })} />
+              <Field label="Parts and goods" hint={`Used for parts without a classification · ${f.goods_cls_cd || `${GARAGE_GOODS_CLASS} (vehicle components, confirm with KRA)`}`}>
+                <ClassPicker value={f.goods_cls_cd || ""} env={mode} disabled={!canManage} placeholder={f.goods_cls_cd || GARAGE_GOODS_CLASS} onChange={(v) => setF({ ...f, goods_cls_cd: v })} />
               </Field>
-              <Field label="Services" hint={`Used for services without a classification · ${f.service_cls_cd || "8111150100"}`}>
-                <ClassPicker value={f.service_cls_cd || ""} env={mode} disabled={!canManage} placeholder={f.service_cls_cd || "8111150100"} onChange={(v) => setF({ ...f, service_cls_cd: v })} />
+              <Field label="Labour and services" hint={`Used for labour and services without a classification · ${f.service_cls_cd || `${GARAGE_SERVICE_CLASS} (vehicle repair and maintenance, confirm with KRA)`}`}>
+                <ClassPicker value={f.service_cls_cd || ""} env={mode} disabled={!canManage} placeholder={f.service_cls_cd || GARAGE_SERVICE_CLASS} onChange={(v) => setF({ ...f, service_cls_cd: v })} />
               </Field>
+              <p className="sm:col-span-2 text-xs text-muted-foreground">The suggested codes are a starting point: confirm the right classes with KRA (or your tax agent) before you sign live invoices, then set them here or on each item.</p>
             </div>
           )}
           {canManage && <div className="mt-4"><button onClick={() => void persist()} className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">Save settings</button></div>}
