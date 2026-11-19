@@ -7,7 +7,7 @@ export type Section = { h: string; p: (string | string[])[] };
 export function termsSections(email: string): Section[] {
   return [
     { h: "1. Who we are", p: [
-      "JMSURF Garage is a cloud business management service provided by JMSURF Technologies, Devan Plaza, 5th Floor, Westlands, Nairobi, Kenya (\"we\", \"us\"). JMSURF TECHNOLOGIES LTD is registered with the Office of the Data Protection Commissioner (ODPC) as a Data Controller and Data Processor, registration no. 194-9812-26EB. These terms apply to everyone who creates a business or uses one (\"you\").",
+      "JMSURF Garage is a cloud garage management service provided by JMSURF Technologies, Devan Plaza, 5th Floor, Westlands, Nairobi, Kenya (\"we\", \"us\"). JMSURF TECHNOLOGIES LTD is registered with the Office of the Data Protection Commissioner (ODPC) as a Data Controller and Data Processor, registration no. 194-9812-26EB. These terms apply to everyone who creates a business or uses one (\"you\").",
     ] },
     { h: "2. Your account", p: [
       "You must give accurate details when you sign up and keep your password private. You are responsible for everything done under your company, including by staff you add.",

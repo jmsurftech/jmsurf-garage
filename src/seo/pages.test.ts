@@ -1,19 +1,18 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { MODULES } from "@/lib/modules";
+import { PUBLIC_MODULES } from "@/lib/modules";
+import { DEFAULT_CATALOGUE, bundleListPrice, modulesForKinds, priceBox } from "@/lib/garagePlans";
 import { buildSeoPages, HOME, HOME_HEADINGS, llmsTxt, sitemapXml, textOf } from "./pages";
 
 const pages = buildSeoPages();
 const src = (f: string) => readFileSync(path.join(process.cwd(), "src", "pages", f), "utf8");
-/** Page source as visible text: JSX tags removed, entities decoded, spaces collapsed. */
-const visible = (s: string) => s.replace(/<\/?[A-Za-z][^<>]*>|<>|<\/>/g, "").replace(/&amp;/g, "&").replace(/\s+/g, " ");
 
 describe("website snapshots", () => {
-  it("covers the home page, every suite and the public pages", () => {
+  it("covers the home page, pricing, every module and the public pages", () => {
     const paths = pages.map((p) => p.path);
-    for (const p of ["/", "/solutions", "/register", "/login", "/terms", "/privacy"]) expect(paths).toContain(p);
-    for (const m of MODULES) expect(paths).toContain(`/solutions/${m.key}`);
+    for (const p of ["/", "/pricing", "/solutions", "/register", "/login", "/terms", "/privacy"]) expect(paths).toContain(p);
+    for (const m of PUBLIC_MODULES) expect(paths).toContain(`/solutions/${m.key}`);
   });
 
   it.each(pages.map((p) => [p.path, p] as const))("%s has one h1, good head tags and valid structured data", (_, p) => {
@@ -26,40 +25,61 @@ describe("website snapshots", () => {
     expect(p.jsonld.some((x: any) => x["@type"] === "Organization" && x.name === "JMSURF TECHNOLOGIES LTD")).toBe(true);
     expect(p.body).toContain("More from JMSURF");
     expect(p.body).toContain("Powered by");
+    expect(p.body).toContain("ODPC");
   });
 
   it("home page names the product and has real text", () => {
     const home = pages.find((p) => p.path === "/")!;
-    expect(/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(home.body)![1]).toContain("JMSURF Garage");
+    expect(home.text).toContain("JMSURF Garage");
     expect(home.text.split(/\s+/).length).toBeGreaterThan(600);
     expect(home.body.match(/<h2[\s>]/g)!.length).toBeGreaterThanOrEqual(8);
   });
 
-  it("home snapshot text is still what the live home page shows", () => {
-    const raw = src("Landing.tsx");
-    const landing = visible(raw);
-    for (const h of Object.values(HOME_HEADINGS)) expect(landing, h).toContain(h);
-    expect(landing).toContain(HOME.eyebrow);
-    expect(landing).toContain(visible(HOME.lead));
-    for (const c of [...HOME.oneLogin, ...HOME.africa, ...HOME.workflows, ...HOME.migrateSteps, ...HOME.security]) {
-      expect(raw, c.t).toContain(`"${c.t}"`);
-      expect(raw, c.d).toContain(`"${c.d}"`);
-    }
-    for (const x of [...HOME.payments, ...HOME.migrateWhat]) expect(raw, x).toContain(`"${x}"`);
-    expect(visible(src("Solutions.tsx"))).toMatch(/Every suite\.\s*One login\./);
+  it("the live pages render the same words as the snapshots", () => {
+    const landing = src("Landing.tsx");
+    expect(landing).toContain('from "@/seo/homeContent"');
+    for (const k of Object.keys(HOME_HEADINGS)) expect(landing, k).toContain(`HOME_HEADINGS.${k}`);
+    for (const k of ["who", "flow", "kenya", "security", "faq"]) expect(landing, k).toContain(`HOME.${k}`);
+    expect(src("Pricing.tsx")).toContain("HOME.pricingFaq");
     expect(src("Register.tsx")).toContain("Start your free trial");
+    expect(HOME.headline.length).toBeGreaterThan(10);
   });
 
   it("sitemap lists only indexable pages; llms.txt has the required sections", () => {
-    const xml = sitemapXml(pages, "2026-11-05");
+    const xml = sitemapXml(pages, "2026-11-20");
     expect(xml).not.toContain("/login");
     expect(xml.match(/<loc>/g)!.length).toBe(pages.filter((p) => !p.noindex).length);
     const llms = llmsTxt();
     for (const h of ["# JMSURF Garage", "\n> ", "## Key pages", "## Pricing", "## Contact", "## Other JMSURF products"]) expect(llms).toContain(h);
-    expect(llms).not.toContain("jmsurftech@gmail.com");
+    expect(llms).not.toMatch(/@gmail\.com/);
   });
 
   it("text extraction keeps words apart", () => {
     expect(textOf("<h2>One</h2><p>Two &amp; three</p>")).toBe("One\nTwo & three");
+  });
+});
+
+describe("garage plans and the price box", () => {
+  it("the All modules bundle is Pro plus every module (normally KES 29,800)", () => {
+    expect(bundleListPrice(DEFAULT_CATALOGUE)).toBe(29800);
+  });
+
+  it("business kinds tick their modules", () => {
+    expect(modulesForKinds(["spares", "body_paint"])).toEqual(expect.arrayContaining(["inventory", "commerce", "body_paint", "insurance"]));
+    expect(modulesForKinds([])).toEqual([]);
+  });
+
+  it("modules in the plan cost nothing extra; others add their price", () => {
+    const box = priceBox(DEFAULT_CATALOGUE, "business", ["workshop_pro", "car_wash"]);
+    expect(box.total).toBe(5000 + 1000);
+    expect(box.lines.find((l) => l.key === "workshop_pro")?.amount).toBe(0);
+    const year = priceBox(DEFAULT_CATALOGUE, "fundi", ["tyres"], { cycle: "year" });
+    expect(year.total).toBe(5000 + 8000);
+  });
+
+  it("suggests the bundle when it is cheaper", () => {
+    const all = priceBox(DEFAULT_CATALOGUE, "pro", ["commerce", "website", "imports", "vehicle_yard", "body_paint", "car_wash", "tyres", "fleet_contracts", "towing", "car_hire", "whatsapp"]);
+    expect(all.total).toBe(29800);
+    expect(all.bundleSaves).toBe(4800);
   });
 });

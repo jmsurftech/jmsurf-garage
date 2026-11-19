@@ -1,8 +1,11 @@
 /**
  * Facts the public website shows in more than one place: the JMSURF product family
- * (footer "More from JMSURF", llms.txt, structured data) and the published packages.
- * Plain data only, so the build-time page snapshots (src/seo/pages.ts) can use it too.
+ * (footer "More from JMSURF", llms.txt, structured data), the published plans and
+ * module pages' "who it is for". Plain data only, so the build-time page snapshots
+ * (src/seo/pages.ts) can use it too.
  */
+import { DEFAULT_PLANS, YEAR_MONTHS, type GaragePlan } from "@/lib/garagePlans";
+import type { ModuleCategory } from "@/lib/modules";
 
 export const SITE_ORIGIN = "https://garage.jmsurf.co.ke";
 
@@ -18,47 +21,37 @@ export const JMSURF_FAMILY: { name: string; url: string; what: string }[] = [
   { name: "JMSURF Mail", url: "https://jmsurfmail.co.ke", what: "transactional email API" },
 ];
 
-export interface PublicPlan {
-  id: string; name: string; price_monthly: number; price_annually: number | null; max_users: number;
-  description: string | null; all_modules: boolean; included_modules: string[]; sort: number;
-}
+/** The plans as published (same as the live plans table, KES per garage, VAT excluded). */
+export const PUBLIC_PLANS: GaragePlan[] = DEFAULT_PLANS;
+export { YEAR_MONTHS };
 
-/**
- * The packages as published (same as the live plans table, KES per company, VAT excluded).
- * The pricing section reads the live table and only falls back to this list.
- */
-export const PUBLIC_PLANS: PublicPlan[] = [
-  { id: "s", name: "Starter", price_monthly: 1000, price_annually: 10000, max_users: 2, description: "JMSURF BOOKS for a small business: invoicing, expenses, banking and reports.", all_modules: false, included_modules: [], sort: 1 },
-  { id: "t", name: "Standard", price_monthly: 2500, price_annually: 25000, max_users: 5, description: "Books plus JMSURF INVENTORY for growing teams.", all_modules: false, included_modules: ["inventory"], sort: 2 },
-  { id: "p", name: "Professional", price_monthly: 5000, price_annually: 50000, max_users: 15, description: "Books, Inventory, CRM, Projects and Expense for established companies.", all_modules: false, included_modules: ["inventory", "crm", "projects", "expense"], sort: 3 },
-  { id: "a", name: "All-in-One", price_monthly: 15000, price_annually: 150000, max_users: 50, description: "Every JMSURF Garage suite for one price.", all_modules: true, included_modules: [], sort: 4 },
-];
-
-type Category = "Finance" | "Sales & Marketing" | "Operations" | "People" | "Services" | "Digital" | "Productivity";
-
-/** "Who it's for" on each suite page, by suite category. */
-export const SUITE_AUDIENCE: Record<Category, string[]> = {
-  "Finance": ["Owner-run shops and SMEs", "Accountants managing several clients", "NGOs and schools with donor reporting", "Growing companies with VAT and eTIMS"],
-  "Sales & Marketing": ["Sales teams chasing a pipeline", "Retailers and distributors", "Agencies running client campaigns", "Hospitality and events"],
-  "Operations": ["Wholesalers and distributors", "Manufacturers and processors", "Construction and hardware", "Logistics and fleets"],
-  "People": ["Companies with 5 to 500 staff", "Schools, hospitals and hotels", "Firms with shift and field teams", "HR and payroll bureaus"],
-  "Services": ["Consultancies and agencies", "Repair and installation businesses", "Clinics, salons and practices", "IT and support teams"],
-  "Digital": ["Brands selling online", "Training providers and schools", "Communities and associations", "Companies that want their own website"],
-  "Productivity": ["Teams that live in documents", "Managers who want answers fast", "Businesses building their own apps", "Everyone who hates retyping"],
+/** "Who it's for" on each module page, by module category. */
+export const SUITE_AUDIENCE: Record<ModuleCategory, string[]> = {
+  "Workshop": ["Roadside fundis and one-man garages", "Neighbourhood garages with a few mechanics", "Busy workshops with many bays", "Dealers' service centres"],
+  "Parts & sales": ["Spares shops and parts counters", "Parts wholesalers and importers", "Garages that sell parts over the counter", "Dealers with a parts department"],
+  "Specialist": ["Body shops and accident repair centres", "Car washes and detailers", "Tyre, alignment and battery centres", "Fleet, towing and car hire businesses"],
+  "Finance & people": ["Garages with staff on payroll", "Owners who want proper books", "Businesses registered for VAT", "Groups with several branches"],
+  "Customers & marketing": ["Garages that want repeat customers", "Front desks answering calls and WhatsApp", "Workshops with fleet and trade customers", "Dealers running service reminders"],
+  "Extras": ["Workshops doing rebuilds and refits", "Garages with service agreements", "Owners who want answers fast", "Teams that write down how they work"],
 };
 
-/** Short suite name without the brand prefix ("JMSURF BOOKS" → "BOOKS"). */
-export const suiteShort = (name: string) => name.replace(/^(JMSURF|DASH) /, "");
+/** Short module name without the brand prefix ("JMSURF Call Centre" → "Call Centre"). */
+export const suiteShort = (name: string) => name.replace(/^(JMSURF|DASH) /i, "");
 
-/** The questions and answers on a suite page. */
-export function suiteFaqs(m: { name: string; included?: boolean }): [string, string][] {
+/** The questions and answers on a module page. */
+export function suiteFaqs(m: { name: string; included?: boolean; includedIn?: string[] }): [string, string][] {
   const short = suiteShort(m.name);
+  const plans = (m.includedIn || []).map((c) => DEFAULT_PLANS.find((p) => p.code === c)?.name).filter(Boolean);
   return [
-    m.included ? [`Is ${m.name} included?`, `Yes. ${m.name} is the base of every JMSURF Garage package, so every company has it from day one.`]
-      : [`Can I try ${m.name} before paying?`, `Yes. Switch it on from System → Modules in your workspace and use it free for 14 days. Your records stay if you switch it off.`],
-    [`Can I use only ${short}?`, m.included ? "JMSURF BOOKS is the foundation; add any other suite when you need it." : `Yes. Sign up for ${short} on its own and your menu shows only its apps. Add the rest of JMSURF Garage whenever you are ready.`],
-    [`Does ${short} work with the rest of JMSURF Garage?`, `Fully. It uses the same login, the same customers, items and staff, and posts to the same books, so nothing is typed twice.`],
-    ["Does it work with M-Pesa, KRA and SMS?", "Yes. M-Pesa payments, KRA eTIMS invoices, SMS and WhatsApp messages are built into JMSURF Garage and available to every suite."],
-    ["Can my team use it on their phones?", "Yes. JMSURF Garage works in any browser and installs like an app on Android and iPhone, with a phone layout for every screen."],
+    m.included ? [`Is ${m.name} included?`, `Yes. ${m.name} is in every JMSURF Garage plan, from Fundi up, so every garage has it from day one.`]
+      : [`Can I try ${m.name} before paying?`, `Yes. Tick it when you sign up, or switch it on later in System → Modules & billing, and use it free for 14 days. Your records stay if you switch it off.`],
+    m.included ? ["What does it cost?", `Nothing extra: it comes with the base plan, from KES ${DEFAULT_PLANS[0].price.toLocaleString("en-KE")} a month for the Fundi plan.`]
+      : ["What does it cost?", `See the monthly price on the pricing page.${plans.length ? ` It is included free in the ${plans.join(" and ")} plan${plans.length > 1 ? "s" : ""}.` : ""} Yearly payment gives 2 months free.`],
+    [`Does ${short} work with the rest of JMSURF Garage?`, "Fully. It uses the same login, the same customers, vehicles, parts and staff, and the same invoices and payments, so nothing is typed twice."],
+    ["Does it work with M-Pesa, KRA and SMS?", "Yes. M-Pesa payments, KRA eTIMS invoices and SMS updates are built into JMSURF Garage and work in every module."],
+    ["Can my mechanics use it on their phones?", "Yes. JMSURF Garage works in any browser and installs like an app on Android and iPhone, with a phone layout for every screen."],
   ];
 }
+
+/** Yearly price of a monthly amount (2 months free). */
+export const yearly = (monthly: number) => monthly * YEAR_MONTHS;

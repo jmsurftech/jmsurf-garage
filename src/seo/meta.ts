@@ -2,6 +2,7 @@
  * Title and description of every public website page. The build-time snapshots
  * (scripts/prerender.mjs) write these into the raw HTML for search engines, AI
  * assistants and link previews; the pages set the same values when they open.
+ * Titles 50-60 characters, descriptions 140-160 (src/seo/pages.test.ts checks).
  */
 import { SITE_ORIGIN } from "@/lib/siteFacts";
 
@@ -21,77 +22,101 @@ export const canonicalUrl = (path: string) => `${SITE_ORIGIN}${path === "/" ? "/
 
 export const HOME_META: PageMeta = {
   path: "/",
-  title: "JMSURF Garage: All-in-One Business Software for the World",
-  description: "Accounting, invoicing, stock, CRM, HR and payroll, projects, POS and a call centre in one login. M-Pesa and KRA eTIMS built in. Start free for 14 days.",
+  title: "JMSURF Garage: Garage Management Software for Kenya",
+  description: "Job cards, estimates customers approve online, parts stock, M-Pesa and KRA eTIMS invoices for every garage in Kenya. From KES 500 a month, 14 days free.",
+};
+
+export const PRICING_META: PageMeta = {
+  path: "/pricing",
+  title: "JMSURF Garage Pricing: Plans from KES 500 a Month, Kenya",
+  description: "Garage plans by size from KES 500 a month, module prices, extra branches and the All modules bundle. Pay yearly and get 2 months free. 14 days free to start.",
 };
 
 export const SOLUTIONS_META: PageMeta = {
   path: "/solutions",
-  title: "JMSURF Garage Suites: Accounting, CRM, Stock, HR and POS",
-  description: "Every JMSURF Garage suite in one login: books, inventory, CRM, HR and payroll, projects, manufacturing, marketing, POS and a call centre for firms everywhere.",
+  title: "JMSURF Garage Modules: Workshop, Parts, Body Shop and More",
+  description: "Every JMSURF Garage module: workshop, parts and spares, imports, car yard, body and paint, car wash, tyres, fleet, towing, car hire, payroll and accounting.",
 };
 
 export const REGISTER_META: PageMeta = {
   path: "/register",
   title: "Start Your Free JMSURF Garage Trial: 14 Days, No Card",
-  description: "Create your JMSURF Garage company in about a minute: books, inventory, CRM, HR, projects and 50+ apps, free for 14 days with no card. Made in Kenya for the world.",
+  description: "Set up your garage in a few minutes: choose your size and what you do, see the monthly price, and use every module you chose free for 14 days. No card needed.",
 };
 
 export const LOGIN_META: PageMeta = {
   path: "/login",
-  title: "Sign in to JMSURF Garage | Business Software for the World",
-  description: "Sign in to JMSURF Garage: your books, inventory, CRM, HR and every company you run, in one place. One login for every company, with two-step sign-in support.",
+  title: "Sign in to JMSURF Garage | Garage Management Software",
+  description: "Sign in to JMSURF Garage at app.garage.jmsurf.co.ke: job cards, customers, vehicles, parts and every garage you run, in one place, with two-step sign-in.",
   noindex: true,
 };
 
 export const TERMS_META: PageMeta = {
   path: "/terms",
-  title: "Terms of Service | JMSURF Garage Business Software, Kenya",
-  description: "The terms for using JMSURF Garage, the cloud business management service from JMSURF Technologies in Nairobi, Kenya: trials, packages, payments and your data.",
+  title: "Terms of Service | JMSURF Garage Software, Nairobi, Kenya",
+  description: "The terms for using JMSURF Garage, the garage management service from JMSURF Technologies in Nairobi, Kenya: trials, plans, modules, payments and your data.",
 };
 
 export const PRIVACY_META: PageMeta = {
   path: "/privacy",
-  title: "Privacy Policy | JMSURF Garage Business Software, Kenya",
+  title: "Privacy Policy | JMSURF Garage Software, Nairobi, Kenya",
   description: "How JMSURF Garage collects, uses and protects personal data under the Kenya Data Protection Act, 2019: what we keep, who we share it with and your rights.",
 };
 
-/** Suite pages (/solutions/<key>). */
+/** Module pages (/solutions/<key>). */
 const SUITE_META: Record<string, [string, string]> = {
-  books: ["JMSURF BOOKS: Accounting & Invoicing Software for Kenya",
-    "Double-entry accounting, invoices, bills, banking and 50+ reports in JMSURF Garage. M-Pesa payment links, KRA eTIMS and VAT built in. Free for 14 days."],
-  finance_plus: ["JMSURF FINANCE+: Fixed Assets & Subscription Billing",
-    "Fixed asset register with monthly depreciation, recurring subscription billing, ESG reporting and practice tools for accountants, in JMSURF Garage."],
-  expense: ["JMSURF EXPENSE: Expense Claims with M-Pesa Refunds",
-    "Expense claims, trips, mileage and advances submitted from the phone, approved in one tap and reimbursed by M-Pesa. Part of JMSURF Garage, free for 14 days."],
-  crm: ["JMSURF CRM: Sales Pipeline & Lead Software for Kenya",
-    "Capture leads from your website, WhatsApp and calls, move deals through a pipeline and turn them into quotes and invoices without retyping. Part of JMSURF Garage."],
-  marketing: ["JMSURF MARKETING: Email, SMS & WhatsApp Campaign Tool",
-    "Email, bulk SMS, WhatsApp and social media campaigns, automation journeys, events and surveys built on your CRM data. Part of JMSURF Garage, worldwide."],
-  commerce: ["JMSURF COMMERCE: POS & Online Store Software, Kenya",
-    "Point of sale, online store, rentals and loyalty on one stock list and one set of books. M-Pesa, card and cash, and the till sells offline. Part of JMSURF Garage."],
-  inventory: ["JMSURF INVENTORY: Stock & Warehouse Software for Kenya",
-    "Track stock across warehouses and branches: transfers, batches and expiry, serial numbers, stock-takes, kits, deliveries and fleet. Part of JMSURF Garage."],
-  manufacturing: ["JMSURF MANUFACTURING: Production Software for Factories",
-    "Bills of materials, routings and production orders that put finished goods into stock at true cost, plus quality, maintenance and IoT. Part of JMSURF Garage."],
-  hrm: ["JMSURF HRM: HR & Payroll Software for Kenya (PAYE, SHIF)",
-    "Employee files, attendance, leave, recruitment, appraisals, shifts and Kenyan payroll with PAYE, NSSF, SHIF and Housing Levy. Payslips by email and SMS."],
-  projects: ["JMSURF PROJECTS: Project, Task & Timesheet Software",
-    "Projects, tasks, milestones and timesheets on boards, lists or calendars, with costs tracked and billable hours turned into invoices. Part of JMSURF Garage."],
-  service: ["JMSURF SERVICE: Helpdesk, Live Chat & Field Service",
-    "Helpdesk tickets from email with SLAs, live chat on your website, field service jobs and online appointment booking, linked to every customer in JMSURF Garage."],
-  contracts: ["JMSURF SIGN & CONTRACTS: Electronic Signatures, Kenya",
-    "Draft contracts from templates, route them for approval, collect legally binding electronic signatures from any phone and track renewals. Part of JMSURF Garage."],
-  callcentre: ["JMSURF CALL CENTRE in DASH: Cloud Call Centre for Kenya",
-    "Cloud call centre with IVR, queues, browser phones and call recording, every call linked to the customer record. Works inside JMSURF Garage for Kenyan businesses."],
-  website: ["JMSURF SITES: Website, Blog & eLearning on Your Domain",
-    "Publish your company website, blog, community forum and online courses on your own domain, with contact forms flowing into the CRM. Part of JMSURF Garage."],
-  workplace: ["JMSURF WORKPLACE: Company Knowledge Base & Spreadsheets",
-    "A searchable knowledge base for procedures, policies and guides, plus working spreadsheets next to the data they describe. Part of JMSURF Garage."],
-  ai: ["Garage AI: AI Business Assistant for Your Company Data",
-    "Ask about your business in plain language by typing or speaking: who owes you, what is selling, how profit changed. Garage AI reads your JMSURF Garage data."],
-  studio: ["JMSURF STUDIO: Build Your Own Business Apps, No Code",
-    "Build your own apps, record types, fields, statuses and views without code, with the same permissions, history and search as the rest of JMSURF Garage."],
+  garage_core: ["Garage Core: Job Cards, Estimates, M-Pesa and eTIMS",
+    "Job cards, customers and vehicles, estimates approved online, M-Pesa payments, KRA eTIMS invoices and SMS updates. In every JMSURF Garage plan from KES 500."],
+  workshop_pro: ["Workshop Pro: Inspections, Bay Board and Mechanic App",
+    "Digital inspections with photos, a live bay board for the workshop TV and a phone app where mechanics see jobs and clock time. Part of JMSURF Garage, Kenya."],
+  inventory: ["Parts & Stock: Garage Parts Inventory Software, Kenya",
+    "Parts stock across stores and branches: purchase orders, receiving, transfers, serial numbers and stock-takes, with parts on jobs taken off stock by itself."],
+  commerce: ["Spares POS & Wholesale: Spare Parts Shop Software, Kenya",
+    "A fast spares counter till that works offline, with M-Pesa, card and cash, wholesale price lists, trade credit limits and loyalty points. Part of JMSURF Garage."],
+  website: ["Online Parts Shop & Garage Website on Your Own Domain",
+    "A fast garage website on your own domain with services, opening hours and online booking, plus an online parts shop with live stock and M-Pesa checkout."],
+  imports: ["Imports & Landed Cost: Car and Parts Import Software",
+    "Follow parts and vehicle imports from order to arrival: shipments, containers, freight, duty and clearing, with the true landed cost of every item. Kenya."],
+  insurance: ["Insurance Claims Software for Garages and Body Shops",
+    "Accident repair claims with photos, assessor and approval steps, excess billed to the customer and statements for every insurer. Part of JMSURF Garage."],
+  vehicle_yard: ["Vehicle Yard & Car Sales Software for Car Dealers, Kenya",
+    "Cars for sale with photos, costs and reconditioning, deposits and part payments, logbook transfer steps and the real profit on every car sold. JMSURF Garage."],
+  body_paint: ["Body & Paint: Panel Beating and Spray Shop Software",
+    "Track body work from strip-down to polish: stages per car, before and after photos, and paint and materials booked to each job. Works with insurance claims."],
+  car_wash: ["Car Wash & Detailing Software with M-Pesa for Kenya",
+    "A wash queue by number plate, packages and add-ons, attendants' commission, prepaid wash cards and M-Pesa payments at the bay. Part of JMSURF Garage, Kenya."],
+  tyres: ["Tyres, Alignment & Batteries: Tyre Shop Software Kenya",
+    "Find tyres by size, record wheel alignment and balancing, test batteries and keep the warranty for every tyre and battery sold. Part of JMSURF Garage, Kenya."],
+  fleet_contracts: ["Fleet Contracts & Fleet Portal for Garages in Kenya",
+    "Service contracts for companies with many vehicles: contract rates, service due reminders, monthly fleet statements and a portal for each fleet manager."],
+  towing: ["Towing & Mobile Mechanic Software: Dispatch and Billing",
+    "Answer tow and roadside calls, dispatch the nearest truck or mechanic, charge by distance and turn each call-out into a job card at the garage. JMSURF Garage."],
+  car_hire: ["Car Hire Software: Bookings, Deposits and Returns, Kenya",
+    "Rent out cars with a booking calendar per car, deposits by M-Pesa, hand-over and return checks with photos, and late or damage charges on the bill. Kenya."],
+  accounting: ["Accounting for Garages: Books, Banking and VAT Returns",
+    "Chart of accounts, journals, bank and M-Pesa statement matching, profit and loss, balance sheet, VAT return and budgets for your garage. Part of JMSURF Garage."],
+  hrm: ["Payroll & HR for Garages: PAYE, NSSF, SHIF, Housing Levy",
+    "Staff files, attendance, leave and Kenyan payroll with PAYE, NSSF, SHIF, Housing Levy and NITA worked out, payslips by SMS and email, casual workers included."],
+  expense: ["Expense Claims for Garage Staff with M-Pesa Refunds",
+    "Staff claim fuel, parts runs and trips from the phone with a receipt photo; the owner approves in one tap and the refund goes by M-Pesa. Part of JMSURF Garage."],
+  whatsapp: ["WhatsApp Inbox for Garages: One Shared Business Inbox",
+    "One shared WhatsApp inbox for your garage team, linked to customers and jobs, with estimates, invoices and car-ready messages sent on WhatsApp. JMSURF Garage."],
+  crm: ["CRM for Garages: Leads and Follow-ups for Fleet Customers",
+    "Follow up every enquiry from calls, WhatsApp and your website, with reminders and deals that turn into estimates and invoices without retyping. JMSURF Garage."],
+  marketing: ["Garage Marketing: Service Reminders, SMS and Campaigns",
+    "Bring customers back with service reminders by mileage or date, SMS, WhatsApp and email campaigns, and feedback after every job. Part of JMSURF Garage, Kenya."],
+  service: ["Helpdesk & Online Service Bookings for Garages, Kenya",
+    "Complaint and warranty tickets with someone responsible, a chat bubble on your website and online appointment booking with SMS confirmations. JMSURF Garage."],
+  callcentre: ["JMSURF Call Centre for Garages: Calls Linked to Customers",
+    "Phone lines with a menu, queues and call recording, answered in the browser with the caller's vehicles, jobs and balance on screen. Works in JMSURF Garage."],
+  projects: ["Projects for Garages: Rebuilds and Refits with Costs",
+    "Plan long jobs such as engine rebuilds and fleet refits with tasks and milestones, log time and costs as they happen, and bill when ready. JMSURF Garage."],
+  contracts: ["Contracts & e-Sign for Garages: Signed on Any Phone, Kenya",
+    "Draft service agreements from templates, send them for electronic signature on any phone and keep the signed copy on the customer. Part of JMSURF Garage."],
+  workplace: ["Knowledge & Sheets: Garage Procedures and Checklists",
+    "Write down how your garage works: procedures, checklists and how-to guides your team can search, plus spreadsheets next to your data. Part of JMSURF Garage."],
+  ai: ["Garage AI: Ask About Your Garage in Plain Words, Kenya",
+    "Ask by typing or speaking who owes you, which jobs pay best and which parts are slow. Garage AI reads your JMSURF Garage data and acts only when you confirm."],
 };
 
 export function suiteMeta(key: string): PageMeta | null {
