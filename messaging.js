@@ -26,6 +26,11 @@ const SERVICE_KEY =
 import { jmsSend, jmsBulk, jmsBalance, jmsTopup, jmsTopupStatus } from "./jmsurfsms.js";
 import { withPlatformRole } from "./platform.js";
 import { isDemoTenant } from "./demo.js";
+import { credential, fitOneSms } from "./integrations-core.js";
+
+// WhatsApp Cloud API (Meta) lives in garage-integrations.js; loaded when first needed
+// (that file also uses this one, so a static import would be circular).
+const cloud = () => import("./garage-integrations.js");
 
 const SENDBULKSMS_URL = "https://api.sendbulksms.co.ke/v1";
 const APIWAP_URL = "https://api.apiwap.com/api/v1";
@@ -246,9 +251,59 @@ export const MESSAGE_EVENTS = {
   visitor: { label: "Visitor at reception" },
   iot_alert: { label: "Device alerts" },
   water_alert: { label: "Water tank alerts" },
+  // Garage (bookings, job cards, estimates, reminders, call centre); default texts in GARAGE_TEXTS
+  booking_confirmed: { label: "Workshop booking confirmations", whatsapp: true },
+  booking_reminder: { label: "Workshop booking reminders", whatsapp: true },
+  job_checked_in: { label: "Vehicle checked in (job tag and tracking link)", whatsapp: true },
+  estimate_ready: { label: "Estimates to approve", whatsapp: true },
+  extra_work_approval: { label: "Extra work to approve", whatsapp: true },
+  car_ready: { label: "Vehicle ready for collection", whatsapp: true },
+  payment_received: { label: "Payment received", whatsapp: true },
+  service_due: { label: "Service due reminders", whatsapp: true },
+  document_expiry: { label: "Insurance, inspection, speed governor and PSV expiry", whatsapp: true },
+  win_back: { label: "Win-back messages", whatsapp: true },
+  payment_request: { label: "Invoice and payment links", whatsapp: true },
+  missed_call: { label: "Missed-call replies", whatsapp: true },
   // Typed or sent by hand from a screen (receipts, statements, suppliers)
   manual: { label: "Messages you send by hand", whatsapp: true },
 };
+
+/**
+ * Default one-SMS English texts for the Garage events. {placeholders}: company, name, reg (number
+ * plate), date, time, job (job tag), link, amount, total, item (what needs approving), doc (insurance,
+ * inspection, speed governor, PSV), receipt. Missing values are left out cleanly; the result is cut to
+ * one SMS part (a link at the end stays whole).
+ */
+export const GARAGE_TEXTS = {
+  booking_confirmed: "Hi {name}, your {reg} is booked at {company} on {date} {time}. Reply or call to change it.",
+  booking_reminder: "Reminder: your {reg} is booked at {company} on {date} {time}. See you then.",
+  job_checked_in: "{company}: {reg} is checked in, job {job}. Follow the progress here: {link}",
+  estimate_ready: "{company}: the estimate for {reg} is KES {total}. View and approve: {link}",
+  extra_work_approval: "{company}: {reg} also needs {item} (KES {amount}). Approve or decline: {link}",
+  car_ready: "Good news {name}: your {reg} is ready for collection at {company}. Balance KES {amount}. {link}",
+  payment_received: "{company}: we received KES {amount} for {reg}, ref {receipt}. Thank you!",
+  service_due: "Hi {name}, {reg} is due for service. Book with {company}: {link}",
+  document_expiry: "Hi {name}, the {doc} for {reg} expires on {date}. {company} can help: {link}",
+  win_back: "Hi {name}, we miss you at {company}! Book your {reg}'s next service: {link}",
+  payment_request: "{company}: invoice for {reg}, KES {amount} due. View and pay: {link}",
+  missed_call: "Sorry we missed your call. {company} will call you back shortly.",
+};
+
+/** A Garage event's default text filled in, one SMS part. */
+export function garageText(event, vars = {}) {
+  const tpl = GARAGE_TEXTS[event] || "";
+  const filled = tpl.replace(/\{(\w+)\}/g, (_, k) => {
+    const v = vars[k];
+    return v === null || v === undefined ? "" : String(v).trim();
+  })
+    .replace(/\b(Balance KES|KES|ref|job|on|for)\s+(?=[.,:;)!]|\s|$)/g, "") // a label whose value is missing
+    .replace(/\(\s*\)/g, "").replace(/\s+([.,:;!])/g, "$1").replace(/([.,:;!]){2,}/g, "$1").replace(/\s{2,}/g, " ").trim();
+  return fitOneSms(filled);
+}
+
+/** Events whose text a person typed: everything else is automatic and must fit one SMS part. */
+const TYPED_EVENTS = new Set(["manual", "bulk", "journey", "test"]);
+export const isAutomaticEvent = (event) => !TYPED_EVENTS.has(String(event || "manual"));
 
 /** Where a server-side call came from, for callers that do not name their event yet. */
 function callerFile(stack) {
@@ -343,6 +398,14 @@ export async function jmsurfSmsKey(tenantId) {
 }
 
 async function shopRoute(tenantId, channel) {
+  // WhatsApp: the company's own WhatsApp Cloud API number first, APIWAP otherwise
+  // ("whatsapp-apiwap" asks for APIWAP only).
+  const apiwapOnly = channel === "whatsapp-apiwap";
+  if (apiwapOnly) channel = "whatsapp";
+  else if (channel === "whatsapp") {
+    const connected = await cloud().then((m) => m.waCloudConnected(tenantId)).catch(() => false);
+    if (connected) return { via: "cloud" };
+  }
   const [m] = await rows(`tenant_messaging?tenant_id=eq.${encodeURIComponent(tenantId)}&select=*&limit=1`);
   if (channel === "sms") {
     // JMSURF SMS sends unless the company chose its own gateway instead.
@@ -376,7 +439,7 @@ async function logSend({ tenantId, channel, to, text, ok, via, provider, detail,
   const base = {
     tenant_id: tenantId, channel, recipient: to, subject: String(text).slice(0, 160),
     status: ok ? "sent" : "failed", smtp_response: String(detail || "").slice(0, 500),
-    smtp_host: via === "jmsurfsms" ? "JMSURF SMS" : `${channel === "sms" ? SMS_PROVIDERS[provider] || "SendBulkSMS" : "APIWAP"}${via === "platform" ? " (JMSURF)" : ""}`,
+    smtp_host: via === "jmsurfsms" ? "JMSURF SMS" : via === "cloud" ? "WhatsApp Cloud API" : `${channel === "sms" ? SMS_PROVIDERS[provider] || "SendBulkSMS" : "APIWAP"}${via === "platform" ? " (JMSURF)" : ""}`,
     from_email: sender || null, sent_by: userId || null,
   };
   const extra = {
@@ -399,12 +462,13 @@ async function logSend({ tenantId, channel, to, text, ok, via, provider, detail,
  * worked out from the text and the calling file. The company's "What uses SMS"
  * choices decide whether it goes out by SMS, WhatsApp or not at all.
  */
-export async function sendForShop({ tenantId, channel, to, text, userId, reference, event }) {
+export async function sendForShop({ tenantId, channel, to, text, userId, reference, event, vars }) {
   const file = callerFile(new Error().stack);
   if (await isDemoTenant(tenantId)) return { ok: false, error: "Messages are not sent from the demo company" };
   const phone = internationalDigits(to);
   if (!phone) return { ok: false, error: "Enter a valid phone number" };
-  const body = String(text || "").trim();
+  // A Garage event with no text of its own: its default text, filled from vars.
+  const body = String(text || (GARAGE_TEXTS[event] ? garageText(event, vars || {}) : "")).trim();
   if (!body) return { ok: false, error: "The message is empty" };
   if (body.length > 1500) return { ok: false, error: "The message is too long" };
 
@@ -430,8 +494,25 @@ export async function sendForShop({ tenantId, channel, to, text, userId, referen
 }
 
 async function sendOne({ tenantId, channel, phone, body, userId, reference, event, route: known }) {
-  const route = known || await shopRoute(tenantId, channel);
+  let route = known || await shopRoute(tenantId, channel);
   if (route.error) return { ok: false, error: route.error };
+  // Automatic messages (reminders, job updates, links) always fit ONE SMS part.
+  if (channel === "sms" && isAutomaticEvent(event)) body = fitOneSms(body);
+
+  if (channel === "whatsapp" && route.via === "cloud") {
+    const m = await cloud();
+    const r = await m.waSendForCompany(tenantId, phone, body, { userId, event }).catch((e) => ({ ok: false, error: e.message }));
+    if (r.ok || !r.windowClosed) {
+      // waSendForCompany writes the inbox message; Message Logs get the usual line too.
+      await logSend({ tenantId, channel, to: `+${phone}`, text: body, ok: r.ok, via: "cloud", detail: r.ok ? `id ${r.id || "accepted"}${r.template ? ` (template ${r.template})` : ""}` : r.error, userId, event });
+      return { ...r, via: "cloud", to: `+${phone}`, channel, event };
+    }
+    // Outside the 24-hour window with no template set: APIWAP when the company also has it.
+    const [mm] = await rows(`tenant_messaging?tenant_id=eq.${encodeURIComponent(tenantId)}&select=wa_mode&limit=1`);
+    if (!mm?.wa_mode || mm.wa_mode === "off") return { ok: false, error: r.error, via: "cloud", channel, event };
+    route = await shopRoute(tenantId, "whatsapp-apiwap");
+    if (route.error) return { ok: false, error: r.error };
+  }
 
   let result;
   if (channel === "sms" && route.via === "own" && route.provider && route.provider !== "sendbulksms") {
@@ -467,17 +548,24 @@ export async function sendPlatform(channel, to, text) {
   const phone = internationalDigits(to);
   if (!phone) return { ok: false, error: "No valid phone number" };
   if (channel === "sms") {
-    // JMSURF's own JMSURF SMS account (sender JMSURF); SendBulkSMS only as the old fallback.
-    if (p.jmsurfsms_api_key) {
-      const r = await jmsSend(p.jmsurfsms_api_key, phone, text);
+    // JMSURF's own JMSURF SMS account (JMSURF TECHNOLOGIES key: JMSURF_SMS_API_KEY, or the key
+    // saved in Admin → Settings); SendBulkSMS only as the old fallback. Platform notices are
+    // automatic, so they fit one SMS part.
+    const key = credential("JMSURF_SMS_API_KEY") || p.jmsurfsms_api_key;
+    const msg = fitOneSms(text);
+    if (key) {
+      const r = await jmsSend(key, phone, msg, credential("JMSURF_SMS_SENDER") || undefined);
       return r.ok ? { ok: true, id: r.id || r.message_id || r.reference } : { ok: false, error: r.error };
     }
     if (!p.sendbulksms_api_key) return { ok: false, error: "The platform JMSURF SMS key is not saved" };
     if (!/^254[17]\d{8}$/.test(phone)) return { ok: false, error: "SMS goes to Kenyan numbers only" };
-    return sendBulkSms({ apiKey: p.sendbulksms_api_key, senderId: p.sms_sender_id || "" }, phone, text);
+    return sendBulkSms({ apiKey: p.sendbulksms_api_key, senderId: p.sms_sender_id || "" }, phone, msg);
   }
-  if (!p.apiwap_api_key) return { ok: false, error: "The platform APIWAP key is not saved" };
-  return sendApiWap({ apiKey: p.apiwap_api_key }, phone, text);
+  // WhatsApp: APIWAP when the platform has it, else the platform WhatsApp Cloud API number.
+  if (p.apiwap_api_key) return sendApiWap({ apiKey: p.apiwap_api_key }, phone, text);
+  const m = await cloud();
+  if (m.waPlatformConfigured()) return m.waSendPlatform(phone, text);
+  return { ok: false, error: "No platform WhatsApp account is saved" };
 }
 
 // --- Routes -----------------------------------------------------------------------

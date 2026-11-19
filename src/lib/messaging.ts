@@ -57,16 +57,20 @@ export async function messagingApi(path: "send" | "test" | "balance" | "admin" |
   }
 }
 
-/** `kind` names the event (see src/lib/smsUses.ts); without it the message counts as sent by hand. */
+/**
+ * `kind` names the event (see src/lib/smsUses.ts and messaging.js MESSAGE_EVENTS; Garage adds booking_confirmed, booking_reminder, job_checked_in, estimate_ready, extra_work_approval, car_ready, payment_received, service_due, document_expiry, win_back, payment_request, missed_call); without it the message counts as
+ * sent by hand. Automatic events are shortened by the server to fit ONE SMS part.
+ * WhatsApp goes through the company's WhatsApp Cloud API number when connected, else APIWAP.
+ */
 export const sendShopMessage = (channel: "sms" | "whatsapp", to: string, text: string, reference?: string, kind?: string) =>
   messagingApi("send", { channel, to, text, reference, kind });
 
-const GSM = "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà^{}\[~]|€";
+const GSM = "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà^{}\\[~]|€";
 /** How many SMS a message uses (GSM-7: 160 / 153 per part; otherwise 70 / 67). Same rule as the server. */
 export function smsParts(text: string) {
   const chars = Array.from(String(text || ""));
   const gsm = chars.every((c) => GSM.includes(c));
-  const len = gsm ? chars.reduce((n, c) => n + ("^{}\[~]|€".includes(c) ? 2 : 1), 0) : chars.length;
+  const len = gsm ? chars.reduce((n, c) => n + ("^{}\\[~]|€".includes(c) ? 2 : 1), 0) : chars.length;
   const single = gsm ? 160 : 70, multi = gsm ? 153 : 67;
   return len <= single ? 1 : Math.ceil(len / multi);
 }

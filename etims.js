@@ -11,12 +11,27 @@
 // Signing writes the KRA details onto the invoice / credit note (etims_* columns)
 // exactly as before, so documents, PDFs and the "Push to eTIMS" button are unchanged.
 // Documents KRA has not answered yet stay "pending" and are checked every 2 minutes.
+// Garage: automatic signing is ON unless the company switches it off, so every sales
+// invoice and credit note (job cards included: they are ordinary invoices) is signed.
+// Workshop screens may sign straight away with signDocument(tenantId, kind, id).
 // ---------------------------------------------------------------------------
+import { credential } from "./integrations-core.js";
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY = process.env.JMSURF_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const HUB = (process.env.ETIMS_HUB_URL || "https://etims.jmsurf.co.ke").replace(/\/+$/, "");
-const PARTNER_KEY = process.env.ETIMS_PARTNER_KEY || "";
+/** The JMSURF Garage partner key (hub partner code "garage"): env, else saved in Super admin → Integrations. */
+const partnerKey = () => credential("ETIMS_PARTNER_KEY");
+/** Partner code of this platform at the hub; it prefixes every idempotency key. */
+export const PARTNER_CODE = (process.env.ETIMS_PARTNER_CODE || "garage").replace(/[^a-z0-9_-]/gi, "").toLowerCase() || "garage";
+/**
+ * Default KRA item classes for items without their own (editable in System → KRA eTIMS).
+ * UNSPSC-based; CONFIRM WITH KRA before going live.
+ *   labour / services: 78181500 vehicle maintenance and repair services
+ *   parts / goods:     25170000 transportation components and systems
+ */
+export const DEFAULT_SERVICE_CLASS = "7818150000";
+export const DEFAULT_GOODS_CLASS = "2517000000";
 
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 const str = (v) => (v === null || v === undefined ? "" : String(v)).trim();
@@ -37,7 +52,7 @@ async function db(path, { method = "GET", body, prefer } = {}) {
 const one = async (path) => (await db(path))?.[0] || null;
 
 /** Calls the hub with the partner key, or a company's own key for /v1. */
-async function hub(path, { method = "GET", body, key = PARTNER_KEY } = {}) {
+async function hub(path, { method = "GET", body, key = partnerKey() } = {}) {
   if (!key) throw new HttpError(503, "KRA eTIMS is not set up on this server yet.");
   let res;
   try {
@@ -60,7 +75,7 @@ async function config(tenantId) {
   return {
     settingsId: s?.id, erp: s?.erp_settings || {}, company: s?.business_name || "", email: s?.business_email || "", phone: s?.business_phone || "",
     env, hubEnv: env === "prod" ? "production" : "sandbox", tin: str(e.tin).toUpperCase(), bhfId: (str(e.bhf_id) || "00").replace(/\D/g, "").padStart(2, "0").slice(0, 2),
-    serial: str(e.device_serial), goodsCls: str(e.goods_cls_cd) || "5059690800", serviceCls: str(e.service_cls_cd) || "8111150100",
+    serial: str(e.device_serial), goodsCls: str(e.goods_cls_cd) || DEFAULT_GOODS_CLASS, serviceCls: str(e.service_cls_cd) || DEFAULT_SERVICE_CLASS,
     vatRegistered: e.vat_registered !== false, key: env === "prod" ? secrets.etims_hub_key_live : secrets.etims_hub_key_sandbox,
   };
 }
@@ -73,7 +88,6 @@ export function taxBand(rate, explicit, vatRegistered = true) {
   return r >= 15 ? "B" : r >= 7 ? "E" : "A";
 }
 
-/** The hub document for a DASH invoice / credit note. Document prices are tax-exclusive. */
 /** The item's unit (pcs, kg, litre …) as a KRA quantity unit code. */
 function qtyUnit(unit) {
   const u = str(unit).toLowerCase();
@@ -147,7 +161,7 @@ async function reportSaleStock(who, c, kind, doc, items, products) {
   if (!lines.length) return;
   try {
     await hub("/v1/stock/movements", { method: "POST", key: c.key, body: {
-      reference: str(doc.invoice_number || doc.credit_note_number || doc.id).slice(0, 50), idempotency_key: `dash-stock-${kind}-${doc.id}`,
+      reference: str(doc.invoice_number || doc.credit_note_number || doc.id).slice(0, 50), idempotency_key: `${PARTNER_CODE}-stock-${kind}-${doc.id}`,
       type: kind === "credit_note" ? "03" : "11", date: str(doc.issue_date || doc.created_at).slice(0, 10) || null, lines,
     } });
     await db(`${table}?id=eq.${doc.id}`, { method: "PATCH", prefer: "return=minimal", body: { etims_stock_status: "reported" } });
@@ -180,7 +194,7 @@ async function sign(who, kind, id) {
   const pin = str(cust?.kra_pin).toUpperCase();
   const body = {
     reference: str(doc.invoice_number || doc.credit_note_number || doc.id).slice(0, 50),
-    idempotency_key: `dash-${kind}-${doc.id}`,
+    idempotency_key: `${PARTNER_CODE}-${kind}-${doc.id}`,
     date: str(doc.issue_date || doc.credit_date || doc.created_at).slice(0, 10) || null,
     customer: { pin: /^[AP]\d{9}[A-Z]$/.test(pin) ? pin : null, name: str(cust?.name || doc.customer_name).slice(0, 60) || null, phone: str(cust?.phone).slice(0, 20) || null },
     payment_method: Number(doc.amount_paid || 0) >= Number(doc.total || 0) ? "01" : "02",
@@ -270,11 +284,12 @@ async function checkPending() {
  */
 const AUTO_LOOKBACK_MS = 30 * 24 * 3600_000;
 async function autoSign() {
-  const companies = await db("business_settings?erp_settings->etims->>auto_sign=eq.true&erp_settings->etims->>initialised_at=not.is.null&select=tenant_id,erp_settings").catch(() => []);
+  // Every connected company unless it switched automatic signing off (auto_sign: false).
+  const companies = await db("business_settings?erp_settings->etims->>initialised_at=not.is.null&select=tenant_id,erp_settings").catch(() => []);
   for (const s of companies || []) {
     const e = s.erp_settings?.etims || {};
     const tenantId = s.tenant_id;
-    if (!tenantId || e.via !== "hub") continue;
+    if (!tenantId || e.via !== "hub" || e.auto_sign === false) continue;
     const c = await config(tenantId).catch(() => null);
     if (!c?.key) continue;
     const since = new Date(Math.max(Date.parse(e.auto_sign_since || e.initialised_at) || 0, Date.now() - AUTO_LOOKBACK_MS)).toISOString();
@@ -305,8 +320,26 @@ async function etimsTick() {
   } finally { jobRunning = false; }
 }
 export function startEtimsJobs() {
-  if (!PARTNER_KEY || !SUPABASE_URL || !SERVICE_KEY) return;
-  setInterval(() => void etimsTick(), 2 * 60_000).unref?.();
+  if (!SUPABASE_URL || !SERVICE_KEY) return;
+  // The partner key may be saved in the super admin after start-up.
+  setInterval(() => { if (partnerKey()) void etimsTick(); }, 2 * 60_000).unref?.();
+}
+
+/**
+ * Signs one sales invoice or credit note with KRA now (server use, e.g. a job card's invoice).
+ * Same result as the "Push to eTIMS" button: { ok, rcpt_no, qr_url } / { ok, pending } /
+ * { ok:false, error } when the company is not connected or KRA refused it.
+ */
+export async function signDocument(tenantId, kind, id) {
+  if (!["invoice", "credit_note"].includes(kind)) return { ok: false, error: "Unknown document type" };
+  try { return await sign({ tenantId }, kind, id); }
+  catch (e) { return { ok: false, error: str(e?.message), status: e?.status || 500 }; }
+}
+
+/** True when the company is connected to KRA eTIMS (a hub key is saved). */
+export async function etimsConnected(tenantId) {
+  const c = await config(tenantId).catch(() => null);
+  return { connected: !!c?.key, environment: c?.env || "sbx", tin: c?.tin || "", branch: c?.bhfId || "00", auto_sign: c?.erp?.etims?.auto_sign !== false, initialised_at: c?.erp?.etims?.initialised_at || null };
 }
 
 // ---------------------------------------------------------------- status, log, items, reports
@@ -472,7 +505,7 @@ async function reportBill(who, b) {
   if (!lines.length) throw new HttpError(400, "The bill has no lines.");
   try {
     await hub("/v1/purchases", { method: "POST", key: c.key, body: {
-      reference: str(bill.bill_number || bill.id).slice(0, 50), idempotency_key: `dash-bill-${bill.id}`, date: str(bill.bill_date).slice(0, 10) || null,
+      reference: str(bill.bill_number || bill.id).slice(0, 50), idempotency_key: `${PARTNER_CODE}-bill-${bill.id}`, date: str(bill.bill_date).slice(0, 10) || null,
       supplier: { pin: str(sup?.kra_pin).toUpperCase() || null, name: str(sup?.name).slice(0, 60) || null, invoice_no: str(bill.reference) || null },
       payment_method: Number(bill.amount_paid || 0) >= Number(bill.amount || 0) ? "01" : "02", prices_include_tax: false, lines, kra_purchase_id: bill.etims_purchase_id || null,
     } });
@@ -504,7 +537,7 @@ async function reportAdjustment(who, b) {
     for (const [type, list] of groups) {
       if (!list.length) continue;
       await hub("/v1/stock/movements", { method: "POST", key: c.key, body: {
-        reference: str(adj.adjustment_number || adj.id).slice(0, 50), idempotency_key: `dash-adj-${adj.id}-${type}`, type,
+        reference: str(adj.adjustment_number || adj.id).slice(0, 50), idempotency_key: `${PARTNER_CODE}-adj-${adj.id}-${type}`, type,
         date: str(adj.adjustment_date).slice(0, 10) || null, remark: str(adj.reason).slice(0, 400) || null, lines: list.map(row),
       } });
     }

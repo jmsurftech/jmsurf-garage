@@ -1,17 +1,25 @@
 import { withPlatformRole } from "./platform.js";
 import { isDemoTenant } from "./demo.js";
+import { credential } from "./integrations-core.js";
 // JMSURF PAY (formerly SendMoney). JMSURFPAY_BASE_URL overrides it for staging.
+// The company only enters its Till / Paybill / bank account; this server provisions the
+// settlement channel with the JMSURF TECHNOLOGIES key (externalId = the company id,
+// source jmsurf-garage). A company whose gateway is its own Daraja app is handed to
+// gateways.js (pushInvoiceDaraja), so every invoice prompt caller works for both.
 const BASE = (process.env.JMSURFPAY_BASE_URL || 'https://jmsurfpay.co.ke').replace(/\/+$/, '');
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
 const ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
 const SERVICE_KEY = process.env.JMSURF_SUPABASE_SERVICE_KEY || '';
-const API_KEY = process.env.JMSURFPAY_API_KEY || process.env.SENDMONEY_API_KEY || process.env.SEND_MONEY_API_KEY || '';
+/** JMSURF TECHNOLOGIES key: server env, else the one saved in Super admin → Settings → Integrations. */
+const apiKey = () => credential('JMSURFPAY_API_KEY');
+/** How this platform names itself to JMSURF PAY (never another product's name). */
+export const SOURCE = 'jmsurf-garage';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const str = (value) => String(value ?? '').trim();
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function requireConfiguration() {
-  if (!SUPABASE_URL || !ANON_KEY || !SERVICE_KEY || !API_KEY) {
+  if (!SUPABASE_URL || !ANON_KEY || !SERVICE_KEY || !apiKey()) {
     throw new Error('JMSURF gateway is not configured on the server. Contact support.');
   }
 }
@@ -27,10 +35,10 @@ async function api(path, { method = 'GET', body } = {}) {
       signal: controller.signal,
       redirect: 'error',
       headers: {
-        'X-API-Key': API_KEY,
+        'X-API-Key': apiKey(),
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'User-Agent': 'JMSURF-DASH/1.0 (+https://garage.jmsurf.co.ke)',
+        'User-Agent': 'JMSURF-GARAGE/1.0 (+https://garage.jmsurf.co.ke)',
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
@@ -45,7 +53,7 @@ async function api(path, { method = 'GET', body } = {}) {
 
 /** JMSURF PAY API for the platform's own collections (subscription fees). */
 export async function sendMoneyApi(path, options = {}) {
-  if (!API_KEY) throw new Error('JMSURF gateway is not configured on the server. Contact support.');
+  if (!apiKey()) throw new Error('JMSURF gateway is not configured on the server. Contact support.');
   return api(path, options);
 }
 
@@ -165,8 +173,8 @@ async function register(req, body) {
   }
   const payload = {
     name: str(tenant.business_name || tenant.slug).slice(0, 100),
-    description: `JMSURF Garage tenant ${tenantId}`,
-    source: 'jmsurf-pos',
+    description: `JMSURF Garage company ${tenantId}`,
+    source: SOURCE,
     externalId: tenantId,
     accountType: target.type === 'till' ? 'till' : 'paybill',
     accountNumber: target.accountNumber,
@@ -349,10 +357,11 @@ export async function handleSendMoneyRequest(req, res, pathname, body, sendJson)
 }
 
 export function startSendMoneyReconciler() {
-  if (!SUPABASE_URL || !SERVICE_KEY || !API_KEY) return;
+  if (!SUPABASE_URL || !SERVICE_KEY) return;
   let busy = false;
   setInterval(async () => {
-    if (busy) return;
+    // The key may be saved in the super admin after start-up.
+    if (busy || !apiKey()) return;
     busy = true;
     try {
       const pending = await db('sendmoney_payments?status=eq.pending&select=*&order=started_at.asc&limit=30');
@@ -371,6 +380,12 @@ export function startSendMoneyReconciler() {
 // payment and applies it to the invoice (settle_invoice_mpesa).
 // ---------------------------------------------------------------------------
 export async function pushInvoiceForShop(tenantId, invoiceId, rawPhone, amountWanted, requestedBy = 'portal') {
+  // A company on its own Daraja app: same request table and settlement, its own keys.
+  const provider = await one('business_settings', `tenant_id=eq.${tenantId}`, 'payment_provider').catch(() => null);
+  if (provider?.payment_provider === 'daraja') {
+    const { pushInvoiceDaraja } = await import('./gateways.js');
+    return pushInvoiceDaraja(tenantId, invoiceId, rawPhone, amountWanted, requestedBy);
+  }
   requireConfiguration();
   if (!uuid.test(str(invoiceId))) return { error: 'Invalid invoice', status: 400 };
   // The public demo never sends real payment prompts (portal, staff or payment link).
@@ -427,19 +442,39 @@ async function reconcileInvoice(r) {
 export async function invoicePromptStatus(tenantId, requestId) {
   const r = await one('invoice_mpesa_requests', `id=eq.${requestId}&tenant_id=eq.${tenantId}`);
   if (!r) return { status: 'unknown' };
-  if (r.status === 'pending' && r.checkout_request_id) { try { await reconcileInvoice(r); } catch { /* next poll */ } }
+  if (r.status === 'pending' && r.checkout_request_id) {
+    try {
+      if (str(r.checkout_request_id).startsWith('daraja:')) await (await import('./gateways.js')).reconcileInvoiceDaraja(r);
+      else await reconcileInvoice(r);
+    } catch { /* next poll */ }
+  }
   const fresh = await one('invoice_mpesa_requests', `id=eq.${requestId}`, 'status,mpesa_receipt,amount');
   return fresh || { status: 'unknown' };
 }
 
+/**
+ * JMSURF PAY webhook (garage-integrations.js checks the signature first): the event only
+ * says which payment changed; its outcome is read back from JMSURF PAY as usual.
+ */
+export async function settleFromWebhook(checkoutRequestId) {
+  const id = str(checkoutRequestId);
+  if (!id || id.length > 160 || !apiKey()) return { matched: false };
+  const sale = await one('sendmoney_payments', `checkout_request_id=eq.${encodeURIComponent(id)}`).catch(() => null);
+  if (sale) return { matched: 'sale', ...(await reconcile(sale)) };
+  const inv = await one('invoice_mpesa_requests', `checkout_request_id=eq.${encodeURIComponent(id)}`).catch(() => null);
+  if (inv) { await reconcileInvoice(inv); return { matched: 'invoice' }; }
+  return { matched: false };
+}
+
 export function startInvoicePromptReconciler() {
-  if (!SUPABASE_URL || !SERVICE_KEY || !API_KEY) return;
+  if (!SUPABASE_URL || !SERVICE_KEY) return;
   let busy = false;
   setInterval(async () => {
-    if (busy) return;
+    if (busy || !apiKey()) return;
     busy = true;
     try {
-      const pending = await db('invoice_mpesa_requests?status=eq.pending&checkout_request_id=not.is.null&select=*&order=created_at.asc&limit=30');
+      // Prompts sent with a company's own Daraja app are checked by gateways.js.
+      const pending = await db('invoice_mpesa_requests?status=eq.pending&checkout_request_id=not.is.null&checkout_request_id=not.like.daraja:*&select=*&order=created_at.asc&limit=30');
       for (const r of pending || []) { try { await reconcileInvoice(r); } catch (e) { console.error('[invoice-mpesa]', r.id, e.message); } await sleep(100); }
     } catch (e) { console.error('[invoice-mpesa] batch', e.message); }
     finally { busy = false; }

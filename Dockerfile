@@ -69,6 +69,7 @@ COPY --from=build /app/garage.js ./garage.js
 COPY --from=build /app/garage-workshop.js ./garage-workshop.js
 COPY --from=build /app/garage-specialist.js ./garage-specialist.js
 COPY --from=build /app/garage-integrations.js ./garage-integrations.js
+COPY --from=build /app/integrations-core.js ./integrations-core.js
 COPY --from=build /app/shop.js ./shop.js
 COPY --from=build /app/portal.js ./portal.js
 COPY --from=build /app/erp.js ./erp.js

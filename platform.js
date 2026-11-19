@@ -2,11 +2,11 @@
 //
 // The platform owner is whoever is listed in platform_admins, and the super
 // admin powers apply ONLY to requests made from the super admin address
-// (dash.<root>). On a company address the same person is just that company's
+// (admin.<root>, or the hub's sys-garage.jmsurfsys.co.ke). On a company address the same person is just that company's
 // admin. Nothing is switched in the database, so a company tab and the super
 // admin tab can be open side by side without undoing each other.
 //
-//   Database (PostgREST): the browser on dash.<root> sends x-dash-context:
+//   Database (PostgREST): the browser on admin.<root> sends x-dash-context:
 //   platform; has_role(uid, 'super_admin') checks it (see migration
 //   20261012090000_dash_platform_context.sql).
 //   App server: every request runs inside requestStore, so any route can ask
@@ -21,9 +21,14 @@ export const requestStore = new AsyncLocalStorage();
 /** True when the current request comes from the super admin address. */
 export function platformRequest(req = requestStore.getStore()?.req) {
   if (!req) return false;
-  const host = String(req.headers["x-forwarded-host"] || req.headers.host || "").toLowerCase();
-  return host.startsWith("admin.") || (String(req.headers["x-dash-context"] || "") === "platform" && host.startsWith("localhost"));
+  const host = String(req.headers["x-forwarded-host"] || req.headers.host || "").toLowerCase().split(":")[0];
+  // admin.garage.jmsurf.co.ke, or the JMSURF SYSTEMS hub's framing proxy for this console
+  // (sys-garage.jmsurfsys.co.ke) when it passes its own host through.
+  return host.startsWith("admin.") || host === HUB_PLATFORM_HOST ||
+    (String(req.headers["x-dash-context"] || "") === "platform" && host.startsWith("localhost"));
 }
+/** Same address as src/lib/host.ts HUB_PLATFORM_HOST. */
+export const HUB_PLATFORM_HOST = "sys-garage.jmsurfsys.co.ke";
 
 const cache = new Map();
 /** Is this user a platform owner AND working from the super admin address? */

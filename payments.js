@@ -1,19 +1,52 @@
 import { startSendMoneyPrompt } from "./sendmoney.js";
 import { shopCyclePrice, planPrice } from "./planPricing.js";
 import { isPlatformAdmin } from "./platform.js";
+import { credential } from "./integrations-core.js";
 
 /**
  * JMSURF Garage modules on the bill: every switched-on module (active, on trial
  * or payment due) is added to each renewal at its monthly price. A plan that
  * includes every module (All-in-One) or lists a module has nothing extra.
  */
-async function billableModules(tenantId, plan, token) {
+export async function billableModules(tenantId, plan, token) {
   if (plan?.all_modules) return [];
   const rows = await db(`tenant_modules?tenant_id=eq.${encodeURIComponent(tenantId)}&or=(status.in.(active,past_due),and(status.eq.trial,trial_ends_at.gt.${new Date().toISOString()}))&select=module_key,price_monthly,status`, { token }).catch(() => []);
   const included = new Set(plan?.included_modules || []);
   return (Array.isArray(rows) ? rows : []).filter((m) => !included.has(m.module_key));
 }
 const modulesMonthly = (mods) => mods.reduce((a, m) => a + Math.max(0, Number(m.price_monthly) || 0), 0);
+
+// Owner rule: a year costs 10 months (2 months free), for the package AND every module line
+// (extra branches and pro-rata rows included). Other cycles pay their number of months.
+export const ANNUAL_PAID_MONTHS = 10;
+const CYCLE_LABEL = { monthly: "1 month", quarterly: "3 months", semi_annually: "6 months", annually: "1 year (10 months paid)" };
+const MODULE_LABEL = { extra_branch: "Extra branch", prorata: "Pro-rata charge", sms: "SMS" };
+export function chargeMonths(cycle) { return cycle === "annually" ? ANNUAL_PAID_MONTHS : cycleMonths(cycle); }
+/** The package part of one cycle: a year is 10 x the (agreed) monthly price. */
+export function planCharge(plan, cycle, businessType, subscription) {
+  return cycle === "annually"
+    ? shopCyclePrice(plan, "monthly", businessType, subscription) * ANNUAL_PAID_MONTHS
+    : shopCyclePrice(plan, cycle, businessType, subscription);
+}
+/**
+ * What a renewal charges, one line per item (package, each module, extra branches, pro-rata,
+ * SMS): the amount asked is their sum, and the subscription invoice lists the same lines.
+ */
+export function subscriptionLines({ plan, cycle, businessType, subscription, mods = [] }) {
+  const months = chargeMonths(cycle);
+  const r2 = (n) => Math.round(Number(n) * 100) / 100;
+  const base = r2(planCharge(plan, cycle, businessType, subscription));
+  const lines = [{ kind: "plan", key: str(plan?.id), name: `${str(plan?.name) || "Package"} package (${CYCLE_LABEL[cycle] || "1 month"})`, quantity: 1, rate: base, amount: base }];
+  for (const m of mods) {
+    const monthly = Math.max(0, Number(m.price_monthly) || 0);
+    if (!monthly) continue;
+    const key = str(m.module_key);
+    const name = MODULE_LABEL[key] || str(m.name) || key.replace(/[_-]+/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+    lines.push({ kind: "module", key, name: `${name} (${CYCLE_LABEL[cycle] || "1 month"})`, quantity: months, rate: monthly, amount: r2(monthly * months) });
+  }
+  return lines;
+}
+export const linesTotal = (lines) => Math.round(lines.reduce((a, l) => a + Number(l.amount || 0), 0));
 
 // ---------------------------------------------------------------------------
 // Payments handled directly by the app container.
@@ -185,6 +218,8 @@ async function payheroCredentials() {
 // JMSURF Technologies Paybill — subscription and renewal money lands here.
 // Keys come from the saved settings or the container environment only.
 const DARAJA_DEFAULT_SHORTCODE = "4022819";
+/** The platform's own JMSURF PAY settlement channel (package fees), separate from every company. */
+const PLATFORM_EXTERNAL_ID = "jmsurf-garage-platform";
 
 /** Daraja rejects references with spaces or symbols; max 12 characters. */
 function safeAccountReference(...candidates) {
@@ -192,7 +227,7 @@ function safeAccountReference(...candidates) {
     const cleaned = str(candidate).replace(/[^A-Za-z0-9]/g, "").toUpperCase();
     if (cleaned) return cleaned.slice(0, 12);
   }
-  return "JMSURFPOS";
+  return "JMSURFGARAGE";
 }
 
 /** Platform Daraja keys used for subscription and renewal payments only. */
@@ -202,7 +237,7 @@ async function darajaCredentials() {
 
   const till = pick(daraja.till_number, daraja.buy_goods_number);
   const paybill = pick(daraja.paybill_number, daraja.shortcode);
-  const shortcode = pick(daraja.shortcode, daraja.paybill_number, till, process.env.MPESA_SHORTCODE, DARAJA_DEFAULT_SHORTCODE);
+  const shortcode = pick(daraja.shortcode, daraja.paybill_number, till, credential("MPESA_SHORTCODE"), DARAJA_DEFAULT_SHORTCODE);
 
   // A paybill needs CustomerPayBillOnline; only a till uses CustomerBuyGoodsOnline.
   // Getting this wrong makes Safaricom accept the request but never deliver the PIN prompt.
@@ -213,12 +248,12 @@ async function darajaCredentials() {
   }
 
   return {
-    consumerKey: pick(daraja.consumer_key, process.env.MPESA_CONSUMER_KEY),
-    consumerSecret: pick(daraja.consumer_secret, process.env.MPESA_CONSUMER_SECRET),
-    passkey: pick(daraja.passkey, process.env.MPESA_PASSKEY),
+    consumerKey: pick(daraja.consumer_key, credential("MPESA_CONSUMER_KEY")),
+    consumerSecret: pick(daraja.consumer_secret, credential("MPESA_CONSUMER_SECRET")),
+    passkey: pick(daraja.passkey, credential("MPESA_PASSKEY")),
     shortcode,
     accountReference: pick(daraja.account_reference),
-    environment: pick(daraja.environment, process.env.MPESA_ENVIRONMENT, "live"),
+    environment: pick(daraja.environment, credential("MPESA_ENVIRONMENT"), "live"),
     transactionType,
   };
 }
@@ -926,7 +961,7 @@ async function platformPaystackSecret() {
 }
 
 /** Sends the prompt / checkout for a package payment through the chosen gateway. */
-async function startPlatformCollection(provider, billing, { tenant, phone, amount, plan, cycle, subscription, email, usd }) {
+async function startPlatformCollection(provider, billing, { tenant, phone, amount, plan, cycle, subscription, email, usd, lines = null }) {
   const ref = `SUB-${tenant.slug || "shop"}-${Date.now().toString(36)}`.slice(0, 40);
   const base = {
     tenant_id: tenant.id,
@@ -934,7 +969,7 @@ async function startPlatformCollection(provider, billing, { tenant, phone, amoun
     amount,
     status: "pending",
     phone,
-    metadata: { plan_id: plan.id, plan_name: plan.name, cycle, type: "subscription", provider, ...(usd ? { currency: "USD", usd_amount: usd.amount, usd_rate: usd.rate } : {}) },
+    metadata: { plan_id: plan.id, plan_name: plan.name, cycle, type: "subscription", provider, ...(lines ? { lines } : {}), ...(usd ?{ currency: "USD", usd_amount: usd.amount, usd_rate: usd.rate } : {}) },
   };
 
   if (provider === "jmsurf") {
@@ -1065,7 +1100,7 @@ async function handlePlatformBillingRegister(req, res, body) {
     const provisioned = await sendMoneyApi("/api/saas/provision-tenant", {
       method: "POST",
       body: {
-        name: "JMSURF Technologies", description: "JMSURF Garage subscription fees", source: "jmsurf-pos", externalId: "platform-fees",
+        name: "JMSURF Technologies", description: "JMSURF Garage subscription fees", source: "jmsurf-garage", externalId: PLATFORM_EXTERNAL_ID,
         accountType: type === "till" ? "till" : "paybill", accountNumber, accountName: accountName || "JMSURF Technologies",
         ...(type === "till" ? {} : { businessNumber }),
       },
@@ -1175,7 +1210,8 @@ async function handleSubscription(req, res, body) {
       { token: ctx.token },
     );
     const mods = await billableModules(tenant.id, plan, ctx.token);
-    const amount = Math.max(1, Math.round(shopCyclePrice(plan, cycle, tenant.business_type, subscription) + modulesMonthly(mods) * cycleMonths(cycle)));
+    const lines = subscriptionLines({ plan, cycle, businessType: tenant.business_type, subscription, mods });
+    const amount = Math.max(1, linesTotal(lines));
 
     if (provider !== "daraja") {
       let usd = null;
@@ -1185,7 +1221,7 @@ async function handleSubscription(req, res, body) {
         usd = { amount: Math.max(1, Math.ceil((amount / rate) * 100) / 100), rate };
       }
       const started = await startPlatformCollection(provider, billing, {
-        tenant, phone, amount, plan, cycle, subscription, email: ctx.user?.email, usd,
+        tenant, phone, amount, plan, cycle, subscription, email: ctx.user?.email, usd, lines,
       });
       return sendJson(res, started.error ? 400 : 200, started);
     }
@@ -1239,7 +1275,7 @@ async function handleSubscription(req, res, body) {
         status: "pending",
         phone,
         reference: checkoutId,
-        metadata: { plan_id: plan.id, plan_name: plan.name, cycle, type: "subscription" },
+        metadata: { plan_id: plan.id, plan_name: plan.name, cycle, type: "subscription", lines },
       },
       token: ctx.token,
     });
@@ -1410,7 +1446,57 @@ async function activateSubscription(ctx, tenant, payment) {
     token: ctx.token,
   });
 
+  // The paid subscription invoice (one line per item), signed with KRA by the platform's own company.
+  await issueSubscriptionInvoice(tenant, payment, plan, cycle, paidModules).catch((e) => console.error("[billing] subscription invoice", payment.id, e?.message));
+
   return { planName: plan.name };
+}
+
+/**
+ * Subscription invoice: when PLATFORM_BILLING_TENANT_ID names JMSURF TECHNOLOGIES' own company in
+ * this database, every paid renewal becomes a paid invoice there, listing the package, each module,
+ * extra branches, pro-rata charges and SMS as separate lines (prices include 16% VAT), and is signed
+ * with KRA eTIMS through that company's connection. Once per payment (metadata.invoice_id).
+ */
+async function issueSubscriptionInvoice(tenant, payment, plan, cycle, mods) {
+  const issuer = str(process.env.PLATFORM_BILLING_TENANT_ID);
+  if (!UUID.test(issuer) || payment?.metadata?.invoice_id) return null;
+  const meta = payment.metadata || {};
+  const sub = await dbRow(`subscriptions?tenant_id=eq.${encodeURIComponent(tenant.id)}&select=plan_id,price&order=created_at.desc&limit=1`);
+  let lines = Array.isArray(meta.lines) && meta.lines.length ? meta.lines
+    : subscriptionLines({ plan, cycle, businessType: tenant.business_type, subscription: sub, mods });
+  // The invoice must equal what was paid: any difference (rounding, older payments) goes on the package line.
+  const paid = Number(payment.amount) || linesTotal(lines);
+  const diff = Math.round((paid - lines.reduce((a, l) => a + Number(l.amount || 0), 0)) * 100) / 100;
+  if (diff) lines = lines.map((l, i) => (i === 0 ? { ...l, rate: l.rate + diff, amount: l.amount + diff } : l));
+  const bs = await dbRow(`business_settings?tenant_id=eq.${encodeURIComponent(tenant.id)}&select=business_name,business_email,business_phone,tax_pin&limit=1`);
+  const name = str(bs?.business_name || tenant.business_name) || tenant.slug;
+  let cust = await dbRow(`customers?tenant_id=eq.${issuer}&name=eq.${encodeURIComponent(name)}&select=id&limit=1`);
+  if (!cust) {
+    const made = await dbRequired("customers", { method: "POST", prefer: "return=representation", body: { tenant_id: issuer, name, phone: str(bs?.business_phone), email: str(bs?.business_email) || null, ...(str(bs?.tax_pin) ? { kra_pin: str(bs.tax_pin).toUpperCase() } : {}) } });
+    cust = made?.[0];
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const number = (await dbRequired("rpc/next_doc_number", { method: "POST", body: { p_kind: "invoice", p_tenant: issuer } }).catch(() => null)) || `SUB-${Date.now().toString(36).toUpperCase()}`;
+  const total = Math.round(lines.reduce((a, l) => a + Number(l.amount), 0) * 100) / 100;
+  const subtotal = Math.round((total / 1.16) * 100) / 100;
+  const items = lines.map((l) => ({ name: l.name, description: l.kind === "plan" ? `${tenant.slug}.garage.jmsurf.co.ke` : "", quantity: Number(l.quantity) || 1, rate: Number(l.rate), price: Number(l.rate), amount: Number(l.amount), tax_rate: 16 }));
+  const [inv] = await dbRequired("invoices", { method: "POST", prefer: "return=representation", body: {
+    tenant_id: issuer, invoice_number: number, customer_id: cust?.id || null, customer_name: name, customer_email: str(bs?.business_email) || null,
+    items, subtotal, tax: Math.round((total - subtotal) * 100) / 100, discount: 0, total, prices_include_tax: true, status: "sent", source: "subscription",
+    issue_date: today, due_date: today, notes: `JMSURF Garage subscription, ${str(plan.name)} (${cycle.replace("_", " ")}). Paid: ${str(payment.reference)}`,
+  } });
+  if (!inv?.id) return null;
+  const payNo = await dbRequired("rpc/next_doc_number", { method: "POST", body: { p_kind: "payment", p_tenant: issuer } }).catch(() => null);
+  const [pr] = await dbRequired("payments_received", { method: "POST", prefer: "return=representation", body: {
+    tenant_id: issuer, payment_number: payNo || `PAY-${Date.now().toString(36).toUpperCase()}`, customer_id: cust?.id || null, customer_name: name, payment_date: today,
+    amount: total, method: payment.gateway === "paystack" ? "card" : "mpesa", reference: str(payment.reference).slice(0, 80), notes: `Subscription ${number}`, received_by_name: "JMSURF Garage billing",
+  } });
+  if (pr?.id) await db("payment_allocations", { method: "POST", body: { tenant_id: issuer, payment_id: pr.id, invoice_id: inv.id, amount: total } });
+  await db(`subscription_payments?id=eq.${encodeURIComponent(payment.id)}`, { method: "PATCH", body: { metadata: { ...meta, lines, invoice_id: inv.id, invoice_number: number } } });
+  const { signDocument } = await import("./etims.js");
+  await signDocument(issuer, "invoice", inv.id).catch(() => null); // not connected / KRA slow: the eTIMS job retries
+  return inv.id;
 }
 
 /** Safaricom calls this when a package payment finishes. */
