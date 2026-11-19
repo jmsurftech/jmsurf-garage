@@ -224,7 +224,7 @@ async function settle(tenantId, kind, key, r) {
   }).catch(() => {});
 }
 
-const EVENT_FOR = { booking: "appointment_reminder", service: "restock_reminder", insurance: "restock_reminder", inspection: "restock_reminder", speed_governor: "restock_reminder", psv: "restock_reminder", winback: "journey" };
+const EVENT_FOR = { booking: "booking_reminder", service: "service_due", insurance: "document_expiry", inspection: "document_expiry", speed_governor: "document_expiry", psv: "document_expiry", winback: "win_back" };
 
 /** Runs reminders for one company. `dry` lists what is due without sending. */
 async function runCompany(tenantId, { dry = false, now = Date.now() } = {}) {
@@ -333,7 +333,7 @@ async function staffRoute(req, res, sub, body, sendJson) {
     const { tenant } = await garage(t);
     const link = publicLink(`/e/${est.token}`);
     const text = str(body.text) || `${garageName(tenant)}: the ${est.kind === "extra" ? "extra work" : "estimate"} for ${formatPlate(vehicle?.plate) || job.job_no} is ready. Approve or decline each item here: ${link}`;
-    const r = await sendForShop({ tenantId: t, channel, to, text, userId: me.userId, reference: `garage-estimate-${est.id}`, event: "manual" });
+    const r = await sendForShop({ tenantId: t, channel, to, text, userId: me.userId, reference: `garage-estimate-${est.id}`, event: "estimate_ready" });
     if (r.ok) {
       await db(`garage_estimates?id=eq.${est.id}`, { method: "PATCH", prefer: "return=minimal", body: { status: ["draft", "expired"].includes(est.status) ? "sent" : est.status, sent_at: new Date().toISOString(), sent_via: r.channel || channel } });
       await db("garage_job_events", { method: "POST", prefer: "return=minimal", body: { tenant_id: t, job_id: job.id, kind: "estimate_sent", note: `Estimate v${est.version} sent by ${r.channel || channel}`, by_user: me.userId, by_name: me.name } });
@@ -357,7 +357,7 @@ async function staffRoute(req, res, sub, body, sendJson) {
       : kind === "ready" ? `${garageName(tenant)}: ${plate} is ready for collection. Details and payment: ${link}`
       : `${garageName(tenant)}: we have received ${plate}, job ${job.job_no}. Follow progress here: ${link}`;
     if (!text) throw new HttpError(400, "Type the message");
-    const r = await sendForShop({ tenantId: t, channel, to, text, userId: me.userId, reference: kind === "ready" ? `repair-${job.id}` : `garage-job-${job.id}`, event: kind === "ready" ? "repair_ready" : "manual" });
+    const r = await sendForShop({ tenantId: t, channel, to, text, userId: me.userId, reference: kind === "ready" ? `repair-${job.id}` : `garage-job-${job.id}`, event: kind === "ready" ? "car_ready" : kind === "tag" ? "job_checked_in" : "manual" });
     if (r.ok) {
       await db("garage_job_events", { method: "POST", prefer: "return=minimal", body: { tenant_id: t, job_id: job.id, kind: "message", note: `${kind === "ready" ? "Ready message" : kind === "tag" ? "Job tag" : "Message"} sent by ${r.channel || channel}`, by_user: me.userId, by_name: me.name } });
       if (kind === "ready") await db(`garage_jobs?id=eq.${job.id}`, { method: "PATCH", prefer: "return=minimal", body: { ready_sms_sent_at: new Date().toISOString() } }).catch(() => {});
@@ -372,7 +372,7 @@ async function staffRoute(req, res, sub, body, sendJson) {
     if (!str(b.phone)) throw new HttpError(400, "The booking has no phone number");
     const { tenant } = await garage(t);
     const text = `${garageName(tenant)}: ${formatPlate(b.plate) || "your vehicle"} is booked for ${fmtDate(b.starts_at, true)} (ref ${b.booking_no}). To change it call ${garagePhone(tenant)}.`;
-    const r = await sendForShop({ tenantId: t, channel, to: b.phone, text, userId: me.userId, reference: `garage-booking-${b.id}`, event: "appointment_booked" });
+    const r = await sendForShop({ tenantId: t, channel, to: b.phone, text, userId: me.userId, reference: `garage-booking-${b.id}`, event: "booking_confirmed" });
     if (r.ok) await db(`garage_bookings?id=eq.${b.id}`, { method: "PATCH", prefer: "return=minimal", body: { confirm_sent_at: new Date().toISOString() } });
     return sendJson(res, r.ok ? 200 : 400, { ok: !!r.ok, error: r.ok ? undefined : r.error });
   }
@@ -602,7 +602,7 @@ async function publicRoute(req, res, sub, body, sendJson) {
       tenant_id: tenant.id, kind: "garage_booking", title: "New online booking", body: `${formatPlate(plate)} · ${fmtDate(startIso, true)} · ${name}`, link: "/garage/bookings", sent_at: new Date().toISOString(),
     } }).catch(() => {});
     const text = `${garageName(tenant)}: we have your booking for ${formatPlate(plate)} on ${fmtDate(startIso, true)} (ref ${booking.booking_no}). We will confirm shortly.`;
-    sendForShop({ tenantId: tenant.id, channel: "sms", to: local0, text, reference: `garage-booking-${booking.id}`, event: "appointment_booked" })
+    sendForShop({ tenantId: tenant.id, channel: "sms", to: local0, text, reference: `garage-booking-${booking.id}`, event: "booking_confirmed" })
       .then((r) => r?.ok && db(`garage_bookings?id=eq.${booking.id}`, { method: "PATCH", prefer: "return=minimal", body: { confirm_sent_at: new Date().toISOString() } }))
       .catch(() => {});
     return sendJson(res, 200, { ok: true, booking_no: booking.booking_no, starts_at: startIso });
