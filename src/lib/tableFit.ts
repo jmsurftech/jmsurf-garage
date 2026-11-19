@@ -174,7 +174,7 @@ function fullTextOnHover(e: Event) {
   const el = t?.closest?.<HTMLElement>(".truncate, td, th");
   if (!el || el.hasAttribute("title") || el.dataset.autoTitle === "0") return;
   const cut = el.scrollWidth > el.clientWidth + 1;
-  const text = (el.textContent || "").replace(/s+/g, " ").trim();
+  const text = (el.textContent || "").replace(/\s+/g, " ").trim();
   if (!cut || !text || text.length > 300) return;
   el.title = text;
 }
