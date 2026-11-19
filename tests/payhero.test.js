@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+// The Docker build passes the real platform keys as build args: clear every one the payment code reads,
+// so the test runs the same in the build as on a laptop.
+for (const k of ['SENDMONEY_API_KEY', 'JMSURFPAY_API_KEY', 'JMSURFPAY_BASE_URL', 'SENDMONEY_WEBHOOK_SECRET', 'PAYMENT_CALLBACK_TOKEN',
+  'SUPABASE_SERVICE_ROLE_KEY', 'SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'GARAGE_SECRETS_KEY', 'PUBLIC_ORIGIN', 'VITE_SUPABASE_URL',
+  'MPESA_CONSUMER_KEY', 'MPESA_CONSUMER_SECRET', 'MPESA_PASSKEY', 'MPESA_SHORTCODE', 'PAYSTACK_SECRET_KEY']) delete process.env[k];
 process.env.SUPABASE_URL = 'https://db.example.test';
 process.env.SUPABASE_ANON_KEY = 'anon-test';
 process.env.JMSURF_SUPABASE_SERVICE_KEY = 'service-test';
