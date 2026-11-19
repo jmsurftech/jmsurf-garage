@@ -67,7 +67,7 @@ export const WORKSHOP_NAV: NavEntry[] = [
       { path: "/garage/jobs", label: "Job cards", icon: ClipboardList },
       { path: "/garage/bookings", label: "Bookings", icon: CalendarDays },
       { path: "/garage/vehicles", label: "Vehicles", icon: Car },
-      { path: "/garage/inspections", label: "Inspections", icon: ClipboardCheck },
+      { path: "/garage/inspections", label: "Inspections", icon: ClipboardCheck, module: "workshop_pro" },
       { path: "/garage/estimates", label: "Estimates", icon: FileText },
       { path: "/garage/parts", label: "Parts for jobs", icon: PackageSearch },
       { path: "/garage/reminders", label: "Service reminders", icon: BellRing },
