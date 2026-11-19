@@ -24,7 +24,7 @@ export interface NavLeaf {
   icon: LucideIcon;
   /** Extra paths that also mark this entry active (e.g. detail pages). */
   match?: string[];
-  /** Module that must be switched on (JMSURF BOOKS parts have none). */
+  /** Module that must be switched on (Garage Core parts have none). */
   module?: string;
   /** Shown only once the module is paid for (not while on trial). */
   paid?: boolean;
@@ -90,7 +90,6 @@ export const NAV: NavSection[] = [
           { path: "/sales/credit-notes", label: "Credit Notes", icon: FileMinus },
           { path: "/sales/returns", label: "Sales Returns", icon: Undo2 },
           { path: "/sales/debts", label: "Receivables", icon: HandCoins },
-          { path: "/sales/samples", label: "Samples", icon: Gift },
           { path: "/sales/reminders", label: "Reminders", icon: CalendarClock },
           { path: "/sales-reps", label: "Salespersons", icon: BadgePercent },
           { path: "/sales/online-orders", label: "Online Orders", icon: Globe, module: "ecommerce" },
@@ -111,20 +110,21 @@ export const NAV: NavSection[] = [
           { path: "/purchases/payments", label: "Payments Made", icon: Banknote },
           { path: "/purchases/vendor-credits", label: "Vendor Credits", icon: FileMinus },
           { path: "/purchases/payables", label: "Payables", icon: HandCoins },
-          { path: "/purchases/landed-costs", label: "Landed Costs", icon: Truck },
+          { path: "/purchases/landed-costs", label: "Landed Costs", icon: Truck, module: "inventory" },
         ],
       },
-      { path: "/accounting/banking", label: "Banking", icon: Landmark },
+      // Accounting module (included in Business and Pro).
+      { path: "/accounting/banking", label: "Banking", icon: Landmark, module: "accounting" },
       {
-        path: "/accountant-menu", label: "Accountant", icon: Scale,
+        path: "/accountant-menu", label: "Accountant", icon: Scale, module: "accounting",
         children: [
-          { path: "/accounting/chart-of-accounts", label: "Chart of Accounts", icon: Landmark },
-          { path: "/accounting/journals", label: "Manual Journals", icon: BookText },
-          { path: "/accounting/statements", label: "Financial Statements", icon: FileSpreadsheet },
-          { path: "/accounting/vat-return", label: "VAT Return", icon: BadgePercent },
-          { path: "/accounting/opening-balances", label: "Opening Balances", icon: Scale },
-          { path: "/accounting/budgets", label: "Budgets", icon: PieChart },
-          { path: "/accounting/lock", label: "Transaction Locking", icon: Lock },
+          { path: "/accounting/chart-of-accounts", label: "Chart of Accounts", icon: Landmark, module: "accounting" },
+          { path: "/accounting/journals", label: "Manual Journals", icon: BookText, module: "accounting" },
+          { path: "/accounting/statements", label: "Financial Statements", icon: FileSpreadsheet, module: "accounting" },
+          { path: "/accounting/vat-return", label: "VAT Return", icon: BadgePercent, module: "accounting" },
+          { path: "/accounting/opening-balances", label: "Opening Balances", icon: Scale, module: "accounting" },
+          { path: "/accounting/budgets", label: "Budgets", icon: PieChart, module: "accounting" },
+          { path: "/accounting/lock", label: "Transaction Locking", icon: Lock, module: "accounting" },
         ],
       },
       {
@@ -182,37 +182,26 @@ export const NAV: NavSection[] = [
           app("expense", "claim", "Expense Claims", Wallet),
         ],
       },
-      {
-        path: "/manufacturing-menu", label: "Manufacturing", icon: Factory, module: "manufacturing", lockable: true,
-        children: [
-          app("manufacturing", "mo", "Manufacturing Orders", Factory),
-          app("manufacturing", "bom", "Bills of Materials", ScrollText),
-          app("manufacturing", "work_center", "Work Centres", Cog),
-          app("manufacturing", "scrap", "Scrap", Trash2),
-          app("quality", "check", "Quality", ShieldCheck),
-          app("plm", "eco", "Engineering Changes", Layers),
-          app("maintenance", "request", "Maintenance", Wrench),
-          app("iot", "device", "Devices (IoT)", Cpu),
-        ],
-      },
+      // Manufacturing is not offered to garages (hidden, not deleted: see src/lib/modules.ts).
       { path: "/reports", label: "Reports", icon: BarChart3, match: ["/finance"] },
       { path: "/documents", label: "Documents", icon: FolderOpen },
     ],
   },
 ];
 
-/** Suites that have their own place in the main menu above. */
-const IN_MAIN_MENU = new Set(["books", "crm", "projects", "hrm", "manufacturing", "inventory", "expense"]);
+/** Modules that have their own place in the main menu above. */
+const IN_MAIN_MENU = new Set(["garage_core", "crm", "projects", "hrm", "manufacturing", "inventory", "expense", "accounting"]);
 
-/** Every other suite the company switched on, each as a group of its apps, in one "Apps" section. */
+/** Every other module the company switched on, each as a group of its apps, in one "Apps" section. */
 export function appsSection(has: (key: string) => boolean, custom: { app_key: string; name: string }[] = []): NavSection {
   const entries: NavEntry[] = [
     { path: "/notebook", label: "Notebook", icon: StickyNote },
     { path: "/apps/discuss", label: "Team chat", icon: MessagesSquare, match: ["/apps/discuss"] },
   ];
   for (const m of MODULES) {
-    if (IN_MAIN_MENU.has(m.key) || m.included || !has(m.key)) continue;
-    const label = m.name.replace(/^JMSURF /, "").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()).replace(/\bAi\b/, "AI");
+    // Garage modules bring their own menu entries (src/garage/*); hidden suites never show.
+    if (IN_MAIN_MENU.has(m.key) || m.included || m.garage || m.hidden || !has(m.key)) continue;
+    const label = m.name.replace(/^JMSURF /, "");
     const kids: NavLeaf[] = m.apps.map((x) => ({ path: x.home.split("?")[0], label: x.name, icon: x.icon, module: x.key, match: x.home.startsWith("/apps/") ? [x.home] : undefined }));
     if (m.key === "studio") kids.push(...custom.map((c) => ({ path: `/apps/studio:${c.app_key}`, label: c.name, icon: Blocks, module: "studio" })));
     // Contracts and Sign are each a button of their own.
@@ -234,7 +223,8 @@ export const PRIMARY: NavLeaf[] = [
 /** Pages reached from the sidebar foot (System, Help) or inside System, for titles. */
 const EXTRA: { leaf: NavLeaf; section: string }[] = [
   { leaf: { path: "/settings", label: "System", icon: LayoutDashboard }, section: "System" },
-  { leaf: { path: "/modules", label: "Modules", icon: Grid2x2 }, section: "System" },
+  { leaf: { path: "/modules", label: "Modules & billing", icon: Grid2x2 }, section: "System" },
+  { leaf: { path: "/billing", label: "Billing", icon: Grid2x2 }, section: "System" },
   { leaf: { path: "/help", label: "Help centre", icon: LayoutDashboard }, section: "System" },
   { leaf: { path: "/whats-new", label: "What's new", icon: LayoutDashboard }, section: "System" },
   { leaf: { path: "/staff", label: "Staff", icon: Users }, section: "System" },

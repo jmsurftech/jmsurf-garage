@@ -74,7 +74,7 @@ export const SYSTEM_GROUPS: { title: string; items: Item[] }[] = [
   {
     title: "Module Settings",
     items: [
-      { label: "Modules (app store)", icon: Grid2x2, to: "/modules", owner: true },
+      { label: "Modules & billing", icon: Grid2x2, to: "/modules", owner: true },
       { label: "Items", icon: Package, tab: "items", managers: true },
       { label: "Point of Sale", icon: ShoppingCart, tab: "pos", managers: true, module: "pos" },
       { label: "Advanced inventory", icon: Package, tab: "inventory", managers: true, module: "inventory" },

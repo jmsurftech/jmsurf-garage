@@ -14,7 +14,7 @@ export default function GetStarted({ data }: { data?: { company: boolean; data: 
   const steps = [
     { done: data.company, icon: Building2, t: "Add your company details", d: "Logo, phone, KRA PIN and address for invoices.", to: "/settings" },
     { done: data.data, icon: UploadCloud, t: "Bring your data", d: "Connect your previous accounting system or upload its exports.", to: "/migrate" },
-    { done: data.modules, icon: Grid2x2, t: "Switch on your apps", d: "CRM, HR & payroll, projects, inventory… 14 days free.", to: "/modules" },
+    { done: data.modules, icon: Grid2x2, t: "Switch on your modules", d: "Workshop Pro, parts, body & paint, car wash… 14 days free.", to: "/modules" },
     { done: data.team, icon: Users, t: "Invite your team", d: "Give each person a role and only what they need.", to: "/staff" },
     { done: data.payments, icon: Smartphone, t: "Get paid by M-Pesa", d: "Connect your Till or Paybill so invoices can be paid online.", to: "/settings?tab=payments" },
     { done: data.invoice, icon: FileCheck, t: "Send your first invoice", d: "Branded, by email, SMS or WhatsApp.", to: "/sales/invoices/new" },

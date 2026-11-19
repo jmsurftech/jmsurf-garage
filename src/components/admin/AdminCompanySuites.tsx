@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Gift, Power, Clock, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { MODULES } from "@/lib/modules";
+import { PUBLIC_MODULES as MODULES } from "@/lib/modules";
 import { Pill } from "@/components/kit";
 import { friendlyError } from "@/lib/friendlyError";
 import { toast } from "sonner";

@@ -38,6 +38,7 @@ function useBillingCurrency() {
   return { foreign, fmt };
 }
 import { OrbSpinner } from "@/components/orbs";
+import GarageBillPanel from "@/components/billing/GarageBillPanel";
 
 type Plan = {
   id: string;
@@ -50,6 +51,8 @@ type Plan = {
   features: Record<string, boolean> | null;
   all_modules?: boolean;
   included_modules?: string[];
+  description?: string | null;
+  quote_only?: boolean;
 };
 
 type Cycle = "monthly" | "quarterly" | "semi_annually" | "annually";
@@ -61,12 +64,8 @@ const CYCLES: { key: Cycle; label: string; duration: string }[] = [
   { key: "annually", label: "Yearly", duration: "12 months" },
 ];
 
-const HIGHLIGHT: Record<string, string> = {
-  Basic: "Everything a single counter needs to sell and restock.",
-  Standard: "Adds the full sales suite for a growing company.",
-  Business: "For multi-branch companies that need messaging and audit trails.",
-  Premium: "Every module, unlimited staff and unlimited branches.",
-};
+/** Older plans without a description of their own. */
+const HIGHLIGHT: Record<string, string> = {};
 
 const cap = (n: number) => (n >= 999999 ? "Unlimited" : String(n));
 
@@ -136,11 +135,12 @@ export default function Billing() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("plans")
-        .select("id, name, price_monthly, price_quarterly, price_annually, max_users, max_locations, features, all_modules, included_modules")
+        .select("id, name, price_monthly, price_quarterly, price_annually, max_users, max_locations, features, all_modules, included_modules, description, quote_only")
         .eq("is_active", true)
         .order("price_monthly", { ascending: true });
       if (error) throw error;
-      return (data || []) as Plan[];
+      // Enterprise is priced per garage by JMSURF (not bought here).
+      return ((data || []) as Plan[]).filter((p) => !p.quote_only);
     },
   });
 
@@ -494,11 +494,13 @@ export default function Billing() {
           </div>
         )}
 
+        <GarageBillPanel tenantId={activeTenantId} onChoosePlan={() => document.getElementById("packages")?.scrollIntoView({ behavior: "smooth" })} />
+
         <section id="packages" className="space-y-4 scroll-mt-24">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="font-display text-xl font-bold">Packages</h2>
-              <p className="text-sm text-muted-foreground">Pay for longer and renew less often.</p>
+              <h2 className="font-display text-xl font-bold">Plans</h2>
+              <p className="text-sm text-muted-foreground">Pay for longer and renew less often. Yearly is 10 months' price.</p>
             </div>
             <Segmented value={viewCycle} onChange={(v) => setViewCycle(v as Cycle)} options={CYCLES.map((c) => ({ value: c.key, label: c.label }))} />
           </div>
@@ -523,7 +525,7 @@ export default function Billing() {
                       </span>
                     )}
                     <h3 className="font-display text-lg font-bold">{plan.name}</h3>
-                    <p className="mt-1 min-h-[36px] text-xs text-muted-foreground">{HIGHLIGHT[plan.name] || ""}</p>
+                    <p className="mt-1 min-h-[36px] text-xs text-muted-foreground">{plan.description || HIGHLIGHT[plan.name] || ""}</p>
                     <p className="mt-3 flex items-baseline gap-1">
                       <span className="font-display text-2xl font-bold tracking-tight">{fmt(isCurrent ? currentCyclePrice(viewCycle) : priceFor(plan, viewCycle))}</span>
                       <span className="text-sm text-muted-foreground">/{cycleUnit(viewCycle)}</span>
@@ -531,7 +533,7 @@ export default function Billing() {
                     <ul className="mt-5 flex-1 space-y-2 text-sm">
                       <li className="flex items-center gap-2"><Users className="h-4 w-4 shrink-0 text-primary" />{cap(plan.max_users)} user{plan.max_users === 1 ? "" : "s"}</li>
                       <li className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-primary" />{cap(plan.max_locations)} branch{plan.max_locations === 1 ? "" : "es"}</li>
-                      <li className="flex items-center gap-2 text-muted-foreground"><Check className="h-4 w-4 shrink-0 text-primary" />{plan.all_modules ? "Every suite included" : (plan.included_modules || []).length ? `Includes ${(plan.included_modules || []).map((k) => moduleName(k).replace(/^JMSURF /, "")).join(", ")}` : "JMSURF BOOKS (accounting) included"}</li>
+                      <li className="flex items-center gap-2 text-muted-foreground"><Check className="h-4 w-4 shrink-0 text-primary" />{plan.all_modules ? "Every module included" : (plan.included_modules || []).length ? `Garage Core + ${(plan.included_modules || []).map((k) => moduleName(k).replace(/^JMSURF /, "")).join(", ")}` : "Garage Core included"}</li>
                     </ul>
                     <Button className="mt-6 w-full" variant={isCurrent || featured ? "default" : "outline"} onClick={() => openPay(plan, viewCycle)}>
                       {isCurrent ? "Renew" : upgrade ? `Upgrade to ${plan.name}` : `Switch to ${plan.name}`}

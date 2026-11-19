@@ -5,7 +5,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, CheckCircle2, Clock, Grid2x2, Lock, Power, Search, Sparkles, X, ArrowRight, CreditCard, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Modal, Pill, Segmented } from "@/components/kit";
-import { MODULES, MODULE_CATEGORIES, ALL_IN_ONE_PRICE, type ModuleDef } from "@/lib/modules";
+import { PUBLIC_MODULES as MODULES, MODULE_CATEGORIES, CORE_KEY, type ModuleDef } from "@/lib/modules";
+import { GARAGE_NAV } from "@/garage/nav";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useGarageCatalogue } from "@/hooks/useGarageCatalogue";
+import { kes as kesFmt } from "@/lib/garagePlans";
 import { useModules } from "@/hooks/useModules";
 import { useErpSettings } from "@/pages/settings/ErpSettingsTabs";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,45 +24,28 @@ const kes = (n: number) => `KES ${Math.round(n).toLocaleString("en-KE")}`;
 
 interface PriceRow { key: string; price_monthly: number; is_active: boolean; included: boolean }
 
-/** Single-app use: only the chosen app (and other apps switched on) in the menu, no accounting suite. */
-function SingleAppMode({ onApps }: { onApps: ModuleDef[] }) {
-  const qc = useQueryClient();
-  const { data: biz } = useBusinessSettings();
-  const focus: string | null = (biz as any)?.erp_settings?.focus_app || null;
-  const [pick, setPick] = useState("");
-  const setFocus = async (key: string | null) => {
-    const { data } = await (supabase as any).from("business_settings").select("id,erp_settings").eq("id", (biz as any)?.id).maybeSingle();
-    if (!data?.id) return toast.error("Save the business details first");
-    const { error } = await (supabase as any).from("business_settings").update({ erp_settings: { ...(data.erp_settings || {}), focus_app: key } }).eq("id", data.id);
-    if (error) return toast.error(friendlyError(error));
-    await qc.invalidateQueries({ queryKey: ["business-settings"] });
-    toast.success(key ? `Using ${MODULES.find((m) => m.key === key)?.name} on its own` : "The full suite is back in your menu");
-  };
-  const app = MODULES.find((m) => m.key === focus);
-  if (!app && !onApps.length) return null;
-  return (
-    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4">
-      <Grid2x2 className="h-5 w-5 text-primary" />
-      {app ? (
-        <>
-          <p className="min-w-0 flex-1 text-sm"><b>{app.name}</b> is used on its own: the menu shows only its screens and any other app you switch on. Accounting (JMSURF BOOKS) is hidden.</p>
-          <button onClick={() => void setFocus(null)} className="rounded-xl bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground">Show the full suite</button>
-        </>
-      ) : (
-        <>
-          <p className="min-w-0 flex-1 text-sm">Only need one app? Hide everything else and use it on its own.</p>
-          <select className="fi h-9 w-auto" value={pick} onChange={(e) => setPick(e.target.value)}><option value="">Choose an app…</option>{onApps.map((m) => <option key={m.key} value={m.key}>{m.name}</option>)}</select>
-          <button disabled={!pick} onClick={() => void setFocus(pick)} className="rounded-xl border border-border px-3.5 py-2 text-sm font-semibold hover:bg-muted disabled:opacity-50">Use on its own</button>
-        </>
-      )}
-    </div>
-  );
+/** Where "Open" goes: the module's own home, else its first entry in the garage menu. */
+function homeOf(m: ModuleDef): string {
+  if (m.home) return m.home;
+  for (const e of GARAGE_NAV) {
+    if (e.module === m.key && !e.children?.length) return e.path;
+    const kid = e.children?.find((c) => c.module === m.key) || (e.module === m.key ? e.children?.[0] : undefined);
+    if (kid) return kid.path;
+  }
+  return "/dashboard";
 }
 
-/** System → Modules: the app store. Switching an app on adds it to the sidebar at once. */
+/**
+ * System → Modules & billing: the module store. Switching a module on adds it to the menu at once
+ * (free for 14 days the first time, then billed pro-rata from that day). Switching off runs to the
+ * end of the paid period; the records stay and can be read. Only the owner or a role with billing
+ * rights may buy or remove (the database checks it too: garage_can_bill).
+ */
 export default function ModulesStore() {
   const { role } = useAuth();
-  const isAdmin = role === "admin" || role === "super_admin";
+  const { hasPermission } = usePermissions();
+  const isAdmin = role === "admin" || role === "super_admin" || hasPermission("billing");
+  const catalogue = useGarageCatalogue();
   const { modules: mine, has, hidden } = useModules();
   const { save } = useErpSettings();
   const qc = useQueryClient();
@@ -91,6 +78,8 @@ export default function ModulesStore() {
     return `Switch on · ${kes(priceOf(m))}/month`;
   };
   const priceOf = (m: ModuleDef) => Number(prices.find((p) => p.key === m.key)?.price_monthly ?? m.price);
+  const bundlePlan = catalogue.plans.find((p) => p.bundle);
+  const inPlan = (m: ModuleDef) => !!(sub as any)?.plans?.included_modules?.includes(m.key);
   const offered = (m: ModuleDef) => prices.length === 0 || prices.find((p) => p.key === m.key)?.is_active !== false;
   const stateOf = (m: ModuleDef) => mine.find((x) => x.module_key === m.key);
 
@@ -107,11 +96,11 @@ export default function ModulesStore() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cat, q, mine, prices]);
 
-  const monthly = mine.filter((m) => ["active", "past_due", "trial"].includes(m.status)).reduce((a, m) => a + Number(m.price_monthly || 0), 0);
+  const monthly = mine.filter((m) => ["active", "past_due", "trial"].includes(m.status) && MODULES.some((x) => x.key === m.module_key) && !inPlan(MODULES.find((x) => x.key === m.module_key)!)).reduce((a, m) => a + Number(m.price_monthly || 0), 0);
   const bundle = !!(sub as any)?.plans?.all_modules;
 
   const activate = async (m: ModuleDef) => {
-    if (!isAdmin) return toast.error("Ask your company administrator to switch this on.");
+    if (!isAdmin) return toast.error("Ask the owner, or someone with billing rights, to switch this on.");
     // JMSURF CALL CENTRE has its own plans and billing: sign up and pay there; it switches on here by itself.
     if (m.key === "callcentre") { void openCallCentre("/billing"); return; }
     setBusy(m.key);
@@ -129,8 +118,9 @@ export default function ModulesStore() {
         });
       } else {
         toast.success(data?.status === "trial" ? `${m.name} is on: 14 days free` : `${m.name} is on`, {
-          description: data?.status === "trial" ? "It is in your menu now. After the trial it is added to your monthly bill." : "Paid until the end of your current period.",
-          action: { label: "Open", onClick: () => nav(m.home) },
+          description: data?.status === "trial" ? "It is in your menu now. After the trial it is added to your monthly bill."
+            : "It is in your menu now. The days left in this period are added to your next bill, then it renews with your plan.",
+          action: { label: "Open", onClick: () => nav(homeOf(m)) },
         });
       }
     } catch (e) { toast.error(friendlyError(e)); } finally { setBusy(null); }
@@ -146,13 +136,13 @@ export default function ModulesStore() {
     toast.success(hidden.has(m.key) ? `${m.name} is back in the menu` : `${m.name} is hidden from the menu`, { description: hidden.has(m.key) ? undefined : "It stays on and your data is kept. Press Enable to bring it back." });
   };
   const deactivate = async (m: ModuleDef) => {
-    if (!(await confirmAction({ title: `Switch off ${m.name}?`, message: "It leaves the menu and is no longer billed. Your data is kept: switch it on again any time to pick up where you left off.", confirmLabel: "Switch off", danger: true }))) return;
+    if (!(await confirmAction({ title: `Switch off ${m.name}?`, message: "It keeps working until the end of the period you paid for, then leaves the menu and is no longer billed. Your records are kept and can still be read: switch it on again any time to pick up where you left off.", confirmLabel: "Switch off", danger: true }))) return;
     setBusy(m.key);
     try {
       const { error } = await (supabase as any).rpc("deactivate_module", { p_key: m.key });
       if (error) throw error;
       await qc.invalidateQueries({ queryKey: ["my-modules"] }); await qc.invalidateQueries({ queryKey: ["module-history"] });
-      toast.success(`${m.name} switched off`);
+      toast.success(`${m.name} switched off`, { description: "It stops at the end of the period you paid for. Your records are kept." });
     } catch (e) { toast.error(friendlyError(e)); } finally { setBusy(null); }
   };
 
@@ -160,6 +150,10 @@ export default function ModulesStore() {
     const st = stateOf(m);
     if (hidden.has(m.key) && has(m.key)) return <Pill tone="muted"><EyeOff className="h-3 w-3" /> Disabled (hidden)</Pill>;
     if (m.included) return <Pill tone="success"><Check className="h-3 w-3" /> Included</Pill>;
+    const h = history.find((x) => x.module_key === m.key);
+    if (h?.status === "cancelled" && h.current_period_end && new Date(h.current_period_end) > new Date()) {
+      return <Pill tone="warning"><Clock className="h-3 w-3" /> Ends {new Date(h.current_period_end).toLocaleDateString("en-KE", { day: "numeric", month: "short" })}</Pill>;
+    }
     if (!st) return null;
     if (st.status === "bundle") return <Pill tone="success"><Check className="h-3 w-3" /> In your plan</Pill>;
     if (st.status === "comped") return <Pill tone="success"><Sparkles className="h-3 w-3" /> Free for you</Pill>;
@@ -174,7 +168,8 @@ export default function ModulesStore() {
   const actions = (m: ModuleDef, big?: boolean) => {
     const on = has(m.key);
     const st = stateOf(m);
-    const removable = on && !m.included && st && !["bundle", "comped", "included"].includes(st.status);
+    const removable = on && !m.included && st && !["bundle", "comped", "included", "cancelled"].includes(st.status);
+    const ending = st?.status === "cancelled";
     const isHidden = hidden.has(m.key);
     return (
       <div className={cn("flex flex-wrap items-center gap-2", big && "w-full")}>
@@ -183,8 +178,13 @@ export default function ModulesStore() {
             className={cn("inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50", big && "flex-1")}>
             <Power className="h-4 w-4" /> Enable
           </button>
+        ) : on && ending ? (
+          <button disabled={busy === m.key || !isAdmin} onClick={() => void activate(m)}
+            className={cn("inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50", big && "flex-1")}>
+            <Power className="h-4 w-4" /> Keep it on
+          </button>
         ) : on ? (
-          <Link to={m.home} className={cn("inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90", big && "flex-1")}>
+          <Link to={homeOf(m)} className={cn("inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90", big && "flex-1")}>
             Open <ArrowRight className="h-4 w-4" />
           </Link>
         ) : (
@@ -194,7 +194,7 @@ export default function ModulesStore() {
             {m.key === "callcentre" ? "Get it at JMSURF CALL CENTRE" : switchLabel(m)}
           </button>
         )}
-        {on && !isHidden && m.key !== "books" && isAdmin && (
+        {on && !isHidden && !ending && m.key !== CORE_KEY && isAdmin && (
           <button disabled={busy === m.key} onClick={() => void hideToggle(m)} title="Hide it from the menu. It stays on and paid."
             className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm font-medium text-muted-foreground hover:border-primary/40 hover:text-primary">
             <EyeOff className="h-4 w-4" /> Disable
@@ -217,35 +217,34 @@ export default function ModulesStore() {
         <div className="relative flex flex-wrap items-start gap-4">
           <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25 sm:flex"><Grid2x2 className="h-6 w-6" /></span>
           <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/70">App store</p>
-            <h1 className="font-display text-2xl font-extrabold sm:text-3xl">Grow your business, one suite at a time</h1>
-            <p className="mt-1 max-w-2xl text-sm text-white/80">JMSURF BOOKS is your base. Switch on any suite below: its apps appear in your menu straight away, free for 14 days, and you can switch off any time without losing data.</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/70">Modules & billing</p>
+            <h1 className="font-display text-2xl font-extrabold sm:text-3xl">Add what your garage does</h1>
+            <p className="mt-1 max-w-2xl text-sm text-white/80">Garage Core is your base. Switch on any module below: it appears in your menu straight away, free for 14 days the first time, and the bill rises from that day. Switch off any time: it runs to the end of the period you paid for and your records are kept.</p>
           </div>
           <Link to="/billing" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-bold text-[#a8121b] shadow-lg"><CreditCard className="h-4 w-4" /> Billing</Link>
         </div>
         <div className="relative mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[
-            ["Your plan", `${(sub as any)?.plan_name || "JMSURF BOOKS"}${bundle ? " · all apps" : ""}`],
-            ["Suites switched on", String(MODULES.filter((m) => !m.included && has(m.key)).length)],
-            ["On free trial", String(mine.filter((m) => m.status === "trial").length)],
-            ["Add-ons per month", kes(monthly)],
+            ["Your plan", `${(sub as any)?.plan_name || "Garage Core"}${bundle ? " · all modules" : ""}`],
+            ["Modules on", String(MODULES.filter((m) => !m.included && has(m.key)).length)],
+            ["On free trial", String(mine.filter((m) => m.status === "trial" && MODULES.some((x) => x.key === m.module_key)).length)],
+            ["Modules per month", kes(monthly)],
           ].map(([l, v]) => <div key={l} className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur"><p className="text-xs text-white/70">{l}</p><p className="mt-1 truncate font-display text-xl font-extrabold">{v}</p></div>)}
         </div>
-        {!bundle && (
+        {!bundle && bundlePlan && (sub as any)?.plan_name !== bundlePlan.name && (
           <p className="relative mt-4 inline-flex flex-wrap items-center gap-2 rounded-2xl bg-white/15 px-4 py-2.5 text-sm backdrop-blur">
-            <Sparkles className="h-4 w-4" /> All-in-One: every suite for {kes(ALL_IN_ONE_PRICE)} / month.
-            <Link to="/billing" className="font-semibold underline underline-offset-2">Upgrade</Link>
+            <Sparkles className="h-4 w-4" /> {bundlePlan.name}: Pro plus every garage module for {kesFmt(bundlePlan.price)} / month.
+            <Link to="/billing" className="font-semibold underline underline-offset-2">See plans</Link>
           </p>
         )}
       </section>
 
-      {isAdmin && <SingleAppMode onApps={MODULES.filter((m) => !m.included && has(m.key))} />}
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <Segmented value={cat} onChange={setCat} options={[{ value: "All", label: "All suites" }, { value: "On", label: "Switched on" }, ...MODULE_CATEGORIES.map((c) => ({ value: c, label: c }))]} />
+        <Segmented value={cat} onChange={setCat} options={[{ value: "All", label: "All modules" }, { value: "On", label: "Switched on" }, ...MODULE_CATEGORIES.map((c) => ({ value: c, label: c }))]} />
         <div className="relative lg:ml-auto lg:w-72">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search, e.g. payroll, tickets, POS…" className="fi pl-9" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search, e.g. car wash, payroll, insurance…" className="fi pl-9" />
         </div>
       </div>
 
@@ -270,7 +269,7 @@ export default function ModulesStore() {
                 </div>
                 <div className="flex-1" />
                 <div className="mt-4 flex items-end justify-between gap-2">
-                  <p><span className="font-display text-2xl font-extrabold">{m.included ? "Included" : kes(priceOf(m))}</span>{!m.included && <span className="text-sm text-muted-foreground"> / month</span>}</p>
+                  <p><span className="font-display text-2xl font-extrabold">{m.included ? "Included" : inPlan(m) ? "In your plan" : kes(priceOf(m))}</span>{!m.included && !inPlan(m) && <span className="text-sm text-muted-foreground"> / month</span>}</p>
                   <button onClick={() => setDetail(m)} className="text-xs font-semibold text-primary hover:underline">What's inside</button>
                 </div>
                 <div className="mt-3 border-t border-border pt-3">{m.included ? <Pill tone="muted"><Lock className="h-3 w-3" /> Always on</Pill> : actions(m)}</div>
@@ -279,7 +278,7 @@ export default function ModulesStore() {
           );
         })}
       </div>
-      {!list.length && <p className="rounded-3xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">Nothing matches "{q}". Try another word, like invoices, payroll or tickets.</p>}
+      {!list.length && <p className="rounded-3xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">Nothing matches "{q}". Try another word, like tyres, payroll or insurance.</p>}
 
       <Modal open={!!detail} onClose={() => { setDetail(null); if (params.get("app")) { params.delete("app"); setParams(params, { replace: true }); } }}
         title={detail?.name} description={detail?.tagline} size="lg"
@@ -289,13 +288,13 @@ export default function ModulesStore() {
             <div className="flex items-center gap-4 rounded-2xl p-4 text-white" style={{ background: `linear-gradient(135deg, ${detail.color}, #15171c)` }}>
               <detail.icon className="h-10 w-10" />
               <div>
-                <p className="font-display text-2xl font-extrabold">{detail.included ? "Included" : kes(priceOf(detail))}<span className="text-sm font-medium text-white/70">{detail.included ? " in JMSURF BOOKS" : " / month per company"}</span></p>
-                <p className="text-sm text-white/75">{detail.apps.length} app{detail.apps.length === 1 ? "" : "s"} in this suite</p>
+                <p className="font-display text-2xl font-extrabold">{detail.included ? "Included" : kes(priceOf(detail))}<span className="text-sm font-medium text-white/70">{detail.included ? " in every plan" : " / month per garage"}</span></p>
+                <p className="text-sm text-white/75">{detail.category}{(detail.includedIn || []).length ? ` · free in ${(detail.includedIn || []).map((c) => catalogue.plans.find((p) => p.code === c)?.name).filter(Boolean).join(" and ")}` : ""}</p>
               </div>
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">{detail.description}</p>
             <div>
-              <p className="mb-2 text-sm font-semibold">Apps in this suite</p>
+              <p className="mb-2 text-sm font-semibold">What is inside</p>
               <ul className="grid gap-2 sm:grid-cols-2">
                 {detail.apps.map((x) => (
                   <li key={x.key} className="flex gap-3 rounded-xl border border-border p-3 text-sm">
@@ -313,7 +312,7 @@ export default function ModulesStore() {
                 ))}
               </ul>
             </div>
-            {!isAdmin && <p className="flex items-center gap-2 rounded-xl bg-muted p-3 text-sm text-muted-foreground"><X className="h-4 w-4" /> Only the company administrator can switch apps on or off.</p>}
+            {!isAdmin && <p className="flex items-center gap-2 rounded-xl bg-muted p-3 text-sm text-muted-foreground"><X className="h-4 w-4" /> Only the owner, or someone with billing rights, can switch modules on or off.</p>}
           </div>
         )}
       </Modal>
