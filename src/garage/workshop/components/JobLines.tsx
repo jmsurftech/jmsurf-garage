@@ -115,8 +115,8 @@ function AddLine({ job, onDone, extra }: { job: any; onDone: () => void; extra: 
         </div>
       )}
       {(kind === "part" || kind === "consumable") && <ProductSearch onPick={(p) => setF((x: any) => ({ ...x, item_id: p.id, description: p.name, rate: String(p.price ?? ""), tax_rate: String(p.vat_rate ?? x.tax_rate) }))} />}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
-        <input className="fi col-span-2 sm:col-span-2" value={f.description} onChange={(e) => set("description", e.target.value)} placeholder={kind === "labour" ? "Enter the work (e.g. Replace front brake pads)" : kind === "sublet" ? "Enter the outside work" : "Enter the part"} />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 2xl:grid-cols-6">
+        <input className="fi col-span-2 sm:col-span-3 2xl:col-span-2" value={f.description} onChange={(e) => set("description", e.target.value)} placeholder={kind === "labour" ? "Enter the work (e.g. Replace front brake pads)" : kind === "sublet" ? "Enter the outside work" : "Enter the part"} />
         {kind === "labour" ? (
           <select className="fi" value={f.pricing} onChange={(e) => set("pricing", e.target.value)}><option value="fixed">Fixed price</option><option value="hourly">Per hour</option></select>
         ) : <input className="fi" inputMode="decimal" value={f.qty} onChange={(e) => set("qty", e.target.value)} placeholder="Qty" />}
@@ -221,8 +221,8 @@ export default function JobLines({ data, onChange, readOnly }: { data: any; onCh
               )}
               {open === l.id && !readOnly && (
                 <div className="mt-2 space-y-2 rounded-lg bg-muted/30 p-2 pl-9">
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
-                    <input className="fi col-span-2" defaultValue={l.description} onBlur={(e) => e.target.value !== l.description && patch(l.id, { description: e.target.value })} disabled={!!l.invoice_id} />
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 2xl:grid-cols-6">
+                    <input className="fi col-span-2 sm:col-span-3 2xl:col-span-2" defaultValue={l.description} onBlur={(e) => e.target.value !== l.description && patch(l.id, { description: e.target.value })} disabled={!!l.invoice_id} />
                     <input className="fi" inputMode="decimal" defaultValue={l.qty} onBlur={(e) => Number(e.target.value) !== Number(l.qty) && patch(l.id, { qty: Number(e.target.value) || 0 })} disabled={!!l.invoice_id} title="Quantity / hours" />
                     <input className="fi" inputMode="decimal" defaultValue={l.rate} onBlur={(e) => Number(e.target.value) !== Number(l.rate) && patch(l.id, { rate: Number(e.target.value) || 0 })} disabled={!!l.invoice_id} title="Price" />
                     <input className="fi" inputMode="decimal" defaultValue={l.discount} onBlur={(e) => Number(e.target.value) !== Number(l.discount) && patch(l.id, { discount: Number(e.target.value) || 0 })} disabled={!!l.invoice_id} placeholder="Discount %" title="Discount %" />

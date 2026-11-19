@@ -67,11 +67,11 @@ export function ModuleHome({ module, title, icon, stats, links, actions, childre
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
           {stats.map((s) => <StatTile key={s.label} label={s.label} value={s.value} tone={s.tone} icon={s.icon} hint={s.hint} />)}
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
           {links.map((l) => (
             <Link key={l.to} to={l.to} className="flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 text-sm font-medium hover:border-primary/40 hover:bg-primary/5">
               <l.icon className="h-4 w-4 shrink-0 text-primary" />
-              <span className="min-w-0"><span className="block truncate">{l.label}</span>{l.hint && <span className="block truncate text-[11px] text-muted-foreground">{l.hint}</span>}</span>
+              <span className="min-w-0"><span className="block leading-tight">{l.label}</span>{l.hint && <span className="block text-[11px] leading-tight text-muted-foreground">{l.hint}</span>}</span>
             </Link>
           ))}
         </div>
