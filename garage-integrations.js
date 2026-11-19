@@ -507,11 +507,11 @@ export async function invoicePayLink(tenantId, invoiceId) {
 /**
  * Sends one SMS or WhatsApp to a customer for a company (the company's "What uses SMS" choices apply;
  * WhatsApp goes through the company's Cloud API number when connected, else APIWAP).
- * event: job_status | estimate | payment_request | service_reminder | booking | missed_call | manual …
+ * event: booking_confirmed | booking_reminder | job_checked_in | estimate_ready | extra_work_approval | car_ready | payment_received | service_due | document_expiry | win_back | payment_request | missed_call | manual. Leave text empty to use the default text (GARAGE_TEXTS) filled from vars.
  */
-export async function sendCustomerMessage({ tenantId, channel = "sms", to, text, event = "manual", userId = null, reference }) {
+export async function sendCustomerMessage({ tenantId, channel = "sms", to, text, event = "manual", userId = null, reference, vars }) {
   const { sendForShop } = await import("./messaging.js");
-  return sendForShop({ tenantId, channel: channel === "whatsapp" ? "whatsapp" : "sms", to, text, userId, reference, event });
+  return sendForShop({ tenantId, channel: channel === "whatsapp" ? "whatsapp" : "sms", to, text, userId, reference, event, vars });
 }
 /** Signs an invoice / credit note with KRA now (see etims.js). */
 export async function signDocument(tenantId, kind, id) {

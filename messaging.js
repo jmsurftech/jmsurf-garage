@@ -251,16 +251,55 @@ export const MESSAGE_EVENTS = {
   visitor: { label: "Visitor at reception" },
   iot_alert: { label: "Device alerts" },
   water_alert: { label: "Water tank alerts" },
-  // Garage (job cards, estimates, tracking, reminders, call centre)
-  job_status: { label: "Job card updates (received, in progress, ready)", whatsapp: true },
-  estimate: { label: "Estimates to approve", whatsapp: true },
+  // Garage (bookings, job cards, estimates, reminders, call centre); default texts in GARAGE_TEXTS
+  booking_confirmed: { label: "Workshop booking confirmations", whatsapp: true },
+  booking_reminder: { label: "Workshop booking reminders", whatsapp: true },
+  job_checked_in: { label: "Vehicle checked in (job tag and tracking link)", whatsapp: true },
+  estimate_ready: { label: "Estimates to approve", whatsapp: true },
+  extra_work_approval: { label: "Extra work to approve", whatsapp: true },
+  car_ready: { label: "Vehicle ready for collection", whatsapp: true },
+  payment_received: { label: "Payment received", whatsapp: true },
+  service_due: { label: "Service due reminders", whatsapp: true },
+  document_expiry: { label: "Insurance, inspection, speed governor and PSV expiry", whatsapp: true },
+  win_back: { label: "Win-back messages", whatsapp: true },
   payment_request: { label: "Invoice and payment links", whatsapp: true },
-  service_reminder: { label: "Service, insurance and inspection reminders", whatsapp: true },
-  booking: { label: "Workshop bookings", whatsapp: true },
   missed_call: { label: "Missed-call replies", whatsapp: true },
   // Typed or sent by hand from a screen (receipts, statements, suppliers)
   manual: { label: "Messages you send by hand", whatsapp: true },
 };
+
+/**
+ * Default one-SMS English texts for the Garage events. {placeholders}: company, name, reg (number
+ * plate), date, time, job (job tag), link, amount, total, item (what needs approving), doc (insurance,
+ * inspection, speed governor, PSV), receipt. Missing values are left out cleanly; the result is cut to
+ * one SMS part (a link at the end stays whole).
+ */
+export const GARAGE_TEXTS = {
+  booking_confirmed: "Hi {name}, your {reg} is booked at {company} on {date} {time}. Reply or call to change it.",
+  booking_reminder: "Reminder: your {reg} is booked at {company} on {date} {time}. See you then.",
+  job_checked_in: "{company}: {reg} is checked in, job {job}. Follow the progress here: {link}",
+  estimate_ready: "{company}: the estimate for {reg} is KES {total}. View and approve: {link}",
+  extra_work_approval: "{company}: {reg} also needs {item} (KES {amount}). Approve or decline: {link}",
+  car_ready: "Good news {name}: your {reg} is ready for collection at {company}. Balance KES {amount}. {link}",
+  payment_received: "{company}: we received KES {amount} for {reg}, ref {receipt}. Thank you!",
+  service_due: "Hi {name}, {reg} is due for service. Book with {company}: {link}",
+  document_expiry: "Hi {name}, the {doc} for {reg} expires on {date}. {company} can help: {link}",
+  win_back: "Hi {name}, we miss you at {company}! Book your {reg}'s next service: {link}",
+  payment_request: "{company}: invoice for {reg}, KES {amount} due. View and pay: {link}",
+  missed_call: "Sorry we missed your call. {company} will call you back shortly.",
+};
+
+/** A Garage event's default text filled in, one SMS part. */
+export function garageText(event, vars = {}) {
+  const tpl = GARAGE_TEXTS[event] || "";
+  const filled = tpl.replace(/\{(\w+)\}/g, (_, k) => {
+    const v = vars[k];
+    return v === null || v === undefined ? "" : String(v).trim();
+  })
+    .replace(/\b(Balance KES|KES|ref|job|on|for)\s+(?=[.,:;)!]|\s|$)/g, "") // a label whose value is missing
+    .replace(/\(\s*\)/g, "").replace(/\s+([.,:;!])/g, "$1").replace(/([.,:;!]){2,}/g, "$1").replace(/\s{2,}/g, " ").trim();
+  return fitOneSms(filled);
+}
 
 /** Events whose text a person typed: everything else is automatic and must fit one SMS part. */
 const TYPED_EVENTS = new Set(["manual", "bulk", "journey", "test"]);
@@ -423,12 +462,13 @@ async function logSend({ tenantId, channel, to, text, ok, via, provider, detail,
  * worked out from the text and the calling file. The company's "What uses SMS"
  * choices decide whether it goes out by SMS, WhatsApp or not at all.
  */
-export async function sendForShop({ tenantId, channel, to, text, userId, reference, event }) {
+export async function sendForShop({ tenantId, channel, to, text, userId, reference, event, vars }) {
   const file = callerFile(new Error().stack);
   if (await isDemoTenant(tenantId)) return { ok: false, error: "Messages are not sent from the demo company" };
   const phone = internationalDigits(to);
   if (!phone) return { ok: false, error: "Enter a valid phone number" };
-  const body = String(text || "").trim();
+  // A Garage event with no text of its own: its default text, filled from vars.
+  const body = String(text || (GARAGE_TEXTS[event] ? garageText(event, vars || {}) : "")).trim();
   if (!body) return { ok: false, error: "The message is empty" };
   if (body.length > 1500) return { ok: false, error: "The message is too long" };
 

@@ -147,13 +147,39 @@ requestInvoicePayment({ tenantId, invoiceId, phone, amount?, requestedBy? })
 invoicePaymentStatus(tenantId, requestId)        // → { status: pending|completed|failed|cancelled|unknown, mpesa_receipt }
 invoicePayLink(tenantId, invoiceId)              // → https://<company>/pay/<token> | null (draft / void)
 sendCustomerMessage({ tenantId, channel: "sms"|"whatsapp", to, text, event, userId?, reference? })
-  // events: job_status | estimate | payment_request | service_reminder | booking | missed_call | manual
+  // events: see "Garage message events" below; with text empty, the event default text is filled from vars
   // automatic events are cut to one SMS part; the company's "What uses SMS" choices apply
 waSendForCompany(tenantId, phone, text, { userId?, template?, lang?, params? })   // Cloud API only, kept in the inbox
 waCloudConnected(tenantId)                       // → boolean
 customerContext(tenantId, { phone?, customerId? }) // → { customer, vehicles, jobs, invoices }
 signDocument(tenantId, "invoice"|"credit_note", id) // KRA signing now → { ok, rcpt_no, qr_url } | { ok, pending } | { ok:false, error }
 ```
+
+### Garage message events
+
+Per-company on/off (System → SMS → What uses SMS, SMS and/or WhatsApp) like every other event; each has a
+default one-SMS English text in `messaging.js` `GARAGE_TEXTS` (placeholders `{company} {name} {reg}
+{date} {time} {job} {link} {amount} {total} {item} {doc} {receipt}`), used when `text` is empty and
+`vars` are given (`sendForShop({ …, event, vars })` / `sendCustomerMessage({ …, event, vars })`,
+or `garageText(event, vars)` to build the text yourself).
+
+| Event key | When | Default text |
+| --- | --- | --- |
+| `booking_confirmed` | booking made | your {reg} is booked at {company} on {date} {time} |
+| `booking_reminder` | before the booking | reminder of the booking |
+| `job_checked_in` | job card opened | checked in, job {job}, tracking {link} |
+| `estimate_ready` | estimate sent | estimate KES {total}, approve at {link} |
+| `extra_work_approval` | more work found | {item} (KES {amount}), approve at {link} |
+| `car_ready` | job ready | ready for collection, balance KES {amount} |
+| `payment_received` | payment recorded | received KES {amount}, ref {receipt} |
+| `service_due` | by date / mileage | due for service, book at {link} |
+| `document_expiry` | insurance / inspection / speed governor / PSV | the {doc} expires on {date} |
+| `win_back` | not seen for a while | book the next service at {link} |
+| `payment_request` | invoice / payment link | KES {amount} due, pay at {link} |
+| `missed_call` | Call Centre missed call | we will call you back |
+
+These replace the borrowed keys (`appointment_booked`, `appointment_reminder`, `repair_ready`,
+`restock_reminder`, `journey`, `manual`) in garage-workshop.js `EVENT_FOR`.
 
 Unchanged older helpers: `sendForShop` / `sendPlatform` (`messaging.js`), `pushInvoiceForShop` /
 `invoicePromptStatus` (`sendmoney.js`, now also for Daraja companies), `payLinkUrl` (`paylinks.js`).

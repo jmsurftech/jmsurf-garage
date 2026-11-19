@@ -58,8 +58,7 @@ export async function messagingApi(path: "send" | "test" | "balance" | "admin" |
 }
 
 /**
- * `kind` names the event (see src/lib/smsUses.ts and messaging.js MESSAGE_EVENTS; Garage adds job_status,
- * estimate, payment_request, service_reminder, booking, missed_call); without it the message counts as
+ * `kind` names the event (see src/lib/smsUses.ts and messaging.js MESSAGE_EVENTS; Garage adds booking_confirmed, booking_reminder, job_checked_in, estimate_ready, extra_work_approval, car_ready, payment_received, service_due, document_expiry, win_back, payment_request, missed_call); without it the message counts as
  * sent by hand. Automatic events are shortened by the server to fit ONE SMS part.
  * WhatsApp goes through the company's WhatsApp Cloud API number when connected, else APIWAP.
  */
