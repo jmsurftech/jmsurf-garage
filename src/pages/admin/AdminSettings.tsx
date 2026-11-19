@@ -15,13 +15,18 @@ import { listPayoutBanks } from "@/lib/serverPayments";
 import PlatformSettlement from "@/components/admin/PlatformSettlement";
 import AdminMfaPanel from "@/components/admin/AdminMfaPanel";
 import { KENYA_BANK_PAYBILLS } from "@/lib/kenyaBanks";
+import { PlugZap } from "lucide-react";
+import { lazyPage } from "@/lib/lazyPage";
+import { Suspense } from "react";
+const PlatformIntegrations = lazyPage(() => import("@/garage/integrations/PlatformIntegrations"));
 
 type PayheroBank = { id: string; name: string; paybill: string };
 
-type Tab = "general" | "tracking" | "smtp" | "messaging" | "reminders" | "payment" | "session" | "security";
+type Tab = "general" | "integrations" | "tracking" | "smtp" | "messaging" | "reminders" | "payment" | "session" | "security";
 
 const TABS: { id: Tab; label: string; icon: any; description: string }[] = [
   { id: "general", label: "General", icon: Building2, description: "Platform name and where alerts go." },
+  { id: "integrations", label: "Integrations", icon: PlugZap, description: "Every platform key in one place: JMSURF PAY, Daraja, JMSURF SMS, JMSURF MAIL, WhatsApp, JMSURF TAX (eTIMS) and the Call Centre, each with a Test." },
   { id: "tracking", label: "Tracking & SEO", icon: LineChart, description: "Meta Pixel and Google Analytics for garage.jmsurf.co.ke, sign-up and sign-in pages." },
   { id: "smtp", label: "Email", icon: Mail, description: "The mail account that sends sign-up, password, receipt and alert emails." },
   { id: "messaging", label: "SMS & WhatsApp", icon: MessageSquare, description: "Platform SMS and WhatsApp accounts, and companies' prepaid SMS units." },
@@ -260,6 +265,7 @@ export default function AdminSettings() {
             </div>
           )}
 
+          {tab === "integrations" && <Suspense fallback={null}><PlatformIntegrations /></Suspense>}
           {tab === "messaging" && <AdminMessagingPanel />}
           {tab === "reminders" && <AdminRemindersPanel />}
 

@@ -46,6 +46,7 @@ import { BUSINESS_TYPES, type BusinessType } from "@/lib/businessType";
 import { Store } from "lucide-react";
 import { KENYA_BANK_PAYBILLS } from "@/lib/kenyaBanks";
 import { registerPayoutChannel, listPayoutBanks, jmsurfSettings, registerJmsurf } from "@/lib/serverPayments";
+import { garageI } from "@/garage/integrations/api";
 
 
 /* ───── Business Settings Tab ───── */
@@ -357,6 +358,8 @@ function PaymentGatewaysTab({ canManage }: { canManage: boolean }) {
     daraja_account_reference: "",
   });
   const [lastPayheroError, setLastPayheroError] = useState<{ message: string; details?: any } | null>(null);
+  const connStatus = useQuery({ queryKey: ["garage-connections"], staleTime: 30_000, queryFn: () => garageI<any>("status") });
+  const darajaKeysSaved = !!connStatus.data?.mpesa?.daraja?.keys_saved;
   const [banksLoading, setBanksLoading] = useState(false);
   const [banks, setBanks] = useState<{ id: string; name: string; paybill: string }[]>(KENYA_BANK_PAYBILLS);
   const [jmsurfConfigured, setJmsurfConfigured] = useState(false);
@@ -678,6 +681,28 @@ function PaymentGatewaysTab({ canManage }: { canManage: boolean }) {
       }
     }
     if (form.payment_provider === "daraja") {
+      // Own Daraja app: saved by the server, keys encrypted in integration_secrets (never in business_settings).
+      const isTillType = form.daraja_type === "till";
+      setSaving(true);
+      try {
+        const r = await garageI<{ keys_ok?: boolean; check_error?: string | null }>("daraja/save", {
+          type: form.daraja_type, environment: form.daraja_environment,
+          shortcode: isTillType ? "" : form.daraja_shortcode, till_number: isTillType ? form.daraja_till_number : "",
+          account_reference: isTillType ? "" : form.daraja_account_reference,
+          consumer_key: form.daraja_consumer_key.trim(), consumer_secret: form.daraja_consumer_secret.trim(), passkey: form.daraja_passkey.trim(),
+        });
+        if (r.ok === false || r.error) throw new Error(r.error || "Not saved");
+        setForm((f) => ({ ...f, daraja_consumer_key: "", daraja_consumer_secret: "", daraja_passkey: "" }));
+        queryClient.invalidateQueries({ queryKey: ["business-settings"] });
+        queryClient.invalidateQueries({ queryKey: ["garage-connections"] });
+        if (r.keys_ok) toast({ title: "Saved", description: "Safaricom accepted your Daraja keys. Register C2B in System → Connections to receive paybill payments." });
+        else toast({ title: "Saved, but the keys were not accepted", description: r.check_error || "Check the consumer key and secret.", variant: "destructive" });
+      } catch (e: any) {
+        toast({ title: "Could not save", description: e?.message, variant: "destructive" });
+      } finally { setSaving(false); }
+      return;
+    }
+    if (form.payment_provider === "daraja") {
       const isTill = form.daraja_type === "till";
       const code = isTill ? form.daraja_till_number : form.daraja_shortcode;
       if (!/^\d{5,7}$/.test(String(code || ""))) {
@@ -832,13 +857,8 @@ function PaymentGatewaysTab({ canManage }: { canManage: boolean }) {
   // PayHero is ready once the shop's Till, Paybill or bank is linked as a channel.
   const mpesaConfigured = channels.some((c) => c.is_active && c.payhero_channel_id);
   const paystackConfigured = !!(savedPaystackPub && savedPaystackSec);
-  const darajaConfigured = !!(
-    (settings as any)?.payment_provider === "daraja" &&
-    (settings as any)?.has_mpesa_consumer_key &&
-    (settings as any)?.has_mpesa_consumer_secret &&
-    (settings as any)?.has_mpesa_passkey &&
-    (((settings as any)?.mpesa_shortcode) || ((settings as any)?.mpesa_till_number))
-  );
+  // Daraja keys live encrypted on the server: the connection status says whether they are saved.
+  const darajaConfigured = !!connStatus.data?.mpesa?.daraja?.connected;
 
   // Server-side sanitisation mirror — used only when persisting custom STK label values.
   const sanitizeStkLabel = (raw: string) =>
@@ -1114,7 +1134,7 @@ function PaymentGatewaysTab({ canManage }: { canManage: boolean }) {
                 className="font-mono tracking-wider"
                 inputMode="numeric"
                 maxLength={7}
-                placeholder={form.daraja_type === "till" ? "e.g. 4579120" : "e.g. 247247"}
+                placeholder={form.daraja_type === "till" ? "Enter your till number" : "Enter your paybill number"}
                 value={form.daraja_type === "till" ? form.daraja_till_number : form.daraja_shortcode}
                 onChange={(e) => {
                   const v = e.target.value.replace(/\D/g, "").slice(0, 7);
@@ -1131,7 +1151,7 @@ function PaymentGatewaysTab({ canManage }: { canManage: boolean }) {
                 <Label htmlFor="daraja-acc-ref" className="text-xs font-medium text-muted-foreground">Account Reference (optional)</Label>
                 <Input
                   id="daraja-acc-ref"
-                  placeholder="e.g. POS"
+                  placeholder="Enter a fixed account name (optional)"
                   maxLength={20}
                   value={form.daraja_account_reference}
                   onChange={(e) => setForm((f) => ({ ...f, daraja_account_reference: e.target.value.slice(0, 20) }))}
@@ -1153,7 +1173,7 @@ function PaymentGatewaysTab({ canManage }: { canManage: boolean }) {
                 id="daraja-key"
                 type="password"
                 autoComplete="off"
-                placeholder={(settings as any)?.has_mpesa_consumer_key ? "Saved (leave blank to keep)" : "Consumer Key"}
+                placeholder={darajaKeysSaved ? "Saved (leave blank to keep)" : "Enter the consumer key"}
                 value={form.daraja_consumer_key}
                 onChange={(e) => setForm((f) => ({ ...f, daraja_consumer_key: e.target.value }))}
               />
@@ -1165,7 +1185,7 @@ function PaymentGatewaysTab({ canManage }: { canManage: boolean }) {
                 id="daraja-secret"
                 type="password"
                 autoComplete="off"
-                placeholder={(settings as any)?.has_mpesa_consumer_secret ? "Saved (leave blank to keep)" : "Consumer Secret"}
+                placeholder={darajaKeysSaved ? "Saved (leave blank to keep)" : "Enter the consumer secret"}
                 value={form.daraja_consumer_secret}
                 onChange={(e) => setForm((f) => ({ ...f, daraja_consumer_secret: e.target.value }))}
               />
@@ -1177,81 +1197,47 @@ function PaymentGatewaysTab({ canManage }: { canManage: boolean }) {
                 id="daraja-passkey"
                 type="password"
                 autoComplete="off"
-                placeholder={(settings as any)?.has_mpesa_passkey ? "Saved (leave blank to keep)" : "Passkey from Daraja portal"}
+                placeholder={darajaKeysSaved ? "Saved (leave blank to keep)" : "Enter the passkey from the Daraja portal"}
                 value={form.daraja_passkey}
                 onChange={(e) => setForm((f) => ({ ...f, daraja_passkey: e.target.value }))}
               />
               <p className="text-[11px] text-muted-foreground">Leave blank to keep the saved value.</p>
             </div>
 
-            {/* Test STK push — verify saved Daraja credentials without taking a real payment */}
+            {/* Key check (nothing is charged) and where paybill payments are registered. */}
             <div className="sm:col-span-2 border-t border-border pt-4 space-y-2">
-              <Label className="text-xs font-semibold text-foreground">Test STK Push</Label>
+              <Label className="text-xs font-semibold text-foreground">Check your keys</Label>
               <p className="text-[11px] text-muted-foreground">
-                Send a KES 1 prompt to a phone number to verify your saved Daraja credentials. No transaction is recorded.
+                Asks Safaricom to accept the saved keys. Nothing is charged. To have payments customers make to your paybill marked paid automatically, register C2B in System → Connections.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
-                <Input
-                  inputMode="numeric"
-                  placeholder="07XXXXXXXX"
-                  value={darajaTestPhone}
-                  onChange={(e) => setDarajaTestPhone(e.target.value.replace(/\D/g, "").slice(0, 12))}
-                  className="flex-1 font-mono"
-                />
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={darajaTesting || !darajaConfigured || !/^(\+?254|0)\d{9}$/.test(darajaTestPhone)}
+                  disabled={darajaTesting || !darajaKeysSaved}
                   onClick={async () => {
                     setDarajaTesting(true);
                     setDarajaTestResult(null);
-                    try {
-                      const { data, error } = await supabase.functions.invoke("mpesa-stk-push", {
-                        body: {
-                          phone: darajaTestPhone,
-                          amount: 1,
-                          tenant_slug: tenantSlug,
-                          tenant_id: profile?.tenant_id || tenant?.id,
-                          account_ref: "TEST",
-                        },
-                      });
-                      let msg = "";
-                      try {
-                        const ctx: any = (error as any)?.context;
-                        if (ctx?.body) {
-                          const parsed = await new Response(ctx.body).json();
-                          msg = parsed?.error || parsed?.errorMessage || "";
-                        }
-                      } catch {}
-                      msg = msg || (error as any)?.message || data?.error || data?.errorMessage || "";
-                      const okCheckout = data?.CheckoutRequestID || data?.checkout_request_id;
-                      if (data?.success && okCheckout) {
-                        setDarajaTestResult({ ok: true, message: "STK prompt sent. Approve on phone to complete the test.", checkout: okCheckout });
-                      } else {
-                        setDarajaTestResult({ ok: false, message: msg || "Daraja did not accept the test request." });
-                      }
-                    } catch (e: any) {
-                      setDarajaTestResult({ ok: false, message: e?.message || "Test failed unexpectedly." });
-                    } finally {
-                      setDarajaTesting(false);
-                    }
+                    const r = await garageI<{ environment?: string }>("daraja/test");
+                    setDarajaTesting(false);
+                    setDarajaTestResult(r.ok ? { ok: true, message: `Safaricom accepted your keys (${r.environment === "sandbox" ? "sandbox" : "live"}).` } : { ok: false, message: r.error || "Safaricom did not accept the keys." });
                   }}
                 >
-                  {darajaTesting ? "Sending..." : "Send Test STK"}
+                  {darajaTesting ? "Checking..." : "Check keys"}
                 </Button>
+                <Link to="/settings?tab=connections" className="inline-flex items-center text-sm font-medium text-primary hover:underline">Register C2B (paybill payments)</Link>
               </div>
-              {!darajaConfigured && (
-                <p className="text-[11px] text-muted-foreground">Save your Daraja credentials first, then come back to test.</p>
+              {!darajaKeysSaved && (
+                <p className="text-[11px] text-muted-foreground">Save your Daraja credentials first, then come back to check them.</p>
               )}
               {darajaTestResult && (
                 <div className={cn(
-                  "text-[11px] rounded-lg border p-2 font-mono break-all",
+                  "text-[11px] rounded-lg border p-2 break-all",
                   darajaTestResult.ok
                     ? "border-success/30 bg-success/5 text-success"
                     : "border-destructive/30 bg-destructive/5 text-destructive"
                 )}>
-                  {darajaTestResult.ok ? "" : ""}{darajaTestResult.message}
-                  {darajaTestResult.checkout && <div className="mt-1 opacity-70">Ref: {darajaTestResult.checkout}</div>}
+                  {darajaTestResult.message}
                 </div>
               )}
             </div>
@@ -1532,6 +1518,7 @@ const MenuItemsTab = lazyPage(() => import("@/pages/settings/MenuItemsTab"));
 const NumberingTab = lazyPage(() => import("@/pages/settings/NumberingTab"));
 const CustomFieldsTab = lazyPage(() => import("@/pages/settings/CustomFieldsTab"));
 const DomainSettings = lazyPage(() => import("@/components/settings/DomainSettings"));
+const ConnectionsPanel = lazyPage(() => import("@/garage/integrations/ConnectionsPanel"));
 const EmailSet = lazyPage(() => import("@/pages/settings/EmailSettings"));
 const NotifRules = lazyPage(() => import("@/pages/settings/NotificationRules"));
 const DevelopersTab = lazyPage(() => import("@/pages/settings/DevelopersTab"));
@@ -1559,6 +1546,7 @@ const TAB_TITLES: Record<string, [string, string]> = {
   smtp: ["Email", "How invoices, statements, reminders and alerts are emailed, and where replies go."],
   barcodes: ["Barcodes & labels", "Barcode format and label size."],
   payments: ["Payment gateways", "How customers pay at the till, on invoices and online."],
+  connections: ["Connections", "M-Pesa (JMSURF PAY or your own Daraja app), SMS, WhatsApp, KRA eTIMS and the Call Centre, each with its state."],
   sms: ["SMS & WhatsApp", "Balance, top-ups, what uses SMS and the message log."],
   alerts: ["Debt & restock alerts", "Automatic reminders to customers, reps and staff."],
   statements: ["Customer statements", "Email statements automatically at month end or on set dates."],
@@ -1589,7 +1577,7 @@ export default function SettingsPage() {
   const alias: Record<string, string> = { integrations: "sms", messaging: "sms", locations: "business", data: "backup", more: "business", website: "shop" };
   const tab = alias[requested] || requested;
   const allowed = (t: string) => {
-    if (["smtp", "sms", "alerts", "statements", "shop", "portal", "etims", "menu", "taxes", "numbering", "custom-fields", "items", "service", "pos", "inventory", "projects", "manufacturing", "expense", "ai", "developers", "workflows", "reporting-tags"].includes(t)) return canManage;
+    if (["smtp", "sms", "connections", "alerts", "statements", "shop", "portal", "etims", "menu", "taxes", "numbering", "custom-fields", "items", "service", "pos", "inventory", "projects", "manufacturing", "expense", "ai", "developers", "workflows", "reporting-tags"].includes(t)) return canManage;
     if (t === "backup" || t === "approvals" || t === "domain") return owner;
     return t in TAB_TITLES;
   };
@@ -1618,6 +1606,7 @@ export default function SettingsPage() {
         {active === "expense" && <Suspense fallback={null}><ExpSet canManage={canManage} /></Suspense>}
         {active === "ai" && <Suspense fallback={null}><AiSet canManage={canManage} /></Suspense>}
         {active === "payments" && <PaymentGatewaysTab canManage={canManage} />}
+        {active === "connections" && <Suspense fallback={null}><ConnectionsPanel canManage={canManage} /></Suspense>}
         {active === "sms" && <SmsGatewaysTab canManage={canManage} />}
         {active === "alerts" && <AlertsTab canManage={canManage} />}
         {active === "statements" && <StatementsTab canManage={canManage} />}

@@ -44,6 +44,7 @@ export const SYSTEM_GROUPS: { title: string; items: Item[] }[] = [
     title: "Setup & Configurations",
     items: [
       { label: "Online payments", icon: CreditCard, tab: "payments" },
+      { label: "Connections", icon: Workflow, tab: "connections", managers: true },
       { label: "Reminders", icon: BellRing, tab: "alerts", managers: true },
       { label: "Customer statements", icon: FileClock, tab: "statements", managers: true },
       { label: "Customer portal & website", icon: KeyRound, tab: "portal", managers: true },
