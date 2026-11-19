@@ -55,6 +55,11 @@ the platform owner in **Super admin → Settings → Integrations** (stored encr
 | `CALLCENTRE_LOOKUP_KEY` | platform key the Call Centre may use for screen pop / missed calls | you (generate) |
 | `CALLCENTRE_APP_URL` | optional, default `https://app.jmsurfcallcentre.co.ke` | JMSURF CALL CENTRE |
 | `CC_BILLING_ENABLED` | leave unset: Call Centre billing runs on DASH | — |
+| `PLATFORM_BILLING_TENANT_ID` | JMSURF TECHNOLOGIES' own company in garage-db: every paid subscription becomes a paid, eTIMS-signed invoice there (one line per package / module / extra branch / pro-rata / SMS) | you (company id) |
+
+Subscription charges (payments.js `subscriptionLines`): a year costs 10 x the monthly price (2 months
+free) for the package and every module line, extra branches and pro-rata rows included; the amount asked
+is the sum of the lines, which are kept on the payment and printed on the invoice.
 
 The mail key is read by `server.js` at start-up from the env only; a value saved in the super admin is
 used by its Test button.

@@ -19,7 +19,7 @@
 // when nobody is watching the screen.
 // ---------------------------------------------------------------------------
 import { PROVIDERS, providerCatalog } from "./providers.js";
-import { activateSubscription, priceFor, cycleMonths } from "./payments.js";
+import { activateSubscription, priceFor, cycleMonths, billableModules, subscriptionLines, linesTotal } from "./payments.js";
 import { shopCyclePrice } from "./planPricing.js";
 import { withPlatformRole } from "./platform.js";
 
@@ -280,12 +280,15 @@ async function subscriptionStart(req, body) {
   const cycle = ["monthly", "quarterly", "semi_annually", "annually"].includes(str(body.cycle)) ? str(body.cycle) : "monthly";
   const subscription = await one(`subscriptions?tenant_id=eq.${who.tenantId}&select=id,plan_id,price&order=created_at.desc&limit=1`);
   const tenant = await one(`tenants?id=eq.${who.tenantId}&select=id,slug,business_name,business_type&limit=1`);
-  const amount = Math.max(1, Math.round(shopCyclePrice(plan, cycle, tenant?.business_type, subscription)));
+  // Same charge as payments.js: package + every module line, a year = 10 months.
+  const mods = await billableModules(who.tenantId, plan);
+  const lines = subscriptionLines({ plan, cycle, businessType: tenant?.business_type, subscription, mods });
+  const amount = Math.max(1, linesTotal(lines));
   const [payment] = await db("subscription_payments", {
     method: "POST", prefer: "return=representation",
     body: {
       tenant_id: who.tenantId, subscription_id: subscription?.id || null, amount, gateway: provider, status: "pending", phone: str(body.phone) || null,
-      metadata: { plan_id: plan.id, plan_name: plan.name, cycle, type: "subscription", provider },
+      metadata: { plan_id: plan.id, plan_name: plan.name, cycle, type: "subscription", provider, lines },
     },
   });
   const started = await begin({
