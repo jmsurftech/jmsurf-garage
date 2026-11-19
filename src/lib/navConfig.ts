@@ -10,6 +10,7 @@ import {
   DoorOpen, HardHat, BookOpenCheck, CalendarHeart,
 } from "lucide-react";
 import { MODULES, MODULE_BY_KEY } from "@/lib/modules";
+import { GARAGE_NAV } from "@/garage/nav";
 
 /**
  * The company menu (classic books order). Sections hold entries; an entry with
@@ -46,6 +47,7 @@ export const NAV: NavSection[] = [
     title: null,
     entries: [
       { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      ...GARAGE_NAV,
       { path: "/approvals", label: "Approvals", icon: CheckSquare },
       { path: "/calendar", label: "Calendar", icon: CalendarIcon },
       { path: "/me", label: "My Space", icon: UserRoundCog, module: "hrm", paid: true },

@@ -1,4 +1,5 @@
 import type { AppDef, FieldDef, KindDef, StageDef } from "./types";
+import { GARAGE_APPS } from "@/garage/apps";
 
 const s = (key: string, label: string, tone: StageDef["tone"], done?: boolean): StageDef => ({ key, label, tone, done });
 const f = (key: string, label: string, type: FieldDef["type"], extra: Partial<FieldDef> = {}): FieldDef => ({ key, label, type, ...extra });
@@ -663,6 +664,7 @@ export const APPS: AppDef[] = [
         fields: [f("client", "Client company", "text", { half: true, list: true }), f("due_date", "Due", "date", { column: "due_date", list: true, half: true }), OWNER] },
     ],
   },
+  ...GARAGE_APPS,
 ];
 
 export const APP_BY_KEY: Record<string, AppDef> = Object.fromEntries(APPS.map((a) => [a.key, a]));

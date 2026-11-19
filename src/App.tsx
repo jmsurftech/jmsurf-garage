@@ -277,6 +277,7 @@ const TenantLogin = lazyPage(() => import("@/pages/TenantLogin"));
 const SubscriptionExpired = lazyPage(() => import("@/pages/SubscriptionExpired"));
 const NotFound = lazyPage(() => import("@/pages/NotFound"));
 const Unsubscribe = lazyPage(() => import("@/pages/Unsubscribe"));
+import { GARAGE_ROUTES, GARAGE_PUBLIC_ROUTES } from "@/garage/routes";
 const OAuthConsent = lazyPage(() => import("@/pages/OAuthConsent"));
 
 
@@ -872,6 +873,7 @@ const tenantRoutes = [
   { path: "notebook", element: <P><NotebookPage /></P> },
   { path: "contracts", element: <P><ContractsPage /></P> },
   { path: "contracts/:id", element: <P><ContractsPage /></P> },
+  ...GARAGE_ROUTES.map((r) => ({ path: r.path, element: r.bare ? <Bare><r.page /></Bare> : <P><r.page /></P> })),
   { path: "apps/:app", element: <P><AppPage /></P> },
   { path: "apps/:app/:kind", element: <P><AppPage /></P> },
   { path: "apps/:app/:kind/:id", element: <P><AppPage /></P> },
@@ -926,6 +928,7 @@ const App = () => (
             <Route path="/signup" element={<Navigate to="/register" replace />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
+            {GARAGE_PUBLIC_ROUTES.map((r) => <Route key={r.path} path={r.path} element={<r.page />} />)}
             <Route path="/terms" element={<Legal />} />
             <Route path="/privacy" element={<Legal />} />
             <Route path="/status" element={<Status />} />

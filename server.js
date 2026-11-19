@@ -24,6 +24,7 @@ import { isCcBillingRoute, handleCcBilling, startCcBilling } from "./ccbilling.j
 import { isDevRoute, handleDev, startWebhooks } from "./devapi.js";
 import { handleDemoStart, startDemoReset, isDemoTenant } from "./demo.js";
 import { isWaterRoute, handleWaterRequest, startWaterAlerts } from "./water.js";
+import { isGarageRoute, handleGarageRequest, startGarageJobs } from "./garage.js";
 import { isShopRoute, handleShopRequest, setShopMailer } from "./shop.js";
 import { isPortalUpload } from "./portal.js";
 import { isErpRoute, handleErpRequest, startErpJobs } from "./erp.js";
@@ -1407,6 +1408,7 @@ startInvoicePromptReconciler();
 startPayLinkReconciler();
 setShopMailer((tenantId, message) => deliverForTenant(tenantId, message));
 startWaterAlerts((message) => deliverSavedSmtp(message));
+startGarageJobs();
 
 // Staff account routes reuse the reply helper and the saved email settings.
 configureStaff({ sendJson, deliverEmail: deliverSavedSmtp, emailShell });
@@ -1703,6 +1705,10 @@ createServer(async (req, res) => {
     const shopSlug = (await customDomainSlug(shopHostName)) || subdomainSlug(shopHostName)
       || (/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(String(req.headers.host || "")) ? String(req.headers["x-shop-slug"] || "") : "");
     return await handleShopRequest(req, res, pathname, shopBody, sendJson, shopSlug);
+  }
+
+  if (isGarageRoute(pathname)) {
+    return await handleGarageRequest(req, res, pathname, { sendJson, readJsonBody });
   }
 
   if (isWaterRoute(pathname)) {
