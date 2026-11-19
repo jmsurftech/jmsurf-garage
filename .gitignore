@@ -35,3 +35,4 @@ vendor-mail.js
 
 # Website page snapshots, written by scripts/prerender.mjs during the build
 seo-pages/
+.claude/
