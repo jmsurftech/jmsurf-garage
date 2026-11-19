@@ -128,7 +128,7 @@ export function withDutyDefaults(saved: Partial<DutyRates> | null | undefined): 
   const s = saved || {};
   return {
     ...DEFAULT_DUTY_RATES,
-    ...Object.fromEntries(Object.entries(s).filter(([, v]) => v !== null && v !== undefined && v !== "")),
+    ...Object.fromEntries(Object.entries(s).filter(([, v]) => v !== null && v !== undefined && (v as unknown) !== "")),
     excise: Array.isArray(s.excise) && s.excise.length ? s.excise : DEFAULT_DUTY_RATES.excise,
     depreciation: Array.isArray(s.depreciation) && s.depreciation.length ? s.depreciation : DEFAULT_DUTY_RATES.depreciation,
   } as DutyRates;
