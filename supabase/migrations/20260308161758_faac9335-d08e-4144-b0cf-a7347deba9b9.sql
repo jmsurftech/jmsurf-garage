@@ -1,0 +1,2 @@
+ALTER TABLE public.transactions DROP CONSTRAINT transactions_payment_method_check;
+ALTER TABLE public.transactions ADD CONSTRAINT transactions_payment_method_check CHECK (payment_method = ANY (ARRAY['mpesa','cash','card','split','credit','loyalty_points']));

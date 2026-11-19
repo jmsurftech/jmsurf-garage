@@ -1,0 +1,37 @@
+To: eTIMSintegratorsupport@kra.go.ke
+Cc: apisupport@kra.go.ke
+Subject: Request for eTIMS Sandbox Integration Token - P052523451C
+
+Dear eTIMS Integrator Support Team,
+
+JMSURF TECHNOLOGIES LTD is developing JMSURF Garage, a cloud business management and invoicing system (POS, ERP and accounting) that we provide to businesses in Kenya. We are integrating it with KRA eTIMS through the Online Sales Control Unit (OSCU) as a Third-Party Integrator.
+
+We have signed up on the GavaConnect Developer Portal, created our application ("JMSURF Garage", product: eTIMS OSCU Integrator Automated Testing) and completed the integration against the sandbox. When we try to start the automated test, the portal returns the error "It is not valid device", as we do not yet have an eTIMS sandbox device serial number.
+
+Kindly issue our eTIMS Sandbox Integration Token so that we can complete the OSCU service request on the eTIMS Taxpayer Sandbox Portal and receive the device serial number. Our details:
+
+- Integrator KRA PIN: P052523451C
+- Integrator Name: JMSURF TECHNOLOGIES LTD
+- Solution Type: OSCU
+- TIS Name: JMSURF Garage
+- TIS Version: 1.0.0
+- Unique TIS Serial Number: JMSDASH0001
+- Type of Integrator: Third-Party Integrator
+- Business Type: Goods & Services
+- Branch ID: 00 (Head office)
+- GavaConnect application: JMSURF Garage (Sandbox)
+- Contact person: Joseph Muthama
+- Phone: 0712504593
+- Email: jmsurftech@gmail.com
+
+Once the device is activated, we will run the automated tests on GavaConnect and submit the test artefacts and KYC documents for verification.
+
+Thank you for your assistance.
+
+Kind regards,
+
+Joseph Muthama
+JMSURF TECHNOLOGIES LTD
+Devan Plaza, 5th Floor, Cross Way Road
+0712504593 | info@jmsurf.co.ke
+https://garage.jmsurf.co.ke

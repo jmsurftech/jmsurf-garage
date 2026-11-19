@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS agg_settings_select ON public.aggregator_settings; CREATE POLICY agg_settings_select ON public.aggregator_settings FOR SELECT TO authenticated USING (has_role(auth.uid(), 'super_admin'::app_role));

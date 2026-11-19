@@ -1,0 +1,1 @@
+ALTER TABLE public.business_settings DROP COLUMN IF EXISTS at_api_key, DROP COLUMN IF EXISTS at_username, DROP COLUMN IF EXISTS at_sender_id, DROP COLUMN IF EXISTS whatsapp_token, DROP COLUMN IF EXISTS whatsapp_phone_id;

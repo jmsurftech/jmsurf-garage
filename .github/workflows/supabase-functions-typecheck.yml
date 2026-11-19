@@ -1,0 +1,41 @@
+name: Supabase Functions Typecheck
+
+on:
+  push:
+    paths:
+      - 'supabase/functions/**'
+      - '.github/workflows/supabase-functions-typecheck.yml'
+  pull_request:
+    paths:
+      - 'supabase/functions/**'
+      - '.github/workflows/supabase-functions-typecheck.yml'
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.x
+
+      - name: Typecheck edge functions
+        run: |
+          set +e
+          fail=0
+          for fn in supabase/functions/*/index.ts; do
+            # Skip functions that import Lovable-runtime-only npm packages
+            # (e.g. @lovable.dev/webhooks-js) which are unavailable in plain CI.
+            if grep -qE "npm:@lovable\\.dev/" "$fn"; then
+              echo "Skipping $fn (uses Lovable runtime-only npm package)"
+              continue
+            fi
+            echo "::group::$fn"
+            if ! deno check --no-lock --allow-import "$fn"; then
+              echo "::error file=$fn::Type errors in $fn"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $fail

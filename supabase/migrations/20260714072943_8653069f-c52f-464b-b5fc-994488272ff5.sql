@@ -1,0 +1,1 @@
+UPDATE public.business_settings SET payment_provider='daraja' WHERE tenant_id='663f8efe-d602-47d3-91b7-f7a8f2ee41e2';

@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS role_perms_select ON public.role_permissions;

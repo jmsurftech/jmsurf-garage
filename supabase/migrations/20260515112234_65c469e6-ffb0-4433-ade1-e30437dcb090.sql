@@ -1,0 +1,1 @@
+CREATE OR REPLACE VIEW public.tenant_domains_public AS SELECT td.host, td.kind, t.slug, t.id AS tenant_id, t.business_name, t.logo_url FROM public.tenant_domains td JOIN public.tenants t ON t.id = td.tenant_id WHERE td.status = 'approved' AND t.is_active = true AND t.deleted_at IS NULL;

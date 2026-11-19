@@ -1,0 +1,1 @@
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS daily_sales_target numeric NOT NULL DEFAULT 50000;

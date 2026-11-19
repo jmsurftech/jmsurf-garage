@@ -1,0 +1,1 @@
+ALTER VIEW public.tenant_domains_public SET (security_invoker = true);

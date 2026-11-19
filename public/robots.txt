@@ -1,0 +1,41 @@
+# JMSURF Garage website (https://garage.jmsurf.co.ke)
+# Company addresses serve their own robots.txt and sitemap (public website pages only); app. and dash. are noindex.
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /api/
+Disallow: /auth/
+Disallow: /sign/
+Disallow: /contract/
+Disallow: /account
+Disallow: /portal
+Disallow: /checkout
+Disallow: /cart
+Disallow: /reset-password
+
+# Search engines and AI assistants are welcome on the public website.
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Googlebot
+User-agent: Bingbot
+User-agent: Applebot
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /api/
+Disallow: /auth/
+Disallow: /account
+
+Sitemap: https://garage.jmsurf.co.ke/sitemap.xml

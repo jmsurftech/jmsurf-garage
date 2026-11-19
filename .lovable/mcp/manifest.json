@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://ljahbptugkbafrjnoxjv.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "jmsurf-pos-mcp",
+      "version": "0.1.0",
+      "title": "JMSURF POS"
+    },
+    "tools": [
+      {
+        "name": "get_business_summary",
+        "title": "Get business summary",
+        "description": "Return revenue, expenses, net profit, and transaction count for the signed-in user's business over the last N days (default 30).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "days": {
+              "default": 30,
+              "description": "Look-back window in days.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_products",
+        "title": "List products",
+        "description": "List products in the signed-in user's business, optionally filtered by name search.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "search": {
+              "description": "Case-insensitive substring match on product name.",
+              "type": "string"
+            },
+            "limit": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_low_stock",
+        "title": "List low-stock items",
+        "description": "List products whose current quantity is at or below the low-stock threshold.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_recent_transactions",
+        "title": "List recent sales",
+        "description": "List recent POS transactions for the signed-in user's business, newest first.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

@@ -1,0 +1,801 @@
+/* Fonts come from our own server: no extra connections to Google before the page can draw. */
+@font-face { font-family: "Inter"; font-style: normal; font-display: swap; font-weight: 100 900; src: url("./assets/fonts/inter-latin-var.woff2") format("woff2"); }
+@font-face { font-family: "Plus Jakarta Sans"; font-style: normal; font-display: swap; font-weight: 200 800; src: url("./assets/fonts/plus-jakarta-sans-latin-var.woff2") format("woff2"); }
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 120 5% 97%;
+    --foreground: 150 20% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 150 20% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 20% 10%;
+
+    --primary: 145 63% 32%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 120 8% 92%;
+    --secondary-foreground: 150 20% 15%;
+
+    --muted: 120 5% 94%;
+    --muted-foreground: 150 10% 45%;
+
+    --accent: 24 95% 53%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 120 8% 88%;
+    --input: 120 8% 88%;
+    --ring: 145 63% 32%;
+
+    --radius: 0.75rem;
+
+    --success: 145 63% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 210 80% 52%;
+    --info-foreground: 0 0% 100%;
+
+    --sidebar-background: 150 20% 10%;
+    --sidebar-foreground: 120 5% 85%;
+    --sidebar-primary: 145 63% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 150 15% 16%;
+    --sidebar-accent-foreground: 120 5% 90%;
+    --sidebar-border: 150 12% 18%;
+    --sidebar-ring: 145 63% 45%;
+
+    --font-display: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    --font-body: 'Inter', sans-serif;
+
+    --shadow-card: 0 1px 3px 0 hsl(150 20% 10% / 0.04), 0 1px 2px -1px hsl(150 20% 10% / 0.04);
+    --shadow-elevated: 0 4px 16px -2px hsl(150 20% 10% / 0.08), 0 2px 4px -2px hsl(150 20% 10% / 0.04);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer components {
+  /* Form input used by every screen (input, select, textarea). */
+  .fi {
+    @apply block w-full h-10 rounded-xl border border-input bg-background px-3 text-sm text-foreground
+      placeholder:text-muted-foreground transition-colors
+      focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20
+      disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  /* Low priority (:where) so a text box's own size (min-h-[200px] …) wins. */
+  textarea.fi { @apply h-auto; }
+  :where(textarea.fi) { @apply min-h-[88px] py-2.5; }
+  select.fi { @apply pr-8; }
+
+  /* Data table used inside a flush Panel. */
+  .dt { @apply w-full text-sm; border-collapse: separate; border-spacing: 0; }
+  .dt thead th {
+    @apply sticky top-0 z-[2] whitespace-nowrap border-b border-border bg-muted px-4 py-2.5 text-left
+      text-[11px] font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+  /* A table that scrolls sideways also scrolls its rows inside its own box, so the
+     column titles stay visible while scrolling (a sideways-scrolling box would
+     otherwise stop the sticky titles). */
+  @media (min-width: 768px) {
+    .overflow-x-auto:has(> table), [data-reveal]:has(> table), .dash-table-wrap {
+      overflow: auto;
+      max-height: calc(100svh - 11rem);
+    }
+    /* Every list table (not only .dt): its column titles stay put while the rows scroll. */
+    .overflow-x-auto:has(> table) > table:not(.dt) > thead th,
+    [data-reveal]:has(> table) > table:not(.dt) > thead th,
+    .dash-table-wrap > table > thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background-color: hsl(var(--card));
+      box-shadow: inset 0 -1px 0 hsl(var(--border));
+    }
+  }
+  .dt tbody td { @apply border-b border-border px-4 py-3 align-middle; }
+  .dt tbody tr:last-child td { @apply border-b-0; }
+  .dt tbody tr { @apply transition-colors; }
+  .dt tbody tr:hover td { @apply bg-muted/40; }
+  .dt .num { @apply text-right tabular-nums; }
+  .dt tfoot td { @apply border-t border-border bg-muted/40 px-4 py-3 font-semibold; }
+
+  /* Small square icon button for row actions. */
+  .icon-btn {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors
+      hover:bg-muted hover:text-foreground disabled:opacity-40;
+  }
+  .icon-btn-danger { @apply icon-btn hover:bg-destructive/10 hover:text-destructive; }
+}
+
+@layer utilities {
+  .pos-shadow {
+    box-shadow: var(--shadow-card);
+  }
+  .pos-shadow-elevated {
+    box-shadow: var(--shadow-elevated);
+  }
+}
+
+/* POS Fullscreen mode: hide app chrome (sidebar + header) */
+body.pos-fullscreen aside,
+body.pos-fullscreen header {
+  display: none !important;
+}
+body.pos-fullscreen main {
+  /* Breathing room at the top and sides instead of content touching the edge */
+  padding: 0.75rem 1rem 0.5rem !important;
+}
+/* With the header and sidebar hidden the till must fill the whole screen,
+   otherwise the pagination card floats above a band of empty space. */
+body.pos-fullscreen .pos-shell {
+  height: calc(100svh - 1.25rem) !important;
+  margin-bottom: 0 !important;
+}
+
+/* Admin content area. */
+.admin-light {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+/* Platform admin palette. Set on <html> while /admin is open so shared UI
+   (cards, inputs, selects, tables, dialogs and popovers rendered in portals)
+   uses the JMSURF Garage colours: light by default, charcoal in dark mode.
+   !important because a company's theme writes its colours inline on <html>. */
+html.admin-theme:not(.dark) {
+  color-scheme: light;
+  --background: 240 5% 97% !important;
+  --foreground: 225 14% 8% !important;
+  --card: 0 0% 100% !important;
+  --card-foreground: 225 14% 8% !important;
+  --popover: 0 0% 100% !important;
+  --popover-foreground: 225 14% 8% !important;
+  --primary: 356 81% 36% !important;
+  --primary-foreground: 0 0% 100% !important;
+  --secondary: 220 14% 96% !important;
+  --secondary-foreground: 222 15% 20% !important;
+  --muted: 220 14% 96% !important;
+  --muted-foreground: 220 9% 44% !important;
+  --accent: 0 76% 96% !important;
+  --accent-foreground: 356 81% 30% !important;
+  --border: 220 13% 91% !important;
+  --input: 220 13% 86% !important;
+  --ring: 356 81% 36% !important;
+}
+html.admin-theme.dark {
+  color-scheme: dark;
+  --background: 216 17% 6% !important;
+  --foreground: 210 40% 98% !important;
+  --card: 222 40% 10.5% !important;
+  --card-foreground: 210 40% 98% !important;
+  --popover: 222 40% 11% !important;
+  --popover-foreground: 210 40% 98% !important;
+  --primary: 357 84% 61% !important;
+  --primary-foreground: 0 0% 100% !important;
+  --secondary: 222 30% 16% !important;
+  --secondary-foreground: 210 40% 96% !important;
+  --muted: 222 30% 14% !important;
+  --muted-foreground: 217 16% 64% !important;
+  --accent: 222 30% 16% !important;
+  --accent-foreground: 210 40% 98% !important;
+  --destructive: 0 72% 55% !important;
+  --destructive-foreground: 0 0% 100% !important;
+  --success: 152 60% 45% !important;
+  --warning: 38 92% 55% !important;
+  --info: 212 90% 62% !important;
+  --border: 222 25% 17% !important;
+  --input: 222 25% 20% !important;
+  --ring: 357 84% 61% !important;
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.35) !important;
+  --shadow-elevated: 0 12px 32px -8px rgb(0 0 0 / 0.55) !important;
+}
+html.admin-theme.dark body {
+  background: hsl(216 17% 6%);
+}
+html.admin-theme ::selection {
+  background: rgb(239 74 82 / 0.35);
+}
+/* Cards get a faint top highlight so they lift off the page. */
+html.admin-theme.dark .admin-light .bg-card {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.025), transparent 40%);
+}
+
+
+/* ---- Landing page motion ------------------------------------------------- */
+@keyframes lp-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes lp-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+@keyframes lp-grow { from { transform: scaleY(0.15); } to { transform: scaleY(1); } }
+@keyframes lp-toast {
+  0%, 8% { opacity: 0; transform: translateY(16px) scale(0.96); }
+  14%, 70% { opacity: 1; transform: translateY(0) scale(1); }
+  78%, 100% { opacity: 0; transform: translateY(-10px) scale(0.98); }
+}
+@keyframes lp-glow { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.9; } }
+.lp-marquee { animation: lp-marquee 38s linear infinite; }
+.lp-marquee-reverse { animation: lp-marquee 44s linear infinite reverse; }
+.lp-marquee-wrap:hover .lp-marquee, .lp-marquee-wrap:hover .lp-marquee-reverse { animation-play-state: paused; }
+.lp-float { animation: lp-float 6s ease-in-out infinite; }
+.lp-float-slow { animation: lp-float 8s ease-in-out infinite; }
+.lp-bar { transform-origin: bottom; animation: lp-grow 1.2s cubic-bezier(.2,.8,.2,1) both; }
+.lp-toast { animation: lp-toast 5s ease-in-out infinite; }
+.lp-glow { animation: lp-glow 6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .lp-marquee, .lp-marquee-reverse, .lp-float, .lp-float-slow, .lp-bar, .lp-toast, .lp-glow { animation: none !important; }
+  .lp-toast { opacity: 1; }
+}
+
+/* ---- Hand-built pop-ups ---------------------------------------------------
+   Older screens draw their own overlay (fixed inset-0 … flex centred). Keep
+   them above sticky headers, dim the page, and never let a tall form run off
+   a phone screen: the card scrolls inside the viewport instead. */
+.fixed.inset-0.flex.items-center.justify-center:is(.z-50, .z-40) {
+  z-index: 90;
+  backdrop-filter: blur(2px);
+}
+.fixed.inset-0.flex.items-center.justify-center:is(.z-50, .z-40) > :is(.bg-card, .bg-background) {
+  max-height: calc(100svh - 2rem);
+  overflow-y: auto;
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.35);
+  border-radius: 1.5rem;
+}
+
+/* ---- System-wide polish (2026-09-27) ------------------------------------ */
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+/* Thin, quiet scrollbars everywhere. */
+* { scrollbar-width: thin; scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: hsl(var(--muted-foreground) / 0.25); border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.45); }
+*::-webkit-scrollbar-track { background: transparent; }
+/* Money and counts line up in every table. */
+table td, table th { font-variant-numeric: tabular-nums; }
+table thead th { font-size: 0.75rem; letter-spacing: 0.02em; }
+/* Clear keyboard focus without affecting mouse clicks. */
+:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
+
+/* ---- Landing device mockups and integrations ---------------------------- */
+@keyframes lp-feed { 0%, 12% { transform: translateY(0); } 25%, 37% { transform: translateY(-14px); } 50%, 62% { transform: translateY(-28px); } 75%, 100% { transform: translateY(0); } }
+@keyframes lp-tap { 0%, 70%, 100% { transform: scale(1); box-shadow: none; } 76% { transform: scale(0.88); box-shadow: 0 0 0 3px rgb(225 29 46 / 0.5); } 84% { transform: scale(1.04); } }
+@keyframes lp-cart-line { 0%, 8% { opacity: 0; transform: translateX(8px); } 14%, 100% { opacity: 1; transform: none; } }
+@keyframes lp-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgb(16 185 129 / 0.5); } 50% { box-shadow: 0 0 0 6px rgb(16 185 129 / 0); } }
+@keyframes lp-paid { 0%, 62% { opacity: 0; transform: scale(1.05); } 68%, 90% { opacity: 1; transform: scale(1); } 96%, 100% { opacity: 0; } }
+@keyframes lp-spin { to { transform: rotate(360deg); } }
+/* Money dots travelling from customer to account. */
+@keyframes lp-flow { 0% { left: 16%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { left: 84%; opacity: 0; } }
+.lp-flow { animation: lp-flow 2.7s linear infinite; }
+/* Rotating glow border for the featured plan. */
+@property --lp-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes lp-angle { to { --lp-angle: 360deg; } }
+.lp-glow-border { background: conic-gradient(from var(--lp-angle), #a8121b, #e11d2e, #ff8a8f, #a8121b); animation: lp-angle 5s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .lp-flow, .lp-glow-border { animation: none; } }
+/* The receipt feeds out of the printer, rests, then starts again. */
+@keyframes lp-print { 0% { transform: translateY(-100%); } 45%, 88% { transform: translateY(0); } 96%, 100% { transform: translateY(-100%); } }
+.lp-print { animation: lp-print 9s cubic-bezier(0.45, 0, 0.2, 1) infinite; }
+.lp-receipt-edge { -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 12px 100%; mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 12px 100%; }
+@media (prefers-reduced-motion: reduce) { .lp-print { animation: none; } }
+.lp-feed { animation: lp-feed 8s ease-in-out infinite; }
+.lp-tap { animation: lp-tap 3.6s ease-in-out infinite; }
+.lp-cart-line { animation: lp-cart-line 7.2s ease-out infinite; }
+.lp-pulse { animation: lp-pulse 1.8s ease-in-out infinite; }
+.lp-paid { opacity: 0; animation: lp-paid 7.2s ease-in-out infinite; }
+.lp-orbit { animation: lp-spin 60s linear infinite; }
+.lp-orbit-counter { animation: lp-spin 60s linear infinite reverse; }
+.lp-orbit:hover, .lp-orbit:hover .lp-orbit-counter { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .lp-feed, .lp-tap, .lp-cart-line, .lp-pulse, .lp-orbit, .lp-orbit-counter { animation: none !important; }
+  .lp-paid { animation: none !important; opacity: 0; }
+}
+
+/* Phones and tablets have no hover: controls that only appear on hover
+   (delete buttons on cards, row actions) are always shown there. */
+@media (hover: none) {
+  .group .group-hover\:opacity-100 { opacity: 1; }
+}
+
+/* Grid children may shrink below their content width, so a wide table or a
+   long unbroken line inside a one-column (phone) grid scrolls inside its own
+   panel instead of pushing the whole page sideways. */
+.grid > * { min-width: 0; }
+
+/* Phones: data tables (and wide list tables, marked dt-phone) become one card per row. Each cell shows its column
+   name (data-label, filled in by lib/responsiveTables.ts) beside its value. */
+@media (max-width: 639px) {
+  :is(table.dt, table.dt-phone):not(.dt-keep) { display: block; min-width: 0 !important; width: 100%; }
+  :is(table.dt, table.dt-phone):not(.dt-keep) thead { display: none; }
+  :is(table.dt, table.dt-phone):not(.dt-keep) tbody,
+  :is(table.dt, table.dt-phone):not(.dt-keep) tfoot { display: block; width: 100%; }
+  :is(table.dt, table.dt-phone):not(.dt-keep) tr {
+    display: block; width: 100%;
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  :is(table.dt, table.dt-phone):not(.dt-keep) tbody tr:last-child { border-bottom: 0; }
+  :is(table.dt, table.dt-phone):not(.dt-keep) tbody tr:hover td { background: transparent; }
+  :is(table.dt, table.dt-phone):not(.dt-keep) td {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+    width: 100%; min-width: 0; max-width: none !important;
+    padding: 0.2rem 0 !important; border: 0 !important;
+    text-align: right; white-space: normal; word-break: break-word;
+  }
+  :is(table.dt, table.dt-phone):not(.dt-keep) td::before {
+    content: attr(data-label);
+    flex-shrink: 0; max-width: 45%;
+    text-align: left; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    color: hsl(var(--muted-foreground));
+  }
+  :is(table.dt, table.dt-phone):not(.dt-keep) td:not([data-label])::before { content: none; }
+  /* Cells without a column name (actions, checkboxes) line up on the right. */
+  :is(table.dt, table.dt-phone):not(.dt-keep) td:not([data-label]) { justify-content: flex-end; }
+  /* Full-width cells: empty states, paging rows, expanded details. */
+  :is(table.dt, table.dt-phone):not(.dt-keep) td[colspan] { display: block; text-align: left; }
+  /* The first column is the row's title. */
+  :is(table.dt, table.dt-phone):not(.dt-keep) tbody td:first-child { font-weight: 600; }
+  :is(table.dt, table.dt-phone):not(.dt-keep) td > * { min-width: 0; }
+  :is(table.dt, table.dt-phone):not(.dt-keep) tfoot td { background: transparent; }
+  /* Empty values take no line. */
+  :is(table.dt, table.dt-phone):not(.dt-keep) tbody td:empty { display: none; }
+  /* Form tables (dt-stack): each label sits above its box, full width. */
+  table.dt-phone.dt-stack:not(.dt-keep) td { display: block; text-align: left; }
+  table.dt-phone.dt-stack:not(.dt-keep) td::before { display: block; max-width: none; margin-bottom: 0.25rem; }
+  table.dt-stack td .fi, table.dt-stack td input, table.dt-stack td select { width: 100%; }
+  /* Document item lines: the item picker and description get the full width; no drag handle. */
+  table.dt-items tbody td:first-child { display: none; }
+  table.dt-items tbody td:nth-child(2) { display: block; text-align: left; font-weight: 400; }
+  table.dt-items tbody td:nth-child(2)::before { display: block; margin-bottom: 0.25rem; }
+}@layer base {
+  /* JMSURF Garage brand: the JMSURF family look (JMSURF ISP / JMSURF PAY).
+     Crimson #a8121b on clean white surfaces, charcoal ink #15171c, bright
+     crimson #e11d2e for highlights; deep charcoal surfaces in dark mode. */
+  :root {
+    color-scheme: light;
+    --background: 240 5% 97%;
+    --foreground: 225 14% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 225 14% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 225 14% 8%;
+    --primary: 356 81% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 15% 20%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 44%;
+    --accent: 225 14% 10%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 357 66% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%;
+    --input: 220 13% 86%;
+    --ring: 356 81% 36%;
+    --radius: 0.7rem;
+    --success: 158 83% 28%;
+    --success-foreground: 0 0% 100%;
+    --warning: 30 89% 35%;
+    --warning-foreground: 0 0% 100%;
+    --info: 218 74% 47%;
+    --info-foreground: 0 0% 100%;
+
+    /* Light sidebar with a crimson active state. */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 15% 20%;
+    --sidebar-primary: 356 81% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 76% 96%;
+    --sidebar-accent-foreground: 356 81% 30%;
+    --sidebar-border: 220 13% 92%;
+    --sidebar-ring: 356 81% 36%;
+
+    /* JMSURF brand extras. */
+    --brand-bright: 355 77% 50%;
+    --brand-soft: 0 76% 96%;
+    --brand-ink: 225 14% 10%;
+    /* Older screens still name the second colour "teal"/"cream". */
+    --brand-teal: 225 14% 10%;
+    --brand-teal-soft: 220 9% 44%;
+    --brand-cream: 0 0% 100%;
+
+    --font-display: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    --font-body: 'Inter', sans-serif;
+
+    --shadow-card: 0 1px 3px rgba(17, 19, 24, .06), 0 1px 2px rgba(17, 19, 24, .04);
+    --shadow-elevated: 0 8px 24px -6px rgba(17, 19, 24, .10), 0 2px 6px rgba(17, 19, 24, .05);
+  }
+
+  .dark {
+    color-scheme: dark;
+    --background: 216 17% 6%;
+    --foreground: 220 17% 94%;
+    --card: 214 15% 9%;
+    --card-foreground: 220 17% 94%;
+    --popover: 214 15% 10%;
+    --popover-foreground: 220 17% 94%;
+    --primary: 357 84% 61%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 216 16% 12%;
+    --secondary-foreground: 220 15% 90%;
+    --muted: 216 16% 12%;
+    --muted-foreground: 216 9% 64%;
+    --accent: 216 16% 18%;
+    --accent-foreground: 220 17% 96%;
+    --destructive: 358 100% 71%;
+    --border: 216 15% 17%;
+    --input: 216 14% 23%;
+    --ring: 357 84% 61%;
+    --success: 156 60% 52%;
+    --warning: 33 85% 62%;
+    --info: 218 100% 72%;
+    --sidebar-background: 216 17% 7.5%;
+    --sidebar-foreground: 220 15% 84%;
+    --sidebar-primary: 357 84% 61%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 357 60% 14%;
+    --sidebar-accent-foreground: 357 100% 80%;
+    --sidebar-border: 216 15% 14%;
+    --sidebar-ring: 357 84% 61%;
+    --brand-soft: 357 60% 14%;
+    --brand-teal: 220 15% 84%;
+    --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --shadow-elevated: 0 12px 32px -8px rgb(0 0 0 / 0.6);
+  }
+}
+
+
+/* ── Readability: anything that turns the teal/green accent colour on hover or
+      keyboard focus gets light text, so the label stays visible. ── */
+[class~="hover:bg-accent"]:hover,
+[class~="focus:bg-accent"]:focus,
+[class~="data-[highlighted]:bg-accent"][data-highlighted],
+[class~="aria-selected:bg-accent"][aria-selected="true"],
+[class~="hover:bg-success"]:hover,
+[class~="hover:bg-accent/90"]:hover {
+  color: hsl(var(--accent-foreground)) !important;
+}
+[class~="hover:bg-accent"]:hover svg,
+[class~="focus:bg-accent"]:focus svg { color: inherit !important; }
+
+/* ── Motion: pages fade in, and anything marked data-reveal rises in as it
+      scrolls into view (see src/lib/reveal.ts). Off for people who ask for less motion. ── */
+@keyframes ft-page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.ft-page-in { animation: none; }
+[data-reveal] { opacity: 0; transform: translateY(22px); transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1); transition-delay: var(--reveal-delay, 0ms); }
+[data-reveal].is-in { opacity: 1; transform: none; }
+@keyframes ft-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.ft-float { animation: ft-float 6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .ft-page-in, .ft-float { animation: none; }
+  [data-reveal] { opacity: 1; transform: none; transition: none; }
+}
+
+/* Dropdown menus and selects: a comfortable standard size. */
+[role="menuitem"], [role="option"] { font-size: 0.875rem; }
+
+/* Tight everywhere: no empty bands around pages, cards, list bars and rows. */
+.glass-shell main :is(.space-y-4,.space-y-5,.space-y-6,.space-y-8,.space-y-10) > :not([hidden]) ~ :not([hidden]),
+.glass-shell main:is(.space-y-5,.space-y-6) > :not([hidden]) ~ :not([hidden]) { margin-top: 8px; }
+.glass-shell main :is(.gap-4,.gap-5,.gap-6,.gap-8,.sm\:gap-4,.sm\:gap-5,.sm\:gap-6,.lg\:gap-6,.lg\:gap-8) { gap: 10px; }
+.glass-shell main :is(.mb-6,.mb-8) { margin-bottom: 10px; }
+.glass-shell main :is(.mt-6,.mt-8) { margin-top: 10px; }
+.glass-shell main :is(.p-5,.p-6,.p-8,.sm\:p-5,.sm\:p-6,.sm\:p-8,.md\:p-5,.md\:p-6,.lg\:p-6) { padding: 0.75rem; }
+.glass-shell main :is(.p-10,.p-12) { padding: 1.25rem; }
+.glass-shell main :is(.py-10,.py-12,.py-14,.py-16) { padding-block: 1.25rem; }
+.glass-shell main h1:not(.zd-sheet h1) { font-size: 1.1rem; line-height: 1.3; }
+.glass-shell main table:not(.zd-sheet table) :is(td,th) { padding-block: .4rem; }
+.g-tile.xs { width: 1.75rem; height: 1.75rem; border-radius: .55rem; }
+/* List bars above a table stay one slim line. */
+.erp-main .border-b.px-4.py-3:has(> button, > div > button, > h2, > h1) { padding-block: .375rem; }
+/* Wide pages use the whole width instead of sitting boxed in the middle. */
+.erp-main .mx-auto:is(.max-w-3xl,.max-w-4xl,.max-w-5xl,.max-w-6xl,.max-w-7xl,.max-w-screen-xl,.max-w-screen-2xl):not(.zd-sheet *) { max-width: none; }
+/* Tab strips wrap onto another line instead of scrolling sideways (kanban boards and data-strip rows keep scrolling). */
+[role="tablist"], .flex.gap-1.overflow-x-auto:not([data-strip]) { flex-wrap: wrap !important; overflow: visible !important; height: auto !important; max-width: 100%; }
+@media (max-width: 639px) {
+  .glass-shell main :is(.p-3,.p-4,.p-5,.p-6,.p-8,.sm\:p-5,.sm\:p-6,.md\:p-5,.md\:p-6) { padding: 0.625rem; }
+  .glass-shell main :is(.gap-3,.gap-4,.gap-5,.gap-6) { gap: 0.5rem; }
+  .glass-shell main :is(.space-y-4,.space-y-5,.space-y-6,.space-y-8) > :not([hidden]) ~ :not([hidden]) { margin-top: 0.5rem; }
+  .glass-shell main [role="tablist"] > * { height: auto; min-height: 0; padding: .2rem .6rem; font-size: .75rem; }
+}
+
+/* Tables that cannot fit (lib/tableFit.ts): wrap, then tight, then fixed columns, then one card per row. */
+table[data-fit] { min-width: 0 !important; width: 100% !important; table-layout: auto; }
+table[data-fit="fixed"] { table-layout: fixed !important; }
+table[data-fit="wrap"] :is(th,td) { padding-inline: .5rem !important; font-size: .8125rem; }
+table[data-fit="tight"] :is(th,td) { padding-inline: .3rem !important; font-size: .75rem; }
+table[data-fit="fixed"] :is(th,td) { padding-inline: .25rem !important; font-size: .72rem; }
+/* Squeezed tables wrap their text, except cells kept to one line (.whitespace-nowrap / .truncate) and what is inside them. */
+table[data-fit="wrap"] td:not(.whitespace-nowrap):not(.truncate), table[data-fit]:is([data-fit="tight"],[data-fit="fixed"]) :is(th,td):not(.whitespace-nowrap):not(.truncate) { white-space: normal !important; overflow-wrap: break-word; }
+table[data-fit="wrap"] td:not(.whitespace-nowrap):not(.truncate) *:not(.whitespace-nowrap):not(.truncate):not(.truncate *):not(.whitespace-nowrap *), table[data-fit]:is([data-fit="tight"],[data-fit="fixed"]) :is(th,td):not(.whitespace-nowrap):not(.truncate) *:not(.whitespace-nowrap):not(.truncate):not(.truncate *):not(.whitespace-nowrap *) { white-space: normal; }
+/* headings never wrap while there is room to wrap the rows instead */
+table[data-fit="wrap"] th { white-space: nowrap !important; }
+/* a name cut to one line (span.truncate in a cell) shows its full text on hover (lib/tableFit.ts) */
+table td .truncate { max-width: 100%; }
+/* amounts side by side keep some air, however tight the table */
+table[data-fit]:not([data-fit="cards"]) td:is(.tabular-nums,.text-right,.num) { padding-inline: .5rem !important; }
+/* dates, numbers, amounts and document numbers never break in the middle */
+table[data-fit]:not([data-fit="cards"]) td:is(.tabular-nums,.text-right,.num,[data-whole]),
+table[data-fit]:not([data-fit="cards"]) td:is(.tabular-nums,.text-right,.num,[data-whole]) * { white-space: nowrap !important; overflow-wrap: normal; }
+table[data-fit="cards"] { display: block; }
+table[data-fit="cards"] > thead { display: none; }
+table[data-fit="cards"] > tbody { display: grid !important; width: 100%; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: .5rem; padding: .5rem; }
+table[data-fit="cards"] > tbody > tr { position: relative; display: block; min-width: 0; padding: .55rem .75rem; border-radius: .9rem; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); }
+table[data-fit="cards"] > tbody > tr > td { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-width: 0; padding: .2rem 0 !important; border: 0 !important; white-space: normal !important; overflow-wrap: anywhere; text-align: right; }
+table[data-fit="cards"] > tbody > tr > td::before { content: attr(data-label); flex: none; max-width: 45%; text-align: left; font-size: .72rem; font-weight: 600; color: hsl(var(--muted-foreground)); }
+table[data-fit="cards"] > tbody > tr > td:is([data-label=""],:not([data-label]))::before { display: none; }
+table[data-fit="cards"] > tbody > tr > td:is([data-label=""],:not([data-label])) { justify-content: flex-end; }
+table[data-fit="cards"] > tbody > tr > td:empty,
+table[data-fit="cards"] > tbody > tr > td.hidden { display: none; }
+table[data-fit="cards"] > tbody > tr > td[colspan] { display: block; text-align: center; }
+table[data-fit="cards"] > tbody > tr > td[colspan]::before { display: none; }
+table[data-fit="cards"] > tbody > tr:has(> td[colspan]:only-child) { grid-column: 1 / -1; padding: 0; border: 0; background: transparent; }
+table[data-fit="cards"] > tbody > tr > td:is(.sm\:table-cell,.md\:table-cell,.lg\:table-cell,.xl\:table-cell) { display: flex; }
+table[data-fit="cards"] > tbody > tr > td :is(input:not([type=checkbox]),select,textarea) { min-width: 0; flex: 1; width: 100%; }
+table[data-fit="cards"] > tfoot { display: block; }
+table[data-fit="cards"] > tfoot > tr { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; padding: .5rem .75rem; font-weight: 600; }
+table[data-fit="cards"].dt-items > tbody > tr > td:first-child { display: none; }
+table[data-fit="cards"].dt-items > tbody > tr > td:nth-child(2) { display: block; text-align: left; }
+table[data-fit="cards"].dt-items > tbody > tr > td:nth-child(2)::before { display: block; margin-bottom: .25rem; }
+
+/* Table cells stay on one line while the table fits; lib/tableFit.ts lets them wrap only when it does not. */
+@media (min-width: 640px) { .glass-shell main table:not([data-fit]):not(.zd-sheet table):not(.dt-items) :is(td,th) { white-space: nowrap; } }
+
+/* Top bar: only the page title and the search box shrink, so every button (and the profile) stays visible. */
+.glass-bar > :not(.min-w-0) { flex-shrink: 0; }
+
+/* ERP pages use the standard sizes (14px body, 12px small print), as in Apex ERP. */
+.erp-main .dt tbody td { line-height: 1.35rem; }
+
+/* Ambient orbs (components/brand/Orbs.tsx): blurred brand-coloured light that drifts. */
+.orb { position: absolute; border-radius: 9999px; filter: blur(70px); will-change: transform; }
+.orb-a { width: 42vmax; height: 42vmax; left: -12vmax; top: -16vmax; background: radial-gradient(circle, hsl(var(--primary) / 0.28), transparent 65%); animation: orb-drift-a 22s ease-in-out infinite; }
+.orb-b { width: 36vmax; height: 36vmax; right: -10vmax; top: 18%; background: radial-gradient(circle, hsl(var(--primary) / 0.18), transparent 65%); animation: orb-drift-b 28s ease-in-out infinite; }
+.orb-c { width: 30vmax; height: 30vmax; left: 30%; bottom: -14vmax; background: radial-gradient(circle, hsl(210 90% 60% / 0.14), transparent 65%); animation: orb-drift-c 26s ease-in-out infinite; }
+.dark .orb-a { background: radial-gradient(circle, hsl(var(--primary) / 0.32), transparent 65%); }
+.dark .orb-c { background: radial-gradient(circle, hsl(260 80% 60% / 0.16), transparent 65%); }
+@keyframes orb-drift-a { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(8vmax, 6vmax) scale(1.12); } }
+@keyframes orb-drift-b { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-7vmax, 5vmax) scale(0.9); } }
+@keyframes orb-drift-c { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-6vmax, -6vmax) scale(1.1); } }
+/* Floating sign-in icons. */
+@keyframes auth-float { 0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); } 50% { transform: translateY(-16px) rotate(calc(var(--r, 0deg) + 6deg)); } }
+.auth-float { animation: auth-float var(--d, 9s) ease-in-out infinite; animation-delay: var(--delay, 0s); }
+.orb-pulse { animation: orb-pulse 9s ease-in-out infinite; }
+@keyframes orb-pulse { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) { .orb, .auth-float, .orb-pulse { animation: none; } }
+
+/* Website hero pictures drift gently up and down. */
+@keyframes hero-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+.hero-bob { animation: hero-bob 7s ease-in-out infinite; will-change: transform; }
+@media (prefers-reduced-motion: reduce) { .hero-bob { animation: none; } }
+
+/* Phone bottom bar: a rounded card; the current page's icon rises into a round button sitting in a notch of the
+   bar (same pattern across the JMSURF systems). Uses the theme's --card, --background, --border, --primary. */
+.notch-nav{position:fixed;left:8px;right:8px;bottom:calc(6px + env(safe-area-inset-bottom));z-index:30;height:66px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);padding:0 4px;
+  background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:22px;box-shadow:0 14px 34px -14px rgba(17,19,24,.35),0 2px 6px rgba(17,19,24,.06)}
+.notch-item{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;padding:0 2px 9px;min-width:0;
+  color:hsl(var(--muted-foreground));font-size:10.5px;font-weight:600;line-height:1.1;text-decoration:none;-webkit-tap-highlight-color:transparent;transition:color .2s}
+.notch-item>span:last-child{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.notch-ico{position:relative;display:grid;place-items:center;width:44px;height:30px;border-radius:999px;transition:transform .28s cubic-bezier(.3,1.4,.5,1),width .2s,height .2s,box-shadow .2s}
+.notch-ico svg{width:21px;height:21px}
+.notch-item:active .notch-ico{transform:scale(.92)}
+.notch-item.is-active{color:hsl(var(--foreground));font-weight:800}
+.notch-item.is-active .notch-ico{position:absolute;left:50%;top:-17px;width:46px;height:46px;border-radius:50%;transform:translateX(-50%);color:hsl(var(--primary));background:hsl(var(--card));
+  box-shadow:0 0 0 5px hsl(var(--background)),0 0 0 6px hsl(var(--primary) / .22),0 12px 22px -10px hsl(var(--primary) / .7)}
+.notch-item.is-active .notch-ico::before{content:'';position:absolute;inset:6px;border-radius:50%;background:hsl(var(--primary) / .13)}
+.notch-item.is-active .notch-ico svg{position:relative;width:21px;height:21px}
+.notch-item.is-active::before,.notch-item.is-active::after{content:'';position:absolute;top:-1px;width:12px;height:10px;pointer-events:none}
+.notch-item.is-active::before{left:calc(50% - 35px);background:radial-gradient(circle at 0 100%,transparent 9px,hsl(var(--background)) 10px)}
+.notch-item.is-active::after{right:calc(50% - 35px);background:radial-gradient(circle at 100% 100%,transparent 9px,hsl(var(--background)) 10px)}
+.notch-badge{position:absolute;top:-3px;right:2px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:hsl(var(--primary));color:hsl(var(--primary-foreground));font:700 10px/17px inherit;text-align:center;box-shadow:0 0 0 2px hsl(var(--card))}
+@media (min-width:768px){.notch-nav.md-hide{display:none}}
+@media (min-width:1024px){.notch-nav.lg-hide{display:none}}
+
+/* Soft look (same family as the ISP workspace and the sign-in): cards and secondary buttons are raised, fields and
+   tab tracks pressed in, buttons are pills. Depth only: colours, sizes and positions stay as they are, so a
+   coloured card keeps its colour. Marker classes are set in components/ui (card, button, input, select, tabs). */
+:root{--soft-hi:rgba(255,255,255,.92);--soft-lo:rgba(40,46,70,.11);--soft-edge:rgba(255,255,255,.75);--soft-sheen:linear-gradient(145deg,rgba(255,255,255,.55),rgba(255,255,255,0) 55%)}
+.dark,html.admin-theme.dark{--soft-hi:rgba(255,255,255,.035);--soft-lo:rgba(0,0,0,.5);--soft-edge:rgba(255,255,255,.06);--soft-sheen:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,0) 55%)}
+.soft-card{background-image:var(--soft-sheen);border-color:var(--soft-edge);box-shadow:8px 8px 20px var(--soft-lo),-6px -6px 16px var(--soft-hi)}
+.soft-card .soft-card{box-shadow:4px 4px 10px var(--soft-lo),-3px -3px 8px var(--soft-hi)}
+.soft-raise{background-image:var(--soft-sheen);border-color:var(--soft-edge);border-radius:999px;box-shadow:4px 4px 10px var(--soft-lo),-3px -3px 8px var(--soft-hi)}
+.soft-primary{border-radius:999px;background-image:linear-gradient(120deg,rgba(255,255,255,.18),rgba(255,255,255,0) 45%,rgba(0,0,0,.12));box-shadow:0 10px 20px -12px hsl(var(--primary)),inset 0 1px 0 rgba(255,255,255,.28)}
+.soft-raise:active,.soft-primary:active{box-shadow:inset 2px 2px 6px var(--soft-lo),inset -2px -2px 6px var(--soft-hi)}
+.soft-field{border-radius:12px;box-shadow:inset 2px 2px 6px var(--soft-lo),inset -2px -2px 6px var(--soft-hi)}
+.soft-track{box-shadow:inset 2px 2px 6px var(--soft-lo),inset -2px -2px 6px var(--soft-hi)}
+.soft-tab[data-state="active"]{box-shadow:3px 3px 8px var(--soft-lo),-2px -2px 6px var(--soft-hi)}
+.notch-nav{box-shadow:8px 8px 22px var(--soft-lo),-6px -6px 16px var(--soft-hi),0 14px 34px -14px rgba(17,19,24,.3)}
+
+/* ── Soft sign-in (same design as the JMSURF ISP sign-in): tinted page with glass discs, the form in a raised soft panel
+   (flat on phones), the logo in a raised tile, pressed-in pill fields and a glowing pill button. ─────────────── */
+.soft-auth{--sa-bg:color-mix(in srgb,hsl(var(--primary)) 5%,#eef1f7);--sa-tile:linear-gradient(145deg,#fbfcff,color-mix(in srgb,hsl(var(--primary)) 4%,#e9edf5));--sa-hi:#fff;--sa-lo:color-mix(in srgb,hsl(var(--primary)) 10%,rgba(30,40,70,.16));--sa-edge:rgba(255,255,255,.75);position:relative;isolation:isolate;background:var(--sa-bg)!important}
+.dark .soft-auth,html.admin-theme.dark .soft-auth{--sa-bg:#0f1218;--sa-tile:linear-gradient(145deg,#1b2029,#13171e);--sa-hi:rgba(255,255,255,.045);--sa-lo:rgba(0,0,0,.55);--sa-edge:rgba(255,255,255,.06)}
+.soft-auth::before,.soft-auth::after{content:'';position:fixed;z-index:-1;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle at 35% 30%,var(--sa-hi),transparent 62%),linear-gradient(145deg,color-mix(in srgb,hsl(var(--primary)) 14%,var(--sa-bg)),var(--sa-bg));
+  box-shadow:inset 0 0 0 10px color-mix(in srgb,hsl(var(--primary)) 9%,transparent),12px 14px 30px var(--sa-lo),-8px -8px 22px var(--sa-hi)}
+.soft-auth::before{width:250px;height:250px;left:-118px;top:-104px}
+.soft-auth::after{width:190px;height:190px;right:-96px;bottom:-60px}
+@media (min-width:640px){.soft-auth::before{width:420px;height:420px;left:-170px;top:-160px}.soft-auth::after{width:340px;height:340px;right:-130px;bottom:-110px}}
+.soft-auth-hide{display:none!important}
+.soft-auth-sheet{background:var(--sa-tile)!important}
+@media (min-width:1024px){.soft-auth-sheet{background:transparent!important}}
+@media (min-width:640px){.soft-auth-card{background:var(--sa-tile)!important;border:1px solid var(--sa-edge)!important;border-radius:34px!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  box-shadow:22px 22px 50px var(--sa-lo),-16px -16px 40px var(--sa-hi),inset 0 1px 0 var(--sa-hi)!important}.soft-auth-card.pad{padding:2.5rem 2.5rem 2.25rem}}
+@media (max-width:639px){.soft-auth-card{background:transparent!important;border-color:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
+@media (min-width:1024px){.soft-auth-card-lg{background:var(--sa-tile)!important;border:1px solid var(--sa-edge)!important;border-radius:34px!important;
+  box-shadow:22px 22px 50px var(--sa-lo),-16px -16px 40px var(--sa-hi),inset 0 1px 0 var(--sa-hi)!important}.soft-auth-card-lg.pad{padding:2.5rem 2.5rem 2.25rem}}
+.soft-auth-logo{display:flex!important;align-items:center;justify-content:center;width:120px;height:120px;margin-inline:auto;border-radius:34px;background:var(--sa-tile);border:1px solid var(--sa-edge);
+  box-shadow:16px 16px 34px var(--sa-lo),-11px -11px 26px var(--sa-hi),inset 0 1px 0 var(--sa-hi)}
+.soft-auth-logo>img,.soft-auth-logo>svg{max-width:78px;max-height:70px;width:auto;height:auto;border-radius:16px;box-shadow:none!important;filter:none!important}
+.soft-auth-logo.wide{width:auto;min-width:120px;max-width:300px;height:auto;min-height:104px;padding:18px 26px}
+.soft-auth-logo.wide>img{max-width:240px;max-height:72px;border-radius:0}
+.soft-auth-logo.sm{width:92px;height:92px;border-radius:28px;margin-inline:0}
+.soft-auth-logo.sm>img,.soft-auth-logo.sm>svg{max-width:60px;max-height:56px}
+@media (max-width:1023px){.soft-auth-logo.sm{margin-inline:auto}}
+.soft-auth .sa-field,.soft-auth form :is(input:not([type="checkbox"],[type="radio"],[type="hidden"],[type="file"],[type="range"],[maxlength="1"],.auth-input),select,textarea),.soft-auth .soft-field,.soft-auth .soft-field{min-height:3.5rem;border-radius:1.15rem!important;font-size:16px;background:var(--sa-tile)!important;border:1px solid var(--sa-edge)!important;
+  box-shadow:inset 2px 2px 6px var(--sa-lo),inset -3px -3px 8px var(--sa-hi),6px 6px 16px color-mix(in srgb,var(--sa-lo) 45%,transparent)!important}
+.soft-auth .sa-field:focus,.soft-auth .sa-field:focus-within,.soft-auth form :is(input:not([type="checkbox"],[type="radio"],[type="hidden"],[type="file"],[type="range"],[maxlength="1"],.auth-input),select,textarea):focus,.soft-auth form :is(input:not([type="checkbox"],[type="radio"],[type="hidden"],[type="file"],[type="range"],[maxlength="1"],.auth-input),select,textarea):focus-within,.soft-auth .soft-field:focus,.soft-auth .soft-field:focus-within,.soft-auth .soft-field:focus,.soft-auth .soft-field:focus-within{border-color:color-mix(in srgb,hsl(var(--primary)) 45%,transparent)!important;outline:none;box-shadow:inset 2px 2px 6px var(--sa-lo),inset -3px -3px 8px var(--sa-hi),0 0 0 4px color-mix(in srgb,hsl(var(--primary)) 14%,transparent)!important}
+.soft-auth form .flex>input:not(:last-child){border-top-right-radius:0!important;border-bottom-right-radius:0!important}
+.soft-auth form .flex>input+span:last-child{min-height:3.5rem;border-radius:0 1.15rem 1.15rem 0!important;background:var(--sa-tile)!important;border-color:var(--sa-edge)!important}
+.soft-auth form .flex>span:first-child+input{border-top-left-radius:0!important;border-bottom-left-radius:0!important}
+.soft-auth form .flex>span:first-child:has(+input){min-height:3.5rem;border-radius:1.15rem 0 0 1.15rem!important;background:var(--sa-tile)!important;border-color:var(--sa-edge)!important}
+.soft-auth .sa-btn,.soft-auth :is(button,a):is(.auth-submit,.btn-primary,.soft-primary,[class~="bg-primary"],[class~="bg-brand"])[class*="w-full"]{min-height:3.5rem;border:0;border-radius:999px!important;font-weight:700;font-size:1.02rem;color:#fff;
+  background-image:linear-gradient(120deg,color-mix(in srgb,hsl(var(--primary)) 82%,#fff),hsl(var(--primary)) 55%,color-mix(in srgb,hsl(var(--primary)) 72%,#000))!important;
+  box-shadow:0 18px 34px -14px hsl(var(--primary)),inset 0 1px 0 rgba(255,255,255,.35)!important}
+.soft-auth .sa-ghost,.soft-auth .soft-raise{border-radius:999px!important;background:var(--sa-tile)!important;border-color:var(--sa-edge)!important;box-shadow:8px 8px 20px var(--sa-lo),-6px -6px 16px var(--sa-hi)!important}
+.soft-auth .sa-ghost:active,.soft-auth .soft-raise:active{box-shadow:inset 3px 3px 8px var(--sa-lo),inset -3px -3px 8px var(--sa-hi)!important}
+.soft-auth .soft-track{background:var(--sa-bg)!important;border-radius:999px;box-shadow:inset 2px 2px 6px var(--sa-lo),inset -2px -2px 6px var(--sa-hi)!important}
+.soft-auth .soft-tab[data-state="active"],.soft-auth .soft-track>button.on{border-radius:999px;background:var(--sa-tile)!important;box-shadow:4px 4px 10px var(--sa-lo),-3px -3px 8px var(--sa-hi)!important}
+.soft-auth .auth-float{background:var(--sa-tile)!important;border-color:var(--sa-edge)!important;box-shadow:10px 10px 24px var(--sa-lo),-8px -8px 20px var(--sa-hi)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+
+/* ── Glass workspace (2026-10-09): the tenant ERP, the platform admin and the customer portal share one look —
+   a softly tinted page with blurred light, frosted translucent cards with a white edge, a floating glass sidebar,
+   icon tiles and pill statuses. Every tint is mixed from the company's own --primary, so each theme keeps its colour.
+   Applied by the .glass-shell class on each app shell (AppLayout, AdminLayout, portal). ───────────────────────── */
+.glass-shell{
+  --g-page:color-mix(in srgb,hsl(var(--primary)) 5%,#eef0f8);
+  --g-card:rgba(255,255,255,.62);--g-card-strong:rgba(255,255,255,.82);--g-edge:rgba(255,255,255,.78);
+  --g-line:color-mix(in srgb,hsl(var(--foreground)) 7%,transparent);
+  --g-shadow:0 12px 32px -16px color-mix(in srgb,hsl(var(--primary)) 30%,rgba(30,40,80,.32)),0 2px 6px rgba(30,40,80,.05);
+  --g-hi:inset 0 1px 0 rgba(255,255,255,.9);
+  background:
+    radial-gradient(1100px 620px at 8% -8%,color-mix(in srgb,hsl(var(--primary)) 13%,transparent),transparent 62%),
+    radial-gradient(900px 640px at 100% 4%,color-mix(in srgb,hsl(222 90% 70%) 16%,transparent),transparent 60%),
+    radial-gradient(800px 600px at 60% 110%,color-mix(in srgb,hsl(268 80% 72%) 12%,transparent),transparent 60%),
+    var(--g-page) !important;
+}
+.dark .glass-shell,.dark.glass-shell,html.admin-theme.dark .glass-shell{
+  --g-page:#0c0f15;--g-card:rgba(22,26,36,.62);--g-card-strong:rgba(26,30,42,.86);--g-edge:rgba(255,255,255,.07);
+  --g-line:rgba(255,255,255,.06);--g-shadow:0 16px 40px -18px rgba(0,0,0,.7);--g-hi:inset 0 1px 0 rgba(255,255,255,.05);
+  background:
+    radial-gradient(1000px 600px at 6% -10%,color-mix(in srgb,hsl(var(--primary)) 18%,transparent),transparent 60%),
+    radial-gradient(900px 640px at 100% 0%,color-mix(in srgb,hsl(222 90% 60%) 12%,transparent),transparent 60%),
+    var(--g-page) !important;
+}
+/* Cards: frosted, white edge, soft coloured shadow. Nested cards stay flat so blur is not stacked. */
+.glass-shell .bg-card,.glass-shell .soft-card{background-color:var(--g-card)!important;background-image:linear-gradient(160deg,rgba(255,255,255,.35),rgba(255,255,255,0) 45%);
+  border-color:var(--g-edge)!important;box-shadow:var(--g-shadow),var(--g-hi)!important;-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}
+.dark .glass-shell .bg-card,.dark .glass-shell .soft-card{background-image:linear-gradient(160deg,rgba(255,255,255,.04),rgba(255,255,255,0) 45%)}
+.glass-shell .bg-card .bg-card,.glass-shell .bg-card .soft-card,.glass-shell .soft-card .soft-card{-webkit-backdrop-filter:none;backdrop-filter:none;background-color:var(--g-card-strong)!important;box-shadow:0 1px 2px rgba(30,40,80,.06),var(--g-hi)!important}
+.glass-shell :is(.rounded-2xl.bg-card,.rounded-xl.bg-card,section.bg-card){border-radius:1.5rem}
+.glass-shell .border-border{border-color:var(--g-line)}
+.glass-shell .bg-muted\/30,.glass-shell .bg-muted\/40,.glass-shell .bg-muted\/50,.glass-shell .bg-muted\/60{background-color:color-mix(in srgb,hsl(var(--muted)) 45%,transparent)!important}
+/* Header and sidebar: glass bars. */
+.glass-shell>header,.glass-shell .glass-bar{background:color-mix(in srgb,var(--g-card) 85%,transparent)!important;border-color:var(--g-line)!important;-webkit-backdrop-filter:blur(20px) saturate(1.6);backdrop-filter:blur(20px) saturate(1.6)}
+.glass-shell aside.bg-sidebar,.glass-shell .glass-side{background:var(--g-card)!important;border-color:var(--g-edge)!important;-webkit-backdrop-filter:blur(22px) saturate(1.6);backdrop-filter:blur(22px) saturate(1.6)}
+@media (min-width:1024px){.glass-shell .glass-float{margin:8px 0 8px 8px;border-radius:20px;border:1px solid var(--g-edge)!important;box-shadow:var(--g-shadow),var(--g-hi);height:calc(100% - 16px)}}
+/* Tables: airy rows, no grey header band. */
+.glass-shell .dt thead th{background:transparent!important;-webkit-backdrop-filter:none;backdrop-filter:none;text-transform:none;letter-spacing:0;font-size:.8rem!important;font-weight:500;color:hsl(var(--muted-foreground));border-color:var(--g-line)}
+.glass-shell .dt tbody td{border-color:var(--g-line)}
+.glass-shell .dt tbody tr:hover td{background:color-mix(in srgb,hsl(var(--primary)) 4%,rgba(255,255,255,.35))}
+.dark .glass-shell .dt tbody tr:hover td{background:rgba(255,255,255,.03)}
+.glass-shell .dt tfoot td{background:transparent}
+/* Fields and selects: light glass. */
+.glass-shell .fi{background-color:color-mix(in srgb,var(--g-card-strong) 90%,transparent);border-color:var(--g-line)}
+/* Icon tiles used by KPI cards and panel headers. */
+.g-tile{display:inline-flex;align-items:center;justify-content:center;width:2.75rem;height:2.75rem;border-radius:.95rem;flex-shrink:0;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--tile,hsl(var(--primary))) 20%,#fff),color-mix(in srgb,var(--tile,hsl(var(--primary))) 9%,#fff));
+  color:var(--tile,hsl(var(--primary)));box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 14px -8px var(--tile,hsl(var(--primary)))}
+.dark .g-tile{background:linear-gradient(145deg,color-mix(in srgb,var(--tile,hsl(var(--primary))) 32%,#111),color-mix(in srgb,var(--tile,hsl(var(--primary))) 16%,#111));box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.g-tile.sm{width:2.1rem;height:2.1rem;border-radius:.75rem}
+/* Phone: a little less padding inside cards so content gets the width. */
+@media (max-width:639px){.glass-shell :is(.rounded-2xl.bg-card,section.bg-card){border-radius:1.25rem}}
+@media (prefers-reduced-transparency:reduce){.glass-shell .bg-card,.glass-shell .soft-card{background-color:var(--g-card-strong)!important;-webkit-backdrop-filter:none;backdrop-filter:none}}
+.glass-shell .admin-light{background:transparent}
+/* The portal sidebar is sticky (not in a fixed-height shell), so the floating margin needs its own height. */
+@media (min-width:1024px){.glass-shell aside.glass-float.lg\:sticky{height:calc(100vh - 16px);top:8px}}
+/* Floating layers (sheets, drawers, pop-ups, menus, dropdowns) inside the glass shell stay readable: near-solid glass. */
+.glass-shell{--g-float:rgba(255,255,255,.95)}
+.dark .glass-shell{--g-float:rgba(22,26,36,.97)}
+.glass-shell :is(.fixed,.absolute):is(.bg-card,.bg-background,.bg-popover),
+.glass-shell :is(.fixed,.absolute) :is(.bg-card,.bg-background,.bg-popover),
+.glass-shell [role="dialog"]:is(.bg-card,.bg-background),.glass-shell [role="dialog"] :is(.bg-card,.bg-background),
+.glass-shell :is([role="menu"],[role="listbox"]){background-color:var(--g-float)!important;-webkit-backdrop-filter:blur(28px) saturate(1.6);backdrop-filter:blur(28px) saturate(1.6)}
+
+/* ── Website (landing + solution pages): serif italic accent words, hairline eyebrows, word-by-word reveal. ── */
+.font-accent{font-family:'Plus Jakarta Sans',Inter,sans-serif;font-style:normal;font-weight:800!important;letter-spacing:-.03em}
+.lx-eyebrow{display:inline-flex;align-items:center;gap:.9rem;font-size:11px;font-weight:700;letter-spacing:.32em;text-transform:uppercase;color:hsl(var(--primary))}
+.lx-eyebrow::before,.lx-eyebrow::after{content:'';height:1px;width:2.75rem;background:linear-gradient(90deg,transparent,currentColor)}
+.lx-eyebrow::after{background:linear-gradient(90deg,currentColor,transparent)}
+.lx-eyebrow.left::before{display:none}
+.lx-grain{position:absolute;inset:0;pointer-events:none;opacity:.05;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+/* Website: rolling country strip (fades at both edges). */
+.lx-fade-x{-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.lx-marquee{animation:lp-marquee var(--dur,60s) linear infinite}
+.lx-marquee.rev{animation-direction:reverse}
+.lx-fade-x:hover .lx-marquee{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){.lx-marquee{animation:none}}
+/* Website hero: suites orbiting the dashboard (chips counter-rotate to stay upright). */
+@keyframes lx-spin{to{transform:rotate(360deg)}}
+.lx-spin{animation:lx-spin var(--spin,60s) linear infinite}
+.lx-spin.rev{animation-direction:reverse}
+@media (prefers-reduced-motion:reduce){.lx-spin{animation:none}}
+/* Website bento: data flowing along the dashed lines. */
+@keyframes lx-dash{to{stroke-dashoffset:-8}}
+.lx-dash{animation:lx-dash 1.2s linear infinite}
+@media (prefers-reduced-motion:reduce){.lx-dash{animation:none}}
+@media (max-width:480px){.lx-eyebrow{letter-spacing:.18em;gap:.55rem;font-size:10px}.lx-eyebrow::before,.lx-eyebrow::after{width:1.25rem}}
+
+/* The pagination bar sits right under the last row and stays at the foot of the view while longer lists scroll.
+   Cards that only clip use overflow: clip, so they do not capture the sticky bar. */
+.glass-shell main .pager-bar { position: sticky; bottom: 0; z-index: 6; background: var(--g-float, hsl(var(--card))); }
+.glass-shell main li:has(> .pager-bar) { display: contents; }
+.glass-shell main td:has(> .pager-bar) { position: sticky; bottom: 0; z-index: 6; background: var(--g-float, hsl(var(--card))); }
+/* When a table turns into cards the cell is held inside its row, so the row is what stays. */
+.glass-shell main tr:has(> td > .pager-bar) { position: sticky; bottom: 0; z-index: 6; }
+.glass-shell main .dash-table-wrap:has(.pager-bar) { overflow-x: clip; overflow-y: visible; }
+.glass-shell main .overflow-hidden:has(.pager-bar) { overflow: clip; }
+.glass-shell main .overflow-x-auto:has(> .pager-bar),
+.glass-shell main .overflow-x-auto:has(> table > tbody > tr > td > .pager-bar) { overflow-x: clip; overflow-y: visible; }
+.glass-shell main .overflow-y-auto:has(> .pager-bar) { display: flex; flex-direction: column; }
+.glass-shell main .overflow-y-auto:has(> .pager-bar) > * { flex-shrink: 0; }
+@media (min-width: 640px) {
+  .glass-shell main .overflow-y-auto:has(> div:not(.sm\:hidden) > .pager-bar) { display: flex; flex-direction: column; }
+  .glass-shell main .overflow-y-auto:has(> div:not(.sm\:hidden) > .pager-bar) > * { flex-shrink: 0; }
+  .glass-shell main .overflow-y-auto > div:not(.sm\:hidden):has(> .pager-bar) { display: flex; flex-direction: column; }
+  .glass-shell main .overflow-y-auto > div:not(.sm\:hidden):has(> .pager-bar) > * { flex-shrink: 0; }
+}
+/* A scroll-linked reveal would shift the pinned bar with its section, behind the phone menu or off the screen. */
+.glass-shell main :is([data-reveal],section,div):has(> .pager-bar, > * > .pager-bar) { animation: none !important; transform: none !important; }
+table[data-fit] [data-fit-hide] { display: none !important; }
+@media print { .pager-bar, tr:has(> td > .pager-bar) { display: none !important; } }
+
+/* Key figures as one divided strip (as in JMSURF ISP): one bordered box, thin lines between figures, small grey icons. */
+.stat-strip { gap: 0 !important; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 1rem; background: hsl(var(--card)); }
+.stat-strip > * { border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: 1px 0 0 hsl(var(--border)), 0 1px 0 hsl(var(--border)) !important; padding: .55rem .8rem !important; }
+.stat-strip .g-tile { --tile: hsl(var(--muted-foreground)) !important; background: none !important; box-shadow: none !important; width: 1.25rem; height: 1.25rem; }
+@media (min-width: 640px) { .stat-strip { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important; } }
+
+/* CRM screens: denser, 13px text like a sales team's working tool (lists, record pages, forms). */
+.crm-ui { font-size: 13px; line-height: 1.45; }
+.crm-ui .text-sm { font-size: 13px; line-height: 1.45; }
+.crm-ui h1 { font-size: 1.05rem !important; }
+.crm-ui .dt { font-size: 13px; }
+.crm-ui .dt thead th { font-size: 12px !important; padding-top: .45rem; padding-bottom: .45rem; }
+.crm-ui .dt tbody td { padding: .45rem .75rem; }
+.crm-ui .dt thead th:first-child, .crm-ui .dt tbody td:first-child { padding-left: .9rem; }
+.crm-ui .fi { height: 2.15rem; font-size: 13px; border-radius: .6rem; }
+.crm-ui textarea.fi { height: auto; }
+.crm-ui dt { font-size: 11.5px; }
+.crm-ui dd { font-size: 13px; }

@@ -1,0 +1,1 @@
+UPDATE platform_settings SET value = jsonb_set(jsonb_set(value, '{port}', '"587"'), '{encryption}', '"starttls"'), updated_at = now() WHERE key = 'smtp';
