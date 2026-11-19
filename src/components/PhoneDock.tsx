@@ -1,7 +1,7 @@
 /**
- * JMSURF CALL CENTRE inside DASH: a phone button in the corner opens the agent's
+ * JMSURF CALL CENTRE inside JMSURF Garage: a phone button in the corner opens the agent's
  * phone (the Call Centre's own phone, embedded and signed in with the same login).
- * Calls go out and come in without leaving DASH. Anywhere in DASH,
+ * Calls go out and come in without leaving JMSURF Garage. Anywhere in JMSURF Garage,
  * window.dispatchEvent(new CustomEvent("dash:call", { detail: "0712…" })) dials.
  */
 import { useEffect, useRef, useState } from "react";
@@ -42,7 +42,7 @@ export default function PhoneDock() {
     return () => window.removeEventListener("message", on);
   }, []);
 
-  // Click-to-call from anywhere in DASH.
+  // Click-to-call from anywhere in JMSURF Garage.
   useEffect(() => {
     const on = (e: Event) => {
       const n = String((e as CustomEvent).detail || "");

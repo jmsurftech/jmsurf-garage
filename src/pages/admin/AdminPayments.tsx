@@ -16,7 +16,7 @@ const GATEWAY_LABELS: Record<string, string> = {
 const gatewayLabel = (g?: string) => GATEWAY_LABELS[String(g || "").toLowerCase()] || (g ? g[0].toUpperCase() + g.slice(1) : "—");
 const isPaid = (s: string) => s === "completed" || s === "success";
 /** One list for every product JMSURF sells. */
-type Pay = { id: string; product: "DASH" | "JMSURF Mail" | "Call Centre"; what: string; tenant_id: string; amount: number; currency: string; gateway: string; reference: string; status: string; created_at: string };
+type Pay = { id: string; product: "Garage" | "JMSURF Mail" | "Call Centre"; what: string; tenant_id: string; amount: number; currency: string; gateway: string; reference: string; status: string; created_at: string };
 const sb: any = supabase;
 
 export default function AdminPayments() {
@@ -39,7 +39,7 @@ export default function AdminPayments() {
       const names: Record<string, string> = {};
       (tenantList as any[]).forEach((t) => { names[t.id] = t.business_name || t.slug; });
       const payments: Pay[] = [
-        ...(dash as any[]).map((p) => ({ id: p.id, product: "DASH" as const, what: p.metadata?.plan_name || p.metadata?.plan || "Package", tenant_id: p.tenant_id, amount: Number(p.amount || 0), currency: "KES", gateway: p.gateway, reference: p.reference || "", status: p.status, created_at: p.created_at })),
+        ...(dash as any[]).map((p) => ({ id: p.id, product: "Garage" as const, what: p.metadata?.plan_name || p.metadata?.plan || "Package", tenant_id: p.tenant_id, amount: Number(p.amount || 0), currency: "KES", gateway: p.gateway, reference: p.reference || "", status: p.status, created_at: p.created_at })),
         ...(mail as any[]).map((p) => ({ id: p.id, product: "JMSURF Mail" as const, what: `${p.plan_name || "Plan"}${p.months ? ` · ${p.months} mo` : ""}`, tenant_id: p.tenant_id, amount: Number(p.amount || 0), currency: p.currency || "KES", gateway: p.provider || "mpesa", reference: p.receipt || p.reference || "", status: p.status, created_at: p.created_at })),
         ...(cc as any[]).map((p) => ({ id: p.id, product: "Call Centre" as const, what: p.purpose || "Plan", tenant_id: p.tenant_id, amount: Number(p.amount || 0), currency: "KES", gateway: p.gateway || "mpesa", reference: p.receipt || p.reference || "", status: p.status, created_at: p.created_at })),
       ].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
@@ -82,7 +82,7 @@ export default function AdminPayments() {
 
   return (
     <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Payments" description="Every payment to JMSURF: DASH packages and modules, JMSURF Mail plans and Call Centre plans and numbers." icon={Banknote}
+      <PageHeader title="Payments" description="Every payment to JMSURF: JMSURF Garage plans and modules, JMSURF Mail plans and Call Centre plans and numbers." icon={Banknote}
         actions={<Button variant="outline" size="sm" onClick={exportCsv} disabled={!filtered.length}><Download /> Export CSV</Button>} />
 
       <StatGrid>
@@ -97,7 +97,7 @@ export default function AdminPayments() {
         <input type="date" className="fi w-auto" value={from} max={to} onChange={(e) => setFrom(e.target.value)} aria-label="From" />
         <input type="date" className="fi w-auto" value={to} min={from} onChange={(e) => setTo(e.target.value)} aria-label="To" />
         <select className="fi w-auto" value={product} onChange={(e) => setProduct(e.target.value)} aria-label="Product">
-          <option value="all">All products</option><option>DASH</option><option>JMSURF Mail</option><option>Call Centre</option>
+          <option value="all">All products</option><option>Garage</option><option>JMSURF Mail</option><option>Call Centre</option>
         </select>
         <select className="fi w-auto" value={gateway} onChange={(e) => setGateway(e.target.value)} aria-label="Gateway">
           <option value="all">All methods</option>
@@ -121,7 +121,7 @@ export default function AdminPayments() {
                 <PagedRows rows={filtered} colSpan={7}>{(rows) => rows.map((p) => (
                   <tr key={p.id}>
                     <td className="whitespace-nowrap text-muted-foreground">{format(new Date(p.created_at), "d MMM yyyy, HH:mm")}</td>
-                    <td><Pill tone={p.product === "DASH" ? "primary" : p.product === "JMSURF Mail" ? "info" : "warning"}>{p.product}</Pill><span className="block text-[11px] text-muted-foreground">{p.what}</span></td>
+                    <td><Pill tone={p.product === "Garage" ? "primary" : p.product === "JMSURF Mail" ? "info" : "warning"}>{p.product}</Pill><span className="block text-[11px] text-muted-foreground">{p.what}</span></td>
                     <td className="max-w-[220px] truncate font-medium">{names[p.tenant_id] || "Unknown company"}</td>
                     <td className="num font-semibold">{p.currency === "USD" ? `US$ ${p.amount.toLocaleString()}` : ksh(p.amount)}</td>
                     <td><Pill tone="muted">{gatewayLabel(p.gateway)}</Pill></td>

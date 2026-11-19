@@ -472,7 +472,7 @@ async function runImportInner(byKind: Map<Kind, Row[]>, opts: { tenantId: string
               const { data, error } = await retry(() => sb.from("bills").insert({ tenant_id: tenantId, bill_number: no, name: vend || `Bill ${no}`, supplier_id, category: pick(h, "Account", "Expense Account") || "Purchases", bill_date: date(pick(h, "Bill Date", "Date")), due_date: date(pick(h, "Due Date")), reference: pick(h, "Reference Number", "Reference#") || null, items: its, subtotal: total - tax, tax, amount: total, amount_paid: 0, status, notes: pick(h, "Notes") || null, is_recurring: false }).select("id").single());
               if (error) throw error;
               // What the old system shows as paid also leaves the books (when no vendor payments list is imported),
-              // recorded the way DASH records any bill payment (the table takes no direct inserts).
+              // recorded the way JMSURF Garage records any bill payment (the table takes no direct inserts).
               if (paidNow > 0.005) {
                 const { error: pe } = await retry(() => sb.rpc("record_bill_payment", { p_bill: data.id, p_amount: paidNow, p_method: "bank", p_reference: "Paid before the move", p_paid_on: date(pick(h, "Bill Date", "Date")), p_notes: null }));
                 if (pe) fail(`${vend} ${no}: ${pe.message}`);
@@ -619,7 +619,7 @@ async function runImportInner(byKind: Map<Kind, Row[]>, opts: { tenantId: string
                 }
                 const bal = pick(h, "Balance") !== "" ? num(pick(h, "Balance")) : null;
                 const refunded = bal === null ? 0 : Math.max(0, total - applied - bal);
-                // DASH posts a vendor credit's refund itself (money back into the bank), so banking skips vendor refunds.
+                // JMSURF Garage posts a vendor credit's refund itself (money back into the bank), so banking skips vendor refunds.
                 if (refunded > 0.005) await sb.from("vendor_credits").update({ amount_refunded: refunded, status: refunded + applied >= total - 0.005 ? "closed" : "open" }).eq("id", vc.id);
               }
               l.ok++;
