@@ -7,6 +7,8 @@ export type WhatsNewTag = "new" | "improved" | "fixed" | "notice";
 export interface WhatsNewEntry { slug: string; date: string; tag: WhatsNewTag; title: string; body: string }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  { slug: "garage-clean-pages", date: "2026-11-20", tag: "improved", title: "Cleaner, simpler pages",
+    body: "- Page titles sit on one line and stay at the top while you scroll\n- One main button per page; the rest are in More, and downloads in Export\n- The dashboard shows one strip of key figures, then what needs attention, then the charts\n- Job cards: one page with a Board and a List switch\n- On a job card, one button shows the next step: Check in, Inspect, Estimate, Approve, Quality check, Ready, Release\n- Job cards and vehicles open beside their list on a wide screen\n- Pop-ups open from the right side\n- On phones, lists show as cards with two details per line" },
   // ── JMSURF Garage launch ────────────────────────────────────────────────
   { slug: "garage-launch", date: "2026-11-20", tag: "new", title: "Welcome to JMSURF Garage",
     body: "- Garage management for every kind of motor business in Kenya, from the roadside fundi to the dealer\n- Garage Core is in every plan: job cards, customers and their vehicles, estimates your customers approve on their phone, M-Pesa payments, KRA eTIMS invoices, SMS updates, basic stock and the owner's dashboard\n- Sales invoices, quotes, payments, expenses, items and reports come with it\n- Staff sign in at app.garage.jmsurf.co.ke and land in their garage; your customers use your own address (yourgarage.garage.jmsurf.co.ke) or your own domain" },
