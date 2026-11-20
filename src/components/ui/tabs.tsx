@@ -12,7 +12,8 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "soft-track inline-flex h-10 max-w-full items-center justify-start overflow-x-auto rounded-xl bg-muted p-1 text-muted-foreground",
+      // A pressed-in pill track; the chosen tab is an ink pill (JMSURF ISP hub tabs).
+      "soft-track inline-flex h-auto min-h-[38px] max-w-full items-center justify-start gap-1 overflow-x-auto rounded-full bg-muted p-1 text-muted-foreground",
       className,
     )}
     {...props}
@@ -27,7 +28,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "soft-tab inline-flex items-center justify-center whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium ring-offset-background transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+      "soft-tab inline-flex h-[30px] items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13.5px] font-medium ring-offset-background transition-all hover:text-foreground data-[state=active]:bg-foreground data-[state=active]:font-semibold data-[state=active]:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
       className,
     )}
     {...props}
