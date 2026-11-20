@@ -11,9 +11,11 @@ export const QUERY_CACHE_META = "query-cache-v2";
 
 /** Never kept on the device: pay and anything sensitive or bulky. */
 // Never kept: money and secrets, and sign-in checks (a support pass or the platform owner check must be asked fresh).
-const NEVER = /pay|salar|payslip|payroll|p9|bank|secret|token|migrat|staff-accounts|logo-palette|audit|hr-registr|support-pass|is-platform-admin/i;
+const NEVER = /integration|credential|platform-|pay|salar|payslip|payroll|p9|bank|secret|token|migrat|staff-accounts|logo-palette|audit|hr-registr|support-pass|is-platform-admin/i;
 
 export function keepOnDevice(q: Query): boolean {
+  // The platform console (admin.) sees every company: nothing of it is kept on the device.
+  if (typeof location !== "undefined" && location.hostname.startsWith("admin.")) return false;
   if (q.state.status !== "success" || q.state.data === undefined) return false;
   const key = q.queryKey.map((k) => (typeof k === "string" ? k : "")).join(" ");
   if (NEVER.test(key)) return false;

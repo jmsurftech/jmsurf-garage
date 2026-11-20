@@ -32,7 +32,13 @@ export default function PlatformIntegrations() {
   const [to, setTo] = useState<Record<string, string>>({});
   const s = status.data;
   if (status.isLoading) return <div className="flex justify-center p-8"><Loader2 className="h-5 w-5 animate-spin" /></div>;
-  if (!s || (s as any).ok === false) return <p className="text-sm text-destructive">{(s as any)?.error || "Could not load the integrations."}</p>;
+  // A bad or empty reply shows a message with a retry instead of crashing the Settings page.
+  if (!s || (s as any).ok === false || !Array.isArray(s.credentials) || !s.urls || !s.pay_platform) return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="text-destructive">{(s as any)?.error || "Could not load the integrations."}</span>
+      <button type="button" onClick={() => void status.refetch()} className="inline-flex h-8 items-center rounded-lg border border-border px-2.5 text-xs font-semibold">Try again</button>
+    </div>
+  );
   const byName = new Map(s.credentials.map((c) => [c.name, c]));
 
   const save = async (names: string[], key: string) => {
