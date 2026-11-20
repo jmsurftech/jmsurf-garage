@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ClipboardCheck, Plus, FileText, Printer, Loader2, Camera } from "lucide-react";
-import { PageHeader, Panel, TableWrap, EmptyState, PageLoader, Modal, Field, Toolbar, SearchBox } from "@/components/kit";
+import { PageHeader, Panel, TableWrap, EmptyState, PageLoader, Modal, Field, Toolbar, SearchBox, MoreMenu, btnPrimaryCls } from "@/components/kit";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useTenantId } from "@/hooks/useTenantId";
@@ -38,10 +38,10 @@ export function InspectionList() {
   };
   return (
     <div className="space-y-3">
-      <PageHeader title="Inspections" icon={ClipboardCheck} actions={<button type="button" onClick={() => setStart(true)} className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground"><Plus className="h-4 w-4" />New inspection</button>} />
+      <PageHeader title="Inspections" icon={ClipboardCheck} actions={<button type="button" onClick={() => setStart(true)} className={btnPrimaryCls}><Plus className="h-4 w-4" />New inspection</button>} />
       <Toolbar><SearchBox value={q} onChange={setQ} placeholder="Search plate, job or number…" /></Toolbar>
       <Panel flush>
-        {isLoading ? <PageLoader /> : !shown.length ? <EmptyState icon={ClipboardCheck} title="No inspections yet" description="Start one from a job card, or here for a pre-purchase check." /> : (
+        {isLoading ? <PageLoader /> : !shown.length ? <EmptyState icon={ClipboardCheck} title="No inspections yet" description="Start one on a job card, or here for a pre-purchase check." action={<button type="button" onClick={() => setStart(true)} className={btnPrimaryCls}><Plus className="h-4 w-4" />New inspection</button>} /> : (
           <TableWrap><table className="dt">
             <thead><tr><th>Number</th><th>Vehicle</th><th>Checklist</th><th>Job</th><th>Result</th><th>Date</th></tr></thead>
             <tbody>{shown.map((r) => { const c = ragCounts(r.results || []); return (
@@ -125,9 +125,11 @@ export function InspectionForm() {
   return (
     <div className="space-y-3 pb-10">
       <PageHeader title={`${data.inspection_no} · ${data.name || "Inspection"}`} icon={ClipboardCheck} actions={<>
-        <button type="button" onClick={() => window.print()} className="inline-flex h-9 items-center gap-1 rounded-xl border border-border px-3 text-sm"><Printer className="h-4 w-4" />Print</button>
-        {data.job && <button type="button" disabled={busy} onClick={toEstimate} className="inline-flex h-9 items-center gap-1 rounded-xl border border-border px-3 text-sm"><FileText className="h-4 w-4" />Estimate from red and amber</button>}
-        <button type="button" disabled={busy} onClick={finish} className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-60">{busy && <Loader2 className="h-4 w-4 animate-spin" />}Finish</button>
+        <MoreMenu items={[
+          { label: "Estimate from red and amber", icon: FileText, hidden: !data.job, disabled: busy, onSelect: () => void toEstimate() },
+          { label: "Print", icon: Printer, onSelect: () => window.print() },
+        ]} />
+        <button type="button" disabled={busy} onClick={finish} className={btnPrimaryCls}>{busy && <Loader2 className="h-4 w-4 animate-spin" />}Finish</button>
       </>}>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <PlateTag plate={data.vehicle?.plate} /><span>{vehicleLabel(data.vehicle)}</span>

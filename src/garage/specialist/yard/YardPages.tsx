@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { BadgeDollarSign, Car, ClipboardCheck, Download, ExternalLink, FileSignature, FileText, Handshake, Landmark, MessageSquare, Pencil, Plus, Receipt, Repeat, ShieldCheck, Wrench, Warehouse } from "lucide-react";
-import { EmptyState, PageHeader, PageLoader, Panel } from "@/components/kit";
+import { BadgeDollarSign, Car, ClipboardCheck, Download, ExternalLink, FileSignature, FileText, Handshake, Landmark, MessageSquare, Pencil, Plus, Receipt, Repeat, ShieldCheck, Wrench, Warehouse, List } from "lucide-react";
+import { EmptyState, PageHeader, PageLoader, Panel, MoreMenu } from "@/components/kit";
 import DocumentsPanel from "@/components/DocumentsPanel";
 import { SignaturePad } from "@/apps/fields";
 import { fmtMoney } from "@/apps/format";
@@ -232,8 +232,7 @@ function CarPage() {
   return (
     <div className="space-y-3">
       <PageHeader title={`${car.number || ""} ${car.title}`} icon={Car} actions={<>
-        <Link to={`/apps/vehicle_yard/car?open=${car.id}`} className={btn}><Pencil className="h-4 w-4" /> Edit details</Link>
-        <Link to="/garage/yard" className={btn}>Yard</Link>
+        <MoreMenu items={[{ label: "Edit details", icon: Pencil, to: `/apps/vehicle_yard/car?open=${car.id}` }, { label: "All cars in the yard", icon: List, to: "/garage/yard", separator: true }]} />
         <button className={btnPrimary} disabled={!dirty || !!busy} onClick={() => save()}>Save</button>
       </>} />
       <StageBar stages={CAR_STAGES} value={car.stage} onChange={(s) => void run("st", async () => { await moveStage(car, s.key, s.label); refresh("vehicle_yard", car.id); })} />

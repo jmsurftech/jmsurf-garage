@@ -57,6 +57,13 @@ export default function CheckIn() {
     });
   }, [params, tenantId]);
 
+  // From a vehicle page (?vehicle=): the car is picked already.
+  useEffect(() => {
+    const vid = params.get("vehicle");
+    if (!vid) return;
+    void sb.from("garage_vehicles").select("*, customer:customers(id,name,phone)").eq("id", vid).maybeSingle().then(({ data: v }: any) => { if (v) setVehicle(v); });
+  }, [params]);
+
   useEffect(() => {
     const from = params.get("from");
     if (!from) return;

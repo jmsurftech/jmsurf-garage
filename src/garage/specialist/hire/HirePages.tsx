@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CalendarDays, Camera, CarFront, ChevronLeft, ChevronRight, FileSignature, KeyRound, LogIn, LogOut, Pencil, Plus, Receipt, Wrench } from "lucide-react";
-import { EmptyState, PageHeader, PageLoader, Panel } from "@/components/kit";
+import { EmptyState, PageHeader, PageLoader, Panel, MoreMenu } from "@/components/kit";
 import DocumentsPanel from "@/components/DocumentsPanel";
 import { SignaturePad } from "@/apps/fields";
 import { fmtMoney } from "@/apps/format";
@@ -240,7 +240,7 @@ function Booking() {
   return (
     <div className="space-y-3">
       <PageHeader title={`${b.number || ""} ${b.title}`} icon={KeyRound} actions={<>
-        <Link className={btn} to={`/apps/car_hire/booking?open=${b.id}`}><Pencil className="h-4 w-4" /> Edit booking</Link>
+        <MoreMenu items={[{ label: "Edit booking", icon: Pencil, to: `/apps/car_hire/booking?open=${b.id}` }]} />
         <button className={btn} disabled={!!busy} onClick={contract}><FileSignature className="h-4 w-4" /> Agreement PDF</button>
       </>} />
       <StageBar stages={HIRE_STAGES} value={b.stage} onChange={(s) => void run("st", async () => { await moveStage(b, s.key, s.label); refresh("car_hire", b.id); })} />

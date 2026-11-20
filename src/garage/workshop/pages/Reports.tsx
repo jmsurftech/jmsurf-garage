@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Download } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { PageHeader, Panel, StatGrid, StatTile, Segmented, TableWrap, PageLoader } from "@/components/kit";
+import { PageHeader, Panel, StatGrid, StatTile, TableWrap, PageLoader, PickMenu } from "@/components/kit";
 import { useTenantId } from "@/hooks/useTenantId";
 import { downloadCsv } from "@/components/Bulk";
 import { sb, must } from "../lib/api";
@@ -38,7 +38,7 @@ export default function Reports() {
 
   return (
     <div className="space-y-3">
-      <PageHeader title="Workshop reports" icon={BarChart3} actions={<Segmented value={range} onChange={(v) => setRange(v as typeof range)} options={RANGES.map((x) => ({ ...x }))} />} />
+      <PageHeader title="Workshop reports" icon={BarChart3} actions={<PickMenu value={range} onChange={(v) => setRange(v)} options={RANGES.map((x) => ({ ...x }))} ariaLabel="Period" />} />
       <StatGrid className="lg:grid-cols-6">
         <StatTile label="Jobs" value={r.jobs} />
         <StatTile label="Average time in the shop" value={r.avg_hours_in_shop ? `${r.avg_hours_in_shop} h` : "—"} tone="info" />

@@ -1,5 +1,5 @@
 import {
-  Wrench, LayoutGrid, CalendarDays, Car, ClipboardCheck, FileText, BellRing, BarChart3, PackageSearch, Settings2, BookOpenCheck, ClipboardList,
+  Wrench, CalendarDays, Car, ClipboardCheck, FileText, BellRing, BarChart3, PackageSearch, Settings2, BookOpenCheck, ClipboardList,
 } from "lucide-react";
 import type { GarageRoute } from "../routes";
 import type { NavEntry } from "@/lib/navConfig";
@@ -63,8 +63,8 @@ export const WORKSHOP_NAV: NavEntry[] = [
   {
     path: "/garage-menu", label: "Workshop", icon: Wrench,
     children: [
-      { path: "/garage", label: "Today / Workshop board", icon: LayoutGrid },
-      { path: "/garage/jobs", label: "Job cards", icon: ClipboardList },
+      // One entry for the jobs: the page switches between the live board and the list.
+      { path: "/garage", label: "Job cards", icon: ClipboardList },
       { path: "/garage/bookings", label: "Bookings", icon: CalendarDays },
       { path: "/garage/vehicles", label: "Vehicles", icon: Car },
       { path: "/garage/inspections", label: "Inspections", icon: ClipboardCheck, module: "workshop_pro" },

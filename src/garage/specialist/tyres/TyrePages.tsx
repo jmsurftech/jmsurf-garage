@@ -57,7 +57,7 @@ export function TyresHome() {
       ]}>
       <div className="grid gap-3 lg:grid-cols-3">
         <Panel title="Tyre size search" icon={Search}>
-          <input className="fi" placeholder="e.g. 195/65R15" value={size} onChange={(e) => setSize(e.target.value)} />
+          <input className="fi" placeholder="Enter tyre size" value={size} onChange={(e) => setSize(e.target.value)} />
           {parsed && <p className="mt-1 text-xs text-muted-foreground">Looking for {parsed.size}</p>}
           <ul className="mt-2 divide-y divide-border text-sm">
             {(stockQ.data || []).map((p) => <li key={p.id} className="flex justify-between gap-2 py-1.5"><span className="truncate">{p.name}</span><span className="shrink-0 tabular-nums">{p.stock ?? 0} · {fmtMoney(num(p.price))}</span></li>)}

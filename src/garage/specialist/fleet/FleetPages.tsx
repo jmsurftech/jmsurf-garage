@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Briefcase, ClipboardCheck, Download, FileSpreadsheet, Fuel, Gauge, Pencil, Plus, Receipt, Truck, Upload, Wrench, CheckCircle2 } from "lucide-react";
+import { Briefcase, ClipboardCheck, Download, FileSpreadsheet, Fuel, Gauge, Pencil, Plus, Receipt, Truck, Upload, Wrench, CheckCircle2, List } from "lucide-react";
 import { toast } from "sonner";
-import { EmptyState, PageHeader, PageLoader, Panel, Segmented } from "@/components/kit";
+import { EmptyState, PageHeader, PageLoader, Panel, Segmented, MoreMenu } from "@/components/kit";
 import { fmtMoney } from "@/apps/format";
 import { useTenantId } from "@/hooks/useTenantId";
 import { APPROVAL_STAGES, CHECK_STAGES, FLEET_STAGES } from "../apps";
@@ -74,8 +74,7 @@ function Account() {
   return (
     <div className="space-y-3">
       <PageHeader title={fleet.title} icon={Truck} actions={<>
-        <Link to={`/apps/fleet_contracts/fleet?open=${fleet.id}`} className={btn}><Pencil className="h-4 w-4" /> Contract & prices</Link>
-        <Link to="/garage/fleet" className={btn}>All fleets</Link>
+        <MoreMenu items={[{ label: "Contract & prices", icon: Pencil, to: `/apps/fleet_contracts/fleet?open=${fleet.id}` }, { label: "All fleets", icon: List, to: "/garage/fleet", separator: true }]} />
       </>} />
       <StageBar stages={FLEET_STAGES} value={fleet.stage} onChange={(s) => void run("st", async () => { await moveStage(fleet, s.key, s.label); refresh("fleet_contracts", fleet.id); })} />
       <Panel>

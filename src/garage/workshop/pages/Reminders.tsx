@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BellRing, Loader2, Send, Eye } from "lucide-react";
-import { PageHeader, Panel, Field, StatusPill } from "@/components/kit";
+import { PageHeader, Panel, Field, StatusPill, btnCls, btnPrimaryCls } from "@/components/kit";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useTenantId } from "@/hooks/useTenantId";
@@ -60,8 +60,8 @@ export default function Reminders() {
   return (
     <div className="space-y-3">
       <PageHeader title="Service reminders" icon={BellRing} actions={<>
-        <button type="button" disabled={!!busy} onClick={preview} className="inline-flex h-9 items-center gap-1 rounded-xl border border-border px-3 text-sm">{busy === "preview" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}What is due today</button>
-        <button type="button" disabled={!!busy} onClick={save} className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground">{busy === "save" && <Loader2 className="h-4 w-4 animate-spin" />}Save</button>
+        <button type="button" disabled={!!busy} onClick={preview} className={btnCls}>{busy === "preview" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}<span className="hidden sm:inline">Due today</span></button>
+        <button type="button" disabled={!!busy} onClick={save} className={btnPrimaryCls}>{busy === "save" && <Loader2 className="h-4 w-4 animate-spin" />}Save</button>
       </>} />
 
       <Panel title="Sending">

@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Wrench, ChevronRight, Copy, Printer, Send, Save, AlertTriangle, ClipboardCheck, Plus, Timer, Undo2 } from "lucide-react";
-import { PageHeader, Panel, PageLoader, EmptyState, Segmented } from "@/components/kit";
+import { Wrench, ChevronRight, Copy, Printer, Send, Save, AlertTriangle, ClipboardCheck, Plus, Timer, Undo2, Car, XCircle, ArrowRight, type LucideIcon } from "lucide-react";
+import { PageHeader, Panel, PageLoader, EmptyState, LineTabs, MoreMenu, RecordSplit, btnPrimaryCls, type MenuAction } from "@/components/kit";
 import { useToast } from "@/hooks/use-toast";
 import { useTenantId } from "@/hooks/useTenantId";
 import { cn } from "@/lib/utils";
 import { sb, must, wsApi } from "../lib/api";
-import { useBays, useJob, useMechanics, useRefresh, useInspectionTemplates, useLiveWorkshop } from "../lib/data";
+import { useBays, useJob, useJobs, useMechanics, useRefresh, useInspectionTemplates, useLiveWorkshop } from "../lib/data";
 import { STATUS_LABEL, nextStatuses, moveProblem, stageMinutes, humanMinutes, primaryNext, JOB_TYPES, WAITING_STAGES, type JobStatus } from "../lib/status";
 import { jobTotals, lineGross } from "../lib/totals";
 import { useWorkshopLinks } from "../lib/nav";
@@ -18,6 +18,27 @@ import JobMoney from "../components/JobMoney";
 import JobQC from "../components/JobQC";
 
 type Tab = "work" | "estimate" | "parts" | "inspection" | "checkin" | "photos" | "qc" | "money" | "history";
+
+/** The workshop flow in plain steps, and where each status sits in it. */
+const STEPS = ["Check in", "Inspect", "Estimate", "Approve", "Work", "Quality check", "Ready", "Release"];
+const STEP_OF: Record<JobStatus, number> = {
+  booked: 0, checked_in: 1, diagnosing: 2, waiting_approval: 3, waiting_parts: 4, in_progress: 4, quality_check: 5, ready: 7, collected: 8, cancelled: -1,
+};
+
+function JobSteps({ status }: { status: JobStatus }) {
+  const at = STEP_OF[status];
+  if (at < 0) return null;
+  return (
+    <div className="job-steps" aria-label="Job progress">
+      {STEPS.map((s, i) => (
+        <Fragment key={s}>
+          {i > 0 && <b />}
+          <span className={cn(i < at && "is-done", i === at && "is-now")}><i />{s}{i === 4 && status === "waiting_parts" && i === at ? " (waiting parts)" : ""}</span>
+        </Fragment>
+      ))}
+    </div>
+  );
+}
 
 function printJob(d: any, nameOf: (id: string) => string) {
   const { job, lines } = d;
@@ -53,6 +74,7 @@ export default function JobCard() {
   const { data: bays = [] } = useBays();
   const { data: templates = [] } = useInspectionTemplates();
   const mech = useMechanics();
+  const { data: openJobs = [], isLoading: railLoading } = useJobs({ open: true });
   const [tab, setTab] = useState<Tab>("work");
   const [notes, setNotes] = useState<any>({});
   const [obd, setObd] = useState("");
@@ -63,8 +85,24 @@ export default function JobCard() {
   }, [data?.job?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stages = useMemo(() => (data?.job ? stageMinutes(data.job) : {}), [data?.job]);
-  if (isLoading) return <PageLoader />;
-  if (!data?.job) return <EmptyState icon={Wrench} title="Job not found" description="It may have been deleted." />;
+  // The open jobs beside the record (from 1280px wide); the open record stays in the list even when collected.
+  const railRows = useMemo(() => {
+    const list = [...(openJobs as any[])];
+    if (data?.job && !list.some((j) => j.id === data.job.id)) list.unshift(data.job);
+    return list.map((j) => ({
+      id: j.id, title: <span className="inline-flex items-center gap-1.5">{j.job_no}<PlateTag plate={j.vehicle?.plate} /></span>,
+      sub: vehicleLabel(j.vehicle) || j.complaint || "", meta: <JobStatusPill status={j.status} className="px-1.5 text-[10px]" />,
+      search: `${j.job_no} ${j.vehicle?.plate || ""} ${j.vehicle?.make || ""} ${j.vehicle?.model || ""} ${j.customer?.name || ""}`,
+    }));
+  }, [openJobs, data?.job]);
+  const split = (body: React.ReactNode) => (
+    <RecordSplit title="Open jobs" listTo={href("/garage/jobs")} rows={railRows} currentId={id} hrefOf={(x) => href(`/garage/jobs/${x}`)} loading={railLoading}
+      newAction={<a href={href("/garage/jobs/new")} aria-label="Check in a car" title="Check in" className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Plus className="h-4 w-4" /></a>}>
+      {body}
+    </RecordSplit>
+  );
+  if (isLoading) return split(<PageLoader />);
+  if (!data?.job) return split(<EmptyState icon={Wrench} title="Job not found" description="It may have been deleted." action={<a href={href("/garage/jobs")} className="text-sm font-medium text-primary">Back to job cards</a>} />);
   const { job, lines, events, media, inspections, logs } = data;
   const status = job.status as JobStatus;
 
@@ -119,24 +157,47 @@ export default function JobCard() {
 
   const waitingMin = WAITING_STAGES.reduce((s, k) => s + (Number(stages[k]) || 0), 0);
   const next = primaryNext(status);
+  // ONE next-step button that follows the status; every other move sits in More.
+  const step: { label: string; icon: LucideIcon; run: () => void; tone?: "success" } | null =
+    status === "booked" ? { label: "Check in", icon: ArrowRight, run: () => void move("checked_in") }
+      : status === "checked_in" ? { label: "Inspect", icon: ClipboardCheck, run: () => { void move("diagnosing"); setTab("inspection"); } }
+        : status === "diagnosing" ? { label: "Estimate", icon: ArrowRight, run: () => { void move("waiting_approval"); setTab("estimate"); } }
+          : status === "waiting_approval" ? { label: "Approve & start", icon: ArrowRight, run: () => void move("in_progress") }
+            : status === "waiting_parts" ? { label: "Start work", icon: ArrowRight, run: () => void move("in_progress") }
+              : status === "in_progress" ? { label: "Quality check", icon: ClipboardCheck, run: () => void move("quality_check") }
+                : status === "quality_check" ? { label: "Ready", icon: ClipboardCheck, run: () => void move("ready") }
+                  : status === "ready" ? { label: "Release car", icon: ArrowRight, tone: "success", run: () => void move("collected") }
+                    : status === "cancelled" ? { label: "Reopen", icon: Undo2, run: () => void move("checked_in") }
+                      : null;
+  const stepTarget: JobStatus | null = status === "checked_in" ? "diagnosing" : status === "diagnosing" ? "waiting_approval" : status === "waiting_approval" || status === "waiting_parts" ? "in_progress" : next;
+  const moves: MenuAction[] = nextStatuses(status).filter((s) => s !== stepTarget && s !== "collected" && s !== "cancelled").map((s, i) => ({ label: STATUS_LABEL[s], icon: ChevronRight, onSelect: () => void move(s), group: i === 0 ? "Move to" : undefined }));
+  const more: MenuAction[] = [
+    ...moves,
+    { label: "Send tracking link", icon: Send, onSelect: () => void sendTrack(), separator: moves.length > 0 },
+    { label: "Print job card", icon: Printer, onSelect: () => printJob(data, mech.nameOf) },
+    { label: "Open vehicle", icon: Car, href: href(`/garage/vehicles/${job.vehicle_id}`), hidden: !job.vehicle_id },
+    { label: "Duplicate", icon: Copy, onSelect: () => go(`/garage/jobs/new?from=${job.id}`), separator: true },
+    { label: "Save as template", icon: Save, onSelect: () => void saveTemplate() },
+    { label: "Comeback", icon: Undo2, onSelect: () => go(`/garage/jobs/new?from=${job.id}&comeback=1`), hidden: status !== "collected" },
+    { label: "Cancel job", icon: XCircle, danger: true, separator: true, onSelect: () => { if (window.confirm("Cancel this job?")) void move("cancelled"); }, hidden: !nextStatuses(status).includes("cancelled") },
+  ];
   const tabs: { value: Tab; label: string; count?: number }[] = [
     { value: "work", label: "Work", count: lines.length }, { value: "estimate", label: "Estimate" }, { value: "parts", label: "Parts", count: data.parts.length },
     { value: "inspection", label: "Inspection", count: inspections.length }, { value: "checkin", label: "Check-in" }, { value: "photos", label: "Photos", count: media.length },
     { value: "qc", label: "Quality check" }, { value: "money", label: "Money" }, { value: "history", label: "History" },
   ];
 
-  return (
+  return split(
     <div className="space-y-3 pb-10">
-      <PageHeader title={<span className="flex flex-wrap items-center gap-2">{job.job_no} <PlateTag plate={job.vehicle?.plate} /> <JobStatusPill status={status} /></span>} icon={Wrench}
+      <PageHeader title={<span className="flex min-w-0 items-center gap-2"><span className="truncate">{job.job_no}</span> <PlateTag plate={job.vehicle?.plate} /> <JobStatusPill status={status} /></span>} icon={Wrench}
         actions={<>
-          <button type="button" onClick={sendTrack} className="inline-flex h-9 items-center gap-1 rounded-xl border border-border px-3 text-sm"><Send className="h-4 w-4" />Send tracking link</button>
-          <button type="button" onClick={() => printJob(data, mech.nameOf)} className="inline-flex h-9 items-center gap-1 rounded-xl border border-border px-3 text-sm"><Printer className="h-4 w-4" />Print</button>
-          <button type="button" onClick={() => go(`/garage/jobs/new?from=${job.id}`)} className="inline-flex h-9 items-center gap-1 rounded-xl border border-border px-3 text-sm"><Copy className="h-4 w-4" />Duplicate</button>
-          <button type="button" onClick={saveTemplate} className="inline-flex h-9 items-center gap-1 rounded-xl border border-border px-3 text-sm"><Save className="h-4 w-4" />Save as template</button>
-          {status === "collected" && <button type="button" onClick={() => go(`/garage/jobs/new?from=${job.id}&comeback=1`)} className="inline-flex h-9 items-center gap-1 rounded-xl border border-warning/50 px-3 text-sm"><Undo2 className="h-4 w-4" />Comeback</button>}
-        </>} />
+          <MoreMenu items={more} />
+          {step && <button type="button" onClick={step.run} className={cn(btnPrimaryCls, step.tone === "success" && "bg-success text-white hover:bg-success/90")}><step.icon className="h-4 w-4" />{step.label}</button>}
+        </>}>
+        <JobSteps status={status} />
+      </PageHeader>
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="space-y-3">
           <Panel>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -161,7 +222,7 @@ export default function JobCard() {
             {job.comeback_of && <p className="mt-2 flex items-center gap-1 text-xs text-warning"><AlertTriangle className="h-3.5 w-3.5" /> Comeback of <a className="underline" href={href(`/garage/jobs/${job.comeback_of}`)}>the earlier job</a>{job.comeback_reason ? `: ${job.comeback_reason}` : ""}</p>}
           </Panel>
 
-          <div className="overflow-x-auto"><Segmented value={tab} onChange={(v) => setTab(v as typeof tab)} options={tabs} /></div>
+          <LineTabs value={tab} onChange={(v) => setTab(v)} options={tabs} />
 
           <Panel>
             {tab === "work" && (
@@ -182,14 +243,14 @@ export default function JobCard() {
                       <span key={i} className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 font-mono text-xs text-destructive">{c.code}
                         <button type="button" onClick={() => patch({ obd_codes: job.obd_codes.filter((_: any, j: number) => j !== i) })}>×</button></span>
                     ))}
-                    <input className="fi h-8 w-32 py-0 font-mono uppercase" value={obd} onChange={(e) => setObd(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addObd()} placeholder="e.g. P0301" />
+                    <input className="fi h-8 w-32 py-0 font-mono uppercase" value={obd} onChange={(e) => setObd(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addObd()} placeholder="Enter code" />
                     <button type="button" onClick={addObd} className="h-8 rounded-lg border border-border px-2 text-xs">Add</button>
                   </div>
                 </div>
                 {job.job_type === "warranty" && (
                   <div className="grid gap-2 rounded-xl border border-warning/40 p-2.5 sm:grid-cols-3">
                     <Sub>Warranty / comeback cost</Sub>
-                    <input className="fi" inputMode="decimal" defaultValue={job.warranty_cost ?? ""} placeholder="Cost to the garage" onBlur={(e) => patch({ warranty_cost: e.target.value === "" ? null : Number(e.target.value) })} />
+                    <input className="fi" inputMode="decimal" defaultValue={job.warranty_cost ?? ""} placeholder="Enter cost to the garage" onBlur={(e) => patch({ warranty_cost: e.target.value === "" ? null : Number(e.target.value) })} />
                     <select className="fi" defaultValue={job.warranty_mechanic_id || ""} onChange={(e) => patch({ warranty_mechanic_id: e.target.value || null })}><option value="">Mechanic responsible</option>{mech.list.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
                   </div>
                 )}
@@ -248,15 +309,6 @@ export default function JobCard() {
         </div>
 
         <div className="space-y-3">
-          <Panel title="Move job">
-            <div className="flex flex-wrap gap-1.5">
-              {next && next !== "collected" && <button type="button" onClick={() => move(next)} className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground">{STATUS_LABEL[next]} <ChevronRight className="h-4 w-4" /></button>}
-              {next === "collected" && <button type="button" onClick={() => setTab("money")} className="inline-flex h-9 w-full items-center justify-center rounded-xl bg-success px-3 text-sm font-semibold text-white">Gate pass and collection</button>}
-              {nextStatuses(status).filter((s) => s !== next && s !== "collected").map((s) => (
-                <button key={s} type="button" onClick={() => move(s)} className={cn("h-8 rounded-lg border px-2 text-xs", s === "cancelled" ? "border-destructive/40 text-destructive" : "border-border")}>{STATUS_LABEL[s]}</button>
-              ))}
-            </div>
-          </Panel>
           <Panel title="Workshop">
             <div className="space-y-2">
               <label className="block"><span className="text-xs text-muted-foreground">Job type</span><select className="fi" value={job.job_type} onChange={(e) => patch({ job_type: e.target.value })}>{JOB_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
@@ -268,7 +320,7 @@ export default function JobCard() {
             <div className="space-y-1 text-sm">
               <div className="flex justify-between"><span className="text-muted-foreground">All quoted</span><span className="tabular-nums">{money(job.estimate_total)}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Approved</span><b className="tabular-nums">{money(job.approved_total)}</b></div>
-              <button type="button" onClick={() => setTab("money")} className="text-xs font-medium text-primary">Invoices, M-Pesa and gate pass →</button>
+              <button type="button" onClick={() => setTab("money")} className="text-xs font-medium text-primary">Invoices, M-Pesa and gate pass</button>
             </div>
           </Panel>
           {job.rating && <Panel title="Customer rating"><p className="text-sm">{"★".repeat(job.rating)}{"☆".repeat(5 - job.rating)}{job.mechanic_rating ? ` · mechanic ${job.mechanic_rating}/5` : ""}</p>{job.rating_comment && <p className="text-xs text-muted-foreground">"{job.rating_comment}"</p>}</Panel>}

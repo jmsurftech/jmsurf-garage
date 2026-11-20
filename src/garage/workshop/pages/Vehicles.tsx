@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { Car, Plus, Gauge, History, ShieldAlert, Users } from "lucide-react";
-import { PageHeader, Panel, Toolbar, SearchBox, TableWrap, EmptyState, PageLoader, Modal, Field } from "@/components/kit";
+import { Car, Plus, Gauge, History, ShieldAlert, Users, Pencil } from "lucide-react";
+import { PageHeader, Panel, Toolbar, SearchBox, TableWrap, EmptyState, PageLoader, Modal, Field, RecordSplit, btnCls, btnPrimaryCls } from "@/components/kit";
+import { PagedRows } from "@/components/Pager";
 import { CustomerPicker } from "@/components/books/CustomerPicker";
 import { useToast } from "@/hooks/use-toast";
 import { useTenantId } from "@/hooks/useTenantId";
@@ -27,16 +28,19 @@ export function VehicleList() {
   const { data: rows = [], isLoading, refetch } = useVehicles(q);
   return (
     <div className="space-y-3">
-      <PageHeader title="Vehicles" icon={Car} actions={<button type="button" onClick={() => setAdding(true)} className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground"><Plus className="h-4 w-4" />Add vehicle</button>} />
+      <PageHeader title="Vehicles" icon={Car} actions={<button type="button" onClick={() => setAdding(true)} className={btnPrimaryCls}><Plus className="h-4 w-4" />Add vehicle</button>} />
       <Toolbar><SearchBox value={q} onChange={setQ} placeholder="Search plate, make, model or chassis…" /></Toolbar>
       {adding && <VehicleQuickForm onCancel={() => setAdding(false)} onSaved={(v) => { setAdding(false); void refetch(); go(`/garage/vehicles/${v.id}`); }} />}
       <Panel flush>
-        {isLoading ? <PageLoader /> : !(rows as any[]).length ? <EmptyState icon={Car} title="No vehicles yet" description="Vehicles are saved when you check them in, or add one here." /> : (
+        {isLoading ? <PageLoader /> : !(rows as any[]).length ? (
+          q ? <EmptyState icon={Car} title="No vehicle matches" description="Check the plate, or add the vehicle." action={<button type="button" onClick={() => setAdding(true)} className={btnPrimaryCls}><Plus className="h-4 w-4" />Add vehicle</button>} />
+            : <EmptyState icon={Car} title="No vehicles yet" description="Cars are saved when you check them in." action={<button type="button" onClick={() => go("/garage/jobs/new")} className={btnPrimaryCls}><Plus className="h-4 w-4" />Check in a car</button>} />
+        ) : (
           <TableWrap>
             <table className="dt">
               <thead><tr><th>Plate</th><th>Vehicle</th><th>Owner</th><th className="num">Mileage</th><th>Next service</th><th>Due dates</th></tr></thead>
               <tbody>
-                {(rows as any[]).map((v) => (
+                <PagedRows rows={rows as any[]} colSpan={6}>{(page) => page.map((v: any) => (
                   <tr key={v.id} className="cursor-pointer" onClick={() => go(`/garage/vehicles/${v.id}`)}>
                     <td><PlateTag plate={v.plate} /></td>
                     <td>{vehicleLabel(v) || "—"}<p className="text-xs text-muted-foreground">{VEHICLE_TYPES.find((t) => t[0] === v.vehicle_type)?.[1]}</p></td>
@@ -45,7 +49,7 @@ export function VehicleList() {
                     <td>{v.next_service_date ? when(v.next_service_date, false) : "—"}{v.next_service_km ? <p className="text-xs text-muted-foreground">or {Number(v.next_service_km).toLocaleString()} km</p> : null}</td>
                     <td className="space-x-1"><DateChip label="Insurance" value={v.insurance_expiry} /><DateChip label="Inspection" value={v.inspection_expiry} /></td>
                   </tr>
-                ))}
+                ))}</PagedRows>
               </tbody>
             </table>
           </TableWrap>
@@ -75,8 +79,8 @@ function EditVehicle({ v, onClose, onSaved }: { v: any; onClose: () => void; onS
       <div className="grid grid-cols-2 gap-3">
         {txt("plate", "Number plate", "Enter number plate", "font-mono uppercase")}
         <Field label="Type"><select className="fi" value={f.vehicle_type} onChange={(e) => set("vehicle_type", e.target.value)}>{VEHICLE_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
-        {txt("make", "Make", "Enter make")}{txt("model", "Model", "Enter model")}{txt("year", "Year", "Enter year")}{txt("engine", "Engine", "e.g. 1.5L petrol")}
-        {txt("transmission", "Gearbox", "Manual or automatic")}{txt("fuel", "Fuel", "Petrol, diesel, hybrid, electric")}{txt("colour", "Colour", "Enter colour")}{txt("mileage", "Mileage (km)", "Enter mileage")}
+        {txt("make", "Make", "Enter make")}{txt("model", "Model", "Enter model")}{txt("year", "Year", "Enter year")}{txt("engine", "Engine", "Enter engine size and fuel")}
+        {txt("transmission", "Gearbox", "Enter manual or automatic")}{txt("fuel", "Fuel", "Enter fuel type")}{txt("colour", "Colour", "Enter colour")}{txt("mileage", "Mileage (km)", "Enter mileage")}
         {txt("vin", "Chassis / VIN", "Enter chassis number", "font-mono uppercase")}{txt("engine_no", "Engine number", "Enter engine number", "font-mono uppercase")}
         {date("insurance_expiry", "Insurance expires")}{date("inspection_expiry", "Inspection expires")}{date("speed_governor_expiry", "Speed governor expires")}{date("psv_expiry", "PSV licence expires")}
         {date("next_service_date", "Next service date")}{txt("next_service_km", "Next service at (km)", "Enter km")}
@@ -97,8 +101,15 @@ export function VehicleDetail() {
   const [owner, setOwner] = useState(false);
   const [newOwner, setNewOwner] = useState<any>(null);
   const [km, setKm] = useState("");
-  if (isLoading) return <PageLoader />;
-  if (!data?.vehicle) return <EmptyState icon={Car} title="Vehicle not found" />;
+  const { data: list = [], isLoading: railLoading } = useVehicles("");
+  const split = (body: React.ReactNode) => (
+    <RecordSplit title="Vehicles" listTo={href("/garage/vehicles")} currentId={id} hrefOf={(x) => href(`/garage/vehicles/${x}`)} loading={railLoading}
+      rows={(list as any[]).map((r) => ({ id: r.id, title: <PlateTag plate={r.plate} />, sub: vehicleLabel(r) || "", meta: r.customer?.name || "", search: `${r.plate} ${r.make || ""} ${r.model || ""} ${r.customer?.name || ""}` }))}>
+      {body}
+    </RecordSplit>
+  );
+  if (isLoading) return split(<PageLoader />);
+  if (!data?.vehicle) return split(<EmptyState icon={Car} title="Vehicle not found" action={<a href={href("/garage/vehicles")} className="text-sm font-medium text-primary">Back to vehicles</a>} />);
   const { vehicle: v, owners, miles, jobs, media } = data;
   const reload = () => { void refetch(); refresh(); };
   const spent = jobs.reduce((s: number, j: any) => s + Number(j.approved_total || 0), 0);
@@ -117,11 +128,11 @@ export function VehicleDetail() {
     setKm(""); reload();
   };
 
-  return (
+  return split(
     <div className="space-y-3">
-      <PageHeader title={<span className="flex items-center gap-2"><PlateTag plate={v.plate} big /> {vehicleLabel(v)}</span>} icon={Car} actions={<>
-        <button type="button" onClick={() => setEditing(true)} className="h-9 rounded-xl border border-border px-3 text-sm">Edit</button>
-        <button type="button" onClick={() => go(`/garage/jobs/new`)} className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground"><Plus className="h-4 w-4" />Check in</button>
+      <PageHeader title={<span className="flex min-w-0 items-center gap-2"><PlateTag plate={v.plate} /> <span className="truncate">{vehicleLabel(v)}</span></span>} icon={Car} actions={<>
+        <button type="button" onClick={() => setEditing(true)} className={btnCls}><Pencil className="h-4 w-4" /><span className="hidden sm:inline">Edit</span></button>
+        <button type="button" onClick={() => go(`/garage/jobs/new?vehicle=${v.id}`)} className={btnPrimaryCls}><Plus className="h-4 w-4" />Check in</button>
       </>} />
       <div className="grid gap-3 lg:grid-cols-3">
         <Panel title="Details">
@@ -150,15 +161,15 @@ export function VehicleDetail() {
       </div>
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <Panel title="Service history" icon={History} flush>
-          {!jobs.length ? <p className="p-4 text-sm text-muted-foreground">No jobs yet.</p> : (
+          {!jobs.length ? <EmptyState icon={History} title="No jobs yet" description="Check the car in to start its history." action={<button type="button" onClick={() => go(`/garage/jobs/new?vehicle=${v.id}`)} className={btnCls}><Plus className="h-4 w-4" />Check in</button>} /> : (
             <div className="divide-y divide-border">
               {jobs.map((j: any) => (
                 <a key={j.id} href={href(`/garage/jobs/${j.id}`)} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm hover:bg-muted/40">
-                  <span className="w-24 text-xs text-muted-foreground">{when(j.created_at, false)}</span><b>{j.job_no}</b>
+                  <span className="w-24 whitespace-nowrap text-xs text-muted-foreground">{when(j.created_at, false)}</span><b className="whitespace-nowrap">{j.job_no}</b>
                   <span className="flex-1 truncate">{j.complaint}</span>
                   {j.comeback_of && <span className="text-[10px] font-semibold text-warning">Comeback</span>}
                   {j.mileage_in && <span className="text-xs text-muted-foreground">{Number(j.mileage_in).toLocaleString()} km</span>}
-                  <JobStatusPill status={j.status} /><span className="w-20 text-right tabular-nums">{money(j.approved_total)}</span>
+                  <JobStatusPill status={j.status} /><span className="w-20 whitespace-nowrap text-right tabular-nums">{money(j.approved_total)}</span>
                 </a>
               ))}
             </div>
