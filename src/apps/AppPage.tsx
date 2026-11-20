@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -481,6 +481,7 @@ function RecordSheet({ app, def, kind, record, preset, onClose, onOpenOther }: {
   ].filter((a) => a.show);
 
   const [running, setRunning] = useState<string | null>(null);
+  const askingClose = useRef(false);
   const run = async (a: (typeof special)[number]) => {
     setRunning(a.label);
     try { await a.run(); } catch (e) { toast.error(friendlyError(e)); } finally { setRunning(null); }
@@ -489,7 +490,14 @@ function RecordSheet({ app, def, kind, record, preset, onClose, onOpenOther }: {
   const children = (kind.children || []).map((k) => def.kinds.find((x) => x.key === k)).filter(Boolean) as KindDef[];
 
   return (
-    <Modal open onClose={() => { if (!dirty) return onClose(); void confirmAction({ title: "Close without saving?", message: "Your changes to this record will be lost.", confirmLabel: "Close", danger: true }).then((ok) => ok && onClose()); }} size="xl"
+    <Modal open onClose={() => {
+      if (!dirty) return onClose();
+      // One "Close without saving?" at a time: pressing Escape again must not stack more boxes.
+      if (askingClose.current) return;
+      askingClose.current = true;
+      void confirmAction({ title: "Close without saving?", message: "Your changes to this record will be lost.", confirmLabel: "Close", danger: true })
+        .then((ok) => ok && onClose()).finally(() => { askingClose.current = false; });
+    }} size="xl"
       title={rec ? (rec.title || kind.label) : `New ${kind.label.toLowerCase()}`}
       description={rec ? [rec.number, `Created ${new Date(rec.created_at).toLocaleDateString("en-KE")}`].filter(Boolean).join(" · ") : kind.description}
       footer={

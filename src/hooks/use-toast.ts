@@ -136,6 +136,11 @@ type Toast = Omit<ToasterToast, "id">;
 
 function toast({ ...props }: Toast) {
   const id = genId();
+  // The demo company never sends messages on purpose: that is a note, not a red error.
+  const said = `${typeof props.title === "string" ? props.title : ""} ${typeof props.description === "string" ? props.description : ""}`;
+  if (props.variant === "destructive" && /not sent from the demo company/i.test(said)) {
+    props = { ...props, variant: undefined, description: "Demo company: messages are switched off, nothing was sent." };
+  }
 
   const update = (props: ToasterToast) =>
     dispatch({

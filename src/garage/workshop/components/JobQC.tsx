@@ -1,4 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+/** Unsaved checklist per job: switching to another tab and back must not wipe the ticks and mileage. */
+const drafts = new Map<string, { ticks: Record<string, boolean>; road: string; mileageOut: string }>();
+/** The job card's top "Ready" button asks the open checklist to pass (same as "Passed: car ready"). */
+export const QC_PASS_EVENT = "garage:qc-pass";
 import { ShieldCheck, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -17,9 +22,12 @@ export default function JobQC({ data, onChange }: { data: any; onChange: () => v
   const { job, lines, media } = data;
   const list: string[] = settings?.qc_checklist?.length ? settings.qc_checklist : DEFAULT_QC;
   const saved = job.qc || {};
-  const [ticks, setTicks] = useState<Record<string, boolean>>(saved.items || {});
-  const [road, setRoad] = useState<string>(saved.road_test || "");
-  const [mileageOut, setMileageOut] = useState<string>(job.mileage_out ? String(job.mileage_out) : "");
+  const draft = drafts.get(job.id);
+  const [ticks, setTicks] = useState<Record<string, boolean>>(draft?.ticks || saved.items || {});
+  const [road, setRoad] = useState<string>(draft?.road ?? saved.road_test ?? "");
+  const [mileageOut, setMileageOut] = useState<string>(draft?.mileageOut ?? (job.mileage_out ? String(job.mileage_out) : ""));
+  useEffect(() => { drafts.set(job.id, { ticks, road, mileageOut }); }, [job.id, ticks, road, mileageOut]);
+  const [marking, setMarking] = useState(false);
   const [tell, setTell] = useState(true);
   const [busy, setBusy] = useState(false);
   const notDone = lines.filter((l: any) => l.approved === true && l.status !== "done" && l.status !== "cancelled");
@@ -41,6 +49,7 @@ export default function JobQC({ data, onChange }: { data: any; onChange: () => v
         toast(smsProblem
           ? { title: "Passed: the car is ready, but the SMS did not go", description: smsProblem, variant: "destructive" }
           : { title: "Passed: the car is ready" });
+        drafts.delete(job.id);
       } else {
         if (job.status === "quality_check") await sb.from("garage_jobs").update({ status: "in_progress" }).eq("id", job.id);
         toast({ title: "Sent back to the workshop" });
@@ -50,10 +59,37 @@ export default function JobQC({ data, onChange }: { data: any; onChange: () => v
     finally { setBusy(false); }
   };
 
+  // Top "Ready" button on the job card = "Passed: car ready" here.
+  const saveRef = useRef(save);
+  saveRef.current = save;
+  useEffect(() => {
+    const on = (e: Event) => { if ((e as CustomEvent).detail === job.id) void saveRef.current(true); };
+    window.addEventListener(QC_PASS_EVENT, on);
+    return () => window.removeEventListener(QC_PASS_EVENT, on);
+  }, [job.id]);
+
+  /** Work finished but not ticked off on the Work tab: mark those lines done from here. */
+  const markAllDone = async () => {
+    setMarking(true);
+    try {
+      must(await sb.from("garage_job_lines").update({ status: "done" }).in("id", notDone.map((l: any) => l.id)));
+      toast({ title: `${notDone.length} line(s) marked done` });
+      onChange();
+    } catch (e: any) { toast({ title: "Not saved", description: e.message, variant: "destructive" }); }
+    finally { setMarking(false); }
+  };
+
   return (
     <div className="space-y-3">
       {saved.at && <p className={cn("rounded-lg px-2 py-1.5 text-xs", saved.passed ? "bg-success/10 text-success" : "bg-warning/10")}>Last check {when(saved.at)} by {saved.by_name || "staff"}: {saved.passed ? "passed" : "failed"}</p>}
-      {notDone.length > 0 && <p className="rounded-lg bg-warning/10 px-2 py-1.5 text-xs">Not done yet: {notDone.map((l: any) => l.description).join(", ")}</p>}
+      {notDone.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-warning/10 px-2 py-1.5 text-xs">
+          <span>Not done yet: {notDone.map((l: any) => l.description).join(", ")}</span>
+          <button type="button" disabled={marking} onClick={() => void markAllDone()} className="inline-flex h-7 items-center gap-1 rounded-lg border border-border bg-card px-2 font-semibold disabled:opacity-50">
+            {marking && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Mark all done
+          </button>
+        </div>
+      )}
       <div className="grid gap-1.5 sm:grid-cols-2">
         {list.map((i) => (
           <label key={i} className={cn("flex items-center gap-2 rounded-lg border px-2.5 py-2 text-sm", ticks[i] ? "border-success/40 bg-success/5" : "border-border")}>

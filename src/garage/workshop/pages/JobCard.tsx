@@ -15,7 +15,7 @@ import JobLines from "../components/JobLines";
 import JobEstimate from "../components/JobEstimate";
 import JobParts from "../components/JobParts";
 import JobMoney from "../components/JobMoney";
-import JobQC from "../components/JobQC";
+import JobQC, { QC_PASS_EVENT } from "../components/JobQC";
 
 type Tab = "work" | "estimate" | "parts" | "inspection" | "checkin" | "photos" | "qc" | "money" | "history";
 
@@ -165,7 +165,7 @@ export default function JobCard() {
           : status === "waiting_approval" ? { label: "Approve & start", icon: ArrowRight, run: () => void move("in_progress") }
             : status === "waiting_parts" ? { label: "Start work", icon: ArrowRight, run: () => void move("in_progress") }
               : status === "in_progress" ? { label: "Quality check", icon: ClipboardCheck, run: () => void move("quality_check") }
-                : status === "quality_check" ? { label: "Ready", icon: ClipboardCheck, run: () => void move("ready") }
+                : status === "quality_check" ? { label: "Ready", icon: ClipboardCheck, run: () => { if (tab === "qc") window.dispatchEvent(new CustomEvent(QC_PASS_EVENT, { detail: data.job.id })); else setTab("qc"); } }
                   : status === "ready" ? { label: "Release car", icon: ArrowRight, tone: "success", run: () => void move("collected") }
                     : status === "cancelled" ? { label: "Reopen", icon: Undo2, run: () => void move("checked_in") }
                       : null;

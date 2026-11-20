@@ -116,7 +116,7 @@ function AddLine({ job, onDone, extra }: { job: any; onDone: () => void; extra: 
       )}
       {(kind === "part" || kind === "consumable") && <ProductSearch onPick={(p) => setF((x: any) => ({ ...x, item_id: p.id, description: p.name, rate: String(p.price ?? ""), tax_rate: String(p.vat_rate ?? x.tax_rate) }))} />}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 2xl:grid-cols-6">
-        <input className="fi col-span-2 sm:col-span-3 2xl:col-span-2" value={f.description} onChange={(e) => set("description", e.target.value)} placeholder={kind === "labour" ? "Enter the work (e.g. Replace front brake pads)" : kind === "sublet" ? "Enter the outside work" : "Enter the part"} />
+        <input className="fi col-span-2 sm:col-span-3 2xl:col-span-2" value={f.description} onChange={(e) => set("description", e.target.value)} placeholder={kind === "labour" ? "Enter the work" : kind === "sublet" ? "Enter the outside work" : "Enter the part"} />
         {kind === "labour" ? (
           <select className="fi" value={f.pricing} onChange={(e) => set("pricing", e.target.value)}><option value="fixed">Fixed price</option><option value="hourly">Per hour</option></select>
         ) : <input className="fi" inputMode="decimal" value={f.qty} onChange={(e) => set("qty", e.target.value)} placeholder="Qty" />}
