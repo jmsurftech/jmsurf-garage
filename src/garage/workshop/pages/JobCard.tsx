@@ -169,7 +169,7 @@ export default function JobCard() {
                   : status === "ready" ? { label: "Release car", icon: ArrowRight, tone: "success", run: () => void move("collected") }
                     : status === "cancelled" ? { label: "Reopen", icon: Undo2, run: () => void move("checked_in") }
                       : null;
-  const stepTarget: JobStatus | null = status === "checked_in" ? "diagnosing" : status === "diagnosing" ? "waiting_approval" : status === "waiting_approval" || status === "waiting_parts" ? "in_progress" : next;
+  const stepTarget: JobStatus | null = status === "cancelled" ? "checked_in" : status === "checked_in" ? "diagnosing" : status === "diagnosing" ? "waiting_approval" : status === "waiting_approval" || status === "waiting_parts" ? "in_progress" : next;
   const moves: MenuAction[] = nextStatuses(status).filter((s) => s !== stepTarget && s !== "collected" && s !== "cancelled").map((s, i) => ({ label: STATUS_LABEL[s], icon: ChevronRight, onSelect: () => void move(s), group: i === 0 ? "Move to" : undefined }));
   const more: MenuAction[] = [
     ...moves,

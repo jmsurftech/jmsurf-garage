@@ -105,7 +105,7 @@ export default function Workshop({ start = "board" }: { start?: "board" | "list"
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <PickMenu value={view} onChange={setView} ariaLabel="Which jobs" options={VIEWS.map((v) => ({ ...v, count: (all as any[]).filter((j) => inView(j, v.value)).length }))} />
+            <PickMenu value={view} onChange={(v) => setView(v as View)} ariaLabel="Which jobs" options={VIEWS.map((v) => ({ ...v, count: (all as any[]).filter((j) => inView(j, v.value)).length }))} />
             <SearchBox value={q} onChange={setQ} placeholder="Search plate, job, customer…" />
             <select className="fi h-9 w-auto" value={type} onChange={(e) => setType(e.target.value)} aria-label="Job type"><option value="">All job types</option>{JOB_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
           </div>
