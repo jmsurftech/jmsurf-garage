@@ -3,6 +3,7 @@ import { Check, Link2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { OrbSpinner } from "@/components/orbs";
+import { Panel, Pill, Field, btnPrimaryCls } from "@/components/kit";
 
 type Linked = { destination_type?: string; business_number?: string; account_number?: string; account_name?: string; linked?: boolean } | null;
 type Info = { provider: string; jmsurf: Linked; payhero: Linked };
@@ -61,54 +62,44 @@ export default function PlatformSettlement({ provider, onLinked }: { provider: "
     }
   };
 
-  const input = "w-full px-4 py-2.5 rounded-xl bg-muted/40 border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary";
   const isActive = info?.provider === provider && !!linked;
 
   return (
-    <section className="bg-muted/30 border border-border rounded-2xl p-5 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border">
-        <div>
-          <h2 className="font-semibold text-foreground">{provider === "jmsurf" ? "JMSURF Pay settlement account" : "PayHero settlement account"}</h2>
-          <p className="text-[11px] text-muted-foreground">Package, domain and upgrade fees paid by companies settle here automatically.</p>
+    <Panel
+      title={provider === "jmsurf" ? "JMSURF Pay settlement" : "PayHero settlement"}
+      description="Package, domain and upgrade fees settle here."
+      icon={Link2}
+      actions={isActive ? <Pill tone="success"><Check className="h-3 w-3" /> In use</Pill> : undefined}
+    >
+      <div className="space-y-4">
+        <div className="grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Settle to">
+            <select className="fi" value={type} onChange={(e) => setType(e.target.value as any)}>
+              <option value="paybill">Paybill</option>
+              <option value="till">Till (Buy Goods)</option>
+              <option value="bank">Bank account (bank paybill)</option>
+            </select>
+          </Field>
+          {type !== "till" && (
+            <Field label={type === "bank" ? "Bank paybill number" : "Paybill number"}>
+              <input className="fi font-mono" inputMode="numeric" maxLength={7} value={businessNumber}
+                onChange={(e) => setBusinessNumber(e.target.value.replace(/\D/g, "").slice(0, 7))} placeholder="Enter paybill number" />
+            </Field>
+          )}
+          <Field label={type === "till" ? "Till number" : "Account number"}>
+            <input className="fi font-mono" maxLength={32} value={accountNumber}
+              onChange={(e) => setAccountNumber(type === "till" ? e.target.value.replace(/\D/g, "").slice(0, 7) : e.target.value.replace(/\s/g, "").slice(0, 32))}
+              placeholder={type === "till" ? "Enter till number" : "Enter account number"} />
+          </Field>
+          <Field label="Account name">
+            <input className="fi" maxLength={100} value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="Enter account name" />
+          </Field>
         </div>
-        {isActive && (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-green-500/15 text-green-300">
-            <Check className="w-3 h-3" /> In use
-          </span>
-        )}
+        <button type="button" onClick={save} disabled={saving} className={btnPrimaryCls}>
+          {saving ? <OrbSpinner className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
+          {linked ? "Update & link" : "Save & link"}
+        </button>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
-        <div>
-          <label className="text-xs text-muted-foreground block mb-1">Settle to</label>
-          <select className={input} value={type} onChange={(e) => setType(e.target.value as any)}>
-            <option value="paybill">Paybill</option>
-            <option value="till">Till (Buy Goods)</option>
-            <option value="bank">Bank account (bank paybill)</option>
-          </select>
-        </div>
-        {type !== "till" && (
-          <div>
-            <label className="text-xs text-muted-foreground block mb-1">{type === "bank" ? "Bank paybill number" : "Paybill number"}</label>
-            <input className={`${input} font-mono`} inputMode="numeric" maxLength={7} value={businessNumber}
-              onChange={(e) => setBusinessNumber(e.target.value.replace(/\D/g, "").slice(0, 7))} placeholder="e.g. 4022819" />
-          </div>
-        )}
-        <div>
-          <label className="text-xs text-muted-foreground block mb-1">{type === "till" ? "Till number" : "Account number"}</label>
-          <input className={`${input} font-mono`} maxLength={32} value={accountNumber}
-            onChange={(e) => setAccountNumber(type === "till" ? e.target.value.replace(/\D/g, "").slice(0, 7) : e.target.value.replace(/\s/g, "").slice(0, 32))}
-            placeholder={type === "till" ? "e.g. 4579120" : "e.g. JMSURF or 1280006242"} />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground block mb-1">Account name</label>
-          <input className={input} maxLength={100} value={accountName} onChange={(e) => setAccountName(e.target.value)} />
-        </div>
-      </div>
-      <button onClick={save} disabled={saving}
-        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium disabled:opacity-60">
-        {saving ? <OrbSpinner className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
-        {linked ? "Update & link" : "Save & link"}
-      </button>
-    </section>
+    </Panel>
   );
 }

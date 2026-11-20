@@ -6,8 +6,8 @@ import { allRows } from "@/lib/fetchAll";
 import { format, subDays, startOfMonth, subMonths, differenceInCalendarDays } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
 import { Download, TrendingUp, Banknote, CreditCard, RefreshCw, Calendar, Percent, BarChart3, Trophy, ArrowRight } from "lucide-react";
-import { PageHeader, Panel, StatTile, EmptyState, Segmented, PageLoader } from "@/components/kit";
-import { Button } from "@/components/ui/button";
+import { PageHeader, Panel, StatTile, StatGrid, EmptyState, PickMenu, ExportMenu, PageLoader, btnCls } from "@/components/kit";
+import { cn } from "@/lib/utils";
 
 const COLORS = ["#f97316", "#22c55e", "#3b82f6", "#eab308", "#a855f7", "#ef4444"];
 const tooltipStyle = { background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--popover-foreground))" };
@@ -113,25 +113,26 @@ export default function AdminReports() {
     URL.revokeObjectURL(a.href);
   };
 
-  if (isLoading) return <div className="p-4 sm:p-6"><PageLoader label="Loading reports…" /></div>;
+  if (isLoading) return <div><PageLoader label="Loading reports…" /></div>;
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
-      <PageHeader title="Reports" description="Platform revenue, recurring income and how companies pay." icon={BarChart3}
+    <div className="space-y-3">
+      <PageHeader title="Reports" icon={BarChart3}
         actions={<>
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={isFetching ? "animate-spin" : ""} /> Refresh</Button>
-          <Button size="sm" onClick={exportCsv} disabled={!inRange.length}><Download /> Export CSV</Button>
-        </>}>
-        <Segmented value={range} onChange={(v) => setRange(v as Range)} options={(Object.keys(RANGE_LABEL) as Range[]).map((r) => ({ value: r, label: RANGE_LABEL[r] }))} />
-      </PageHeader>
+          <PickMenu ariaLabel="Period" value={range} onChange={(v) => setRange(v as Range)} options={(Object.keys(RANGE_LABEL) as Range[]).map((r) => ({ value: r, label: RANGE_LABEL[r] }))} />
+          <button type="button" className={cn(btnCls, "w-9 px-0")} onClick={() => refetch()} disabled={isFetching} aria-label="Refresh" title="Refresh">
+            <RefreshCw className={isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+          </button>
+          <ExportMenu items={[{ label: "Payments CSV", icon: Download, onSelect: exportCsv, disabled: !inRange.length }]} />
+        </>} />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+      <StatGrid className="md:grid-cols-3 xl:grid-cols-5">
         <StatTile label={`Revenue · ${RANGE_LABEL[range]}`} value={ksh(totalRevenue)} icon={Banknote} tone="success" />
-        <StatTile label="Monthly recurring" value={ksh(mrr)} icon={TrendingUp} tone="info" hint="Active packages, per month" />
+        <StatTile label="Monthly recurring" value={ksh(mrr)} icon={TrendingUp} tone="info" hint="Active packages" />
         <StatTile label="Yearly run-rate" value={ksh(mrr * 12)} icon={Calendar} tone="primary" />
         <StatTile label="Paid payments" value={completed.length} icon={CreditCard} tone="success" hint={`${failedCount} failed or cancelled`} />
         <StatTile label="Success rate" value={`${successRate}%`} icon={Percent} tone={successRate >= 80 ? "success" : "warning"} />
-      </div>
+      </StatGrid>
 
       <Panel title="Daily revenue" description={RANGE_LABEL[range]} icon={TrendingUp}>
         <ResponsiveContainer debounce={120} width="100%" height={250}>
@@ -151,7 +152,7 @@ export default function AdminReports() {
         </ResponsiveContainer>
       </Panel>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="Last 6 months" icon={BarChart3}>
           <ResponsiveContainer debounce={120} width="100%" height={240}>
             <BarChart data={monthlySeries}>
@@ -175,11 +176,11 @@ export default function AdminReports() {
                   <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [ksh(v), ""]} />
                 </PieChart>
               </ResponsiveContainer>
-              <ul className="space-y-2 text-sm">
+              <ul className="min-w-0 flex-1 space-y-2 text-sm">
                 {methodRev.map((g, i) => (
-                  <li key={g.name} className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    <span className="text-muted-foreground">{g.name}</span>
+                  <li key={g.name} className="flex min-w-0 flex-wrap items-center gap-x-2">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                    <span className="min-w-0 truncate text-muted-foreground">{g.name}</span>
                     <span className="font-semibold tabular-nums">{ksh(g.value)}</span>
                   </li>
                 ))}
@@ -189,7 +190,7 @@ export default function AdminReports() {
         </Panel>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="Revenue by package" description={RANGE_LABEL[range]} icon={BarChart3}>
           {planRev.length === 0 ? <EmptyState title="No payments in this period" /> : (
             <ResponsiveContainer debounce={120} width="100%" height={240}>

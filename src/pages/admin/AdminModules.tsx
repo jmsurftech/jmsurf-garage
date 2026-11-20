@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Grid2x2, Gift, Save, Search, TrendingUp } from "lucide-react";
+import { CheckCircle2, Grid2x2, Gift, Save, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Panel, Modal, Field } from "@/components/kit";
+import { Panel, Modal, Field, PageHeader, MoreMenu, StatGrid, StatTile, Toolbar, SearchBox, Segmented, btnCls, btnPrimaryCls } from "@/components/kit";
 import { MODULES, MODULE_BY_KEY } from "@/lib/modules";
 import { friendlyError } from "@/lib/friendlyError";
 import { toast } from "sonner";
@@ -68,48 +68,40 @@ export default function AdminModules() {
   const trials = [...stats.values()].reduce((a, x) => a + x.trial, 0);
 
   return (
-    <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#7a0b14,#c1121f_45%,#1f2937)] p-6 text-white shadow-xl sm:p-8">
-        <span aria-hidden className="absolute -right-16 -top-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-        <span aria-hidden className="absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-orange-400/20 blur-3xl" />
-        <div className="relative flex flex-wrap items-start gap-4">
-          <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25 sm:flex"><Grid2x2 className="h-6 w-6" /></span>
-          <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/70">App store</p>
-            <h1 className="font-display text-2xl font-extrabold sm:text-3xl">Modules & prices</h1>
-            <p className="mt-1 max-w-xl text-sm text-white/80">Every JMSURF Garage suite, its monthly price and how companies use it. Companies switch suites on in System → Modules with 14 days free.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={() => setComp(true)} className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold ring-1 ring-white/25 backdrop-blur hover:bg-white/25"><Gift className="h-4 w-4" /> Give a module free</button>
-            <button disabled={!dirty || saving} onClick={save} className="inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2 text-sm font-bold text-[#a8121b] shadow-lg disabled:opacity-50"><Save className="h-4 w-4" /> {saving ? "Saving…" : dirty ? `Save ${Object.keys(edits).length} change${Object.keys(edits).length > 1 ? "s" : ""}` : "Saved"}</button>
-          </div>
-        </div>
-        <div className="relative mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {[["Suites offered", rows.filter((r: any) => r.is_active).length], ["Module MRR", kes(mrr)], ["Paying activations", paying], ["On free trial", trials]].map(([l, v]) => (
-            <div key={l as string} className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur"><p className="text-xs text-white/70">{l}</p><p className="mt-1 font-display text-2xl font-extrabold tabular-nums">{v}</p></div>
-          ))}
-        </div>
-      </section>
+    <div className="space-y-3">
+      <PageHeader title="Modules & prices" icon={Grid2x2} actions={<>
+        <button type="button" disabled={!dirty || saving} onClick={save} className={btnPrimaryCls}>
+          <Save className="h-4 w-4" /> {saving ? "Saving…" : dirty ? `Save ${Object.keys(edits).length} change${Object.keys(edits).length > 1 ? "s" : ""}` : "Saved"}
+        </button>
+        <MoreMenu items={[{ label: "Give a module free", icon: Gift, onSelect: () => setComp(true) }]} />
+      </>} />
+
+      <StatGrid>
+        <StatTile label="Suites offered" value={rows.filter((r: any) => r.is_active).length} icon={Grid2x2} tone="primary" />
+        <StatTile label="Module MRR" value={kes(mrr)} icon={TrendingUp} tone="success" />
+        <StatTile label="Paying activations" value={paying} icon={CheckCircle2} tone="info" />
+        <StatTile label="On free trial" value={trials} icon={Gift} tone="warning" />
+      </StatGrid>
 
       {top.length > 0 && (
-        <Panel title="Where module revenue comes from" icon={TrendingUp}>
+        <Panel title="Module revenue" icon={TrendingUp}>
           <div className="space-y-2.5">
             {top.map(([key, x]) => { const def = MODULE_BY_KEY[key]; return (
-              <div key={key} className="flex items-center gap-3 text-sm">
+              <div key={key} className="flex min-w-0 items-center gap-2 text-sm sm:gap-3">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white" style={{ background: def?.color || "#64748b" }}>{def ? <def.icon className="h-3.5 w-3.5" /> : null}</span>
-                <span className="w-44 shrink-0 truncate font-medium">{def?.name || key}</span>
-                <span className="relative h-6 flex-1 overflow-hidden rounded-full bg-muted"><span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.max(4, (x.mrr / topMax) * 100)}%`, background: def?.color || "#64748b" }} /></span>
-                <span className="w-32 shrink-0 text-right font-semibold tabular-nums">{kes(x.mrr)}</span>
+                <span className="w-24 shrink-0 truncate font-medium sm:w-44">{def?.name || key}</span>
+                <span className="relative h-6 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"><span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.max(4, (x.mrr / topMax) * 100)}%`, background: def?.color || "#64748b" }} /></span>
+                <span className="shrink-0 text-right text-xs font-semibold tabular-nums sm:w-32 sm:text-sm">{kes(x.mrr)}</span>
               </div>
             ); })}
           </div>
         </Panel>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative w-full sm:w-64"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search suites" className="fi h-10 pl-9" /></div>
-        <div className="flex flex-wrap gap-1.5">{categories.map((c) => <button key={c} onClick={() => setCat(c)} className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${cat === c ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" : "bg-card text-muted-foreground ring-1 ring-border hover:text-foreground"}`}>{c}</button>)}</div>
-      </div>
+      <Toolbar>
+        <SearchBox value={q} onChange={setQ} placeholder="Search suites…" />
+        <Segmented value={cat} onChange={setCat} options={categories.map((c) => ({ value: c, label: c }))} />
+      </Toolbar>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {shown.map((r: any) => {
@@ -186,7 +178,7 @@ function CompModule({ open, onClose, onDone }: { open: boolean; onClose: () => v
   };
   return (
     <Modal open={open} onClose={onClose} title="Set a module for a company" icon={Gift}
-      footer={<><button onClick={onClose} className="rounded-xl border border-border px-4 py-2 text-sm">Cancel</button><button disabled={busy} onClick={go} className="rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground">Apply</button></>}>
+      footer={<><button type="button" onClick={onClose} className={btnCls}>Cancel</button><button type="button" disabled={busy} onClick={go} className={btnPrimaryCls}>Apply</button></>}>
       <div className="space-y-4">
         <Field label="Company"><select className="fi" value={tenant} onChange={(e) => setTenant(e.target.value)}><option value="">Choose…</option>{tenants.map((t: any) => <option key={t.id} value={t.id}>{t.business_name} ({t.slug})</option>)}</select></Field>
         <Field label="Module"><select className="fi" value={key} onChange={(e) => setKey(e.target.value)}>{MODULES.filter((m) => !m.included).map((m) => <option key={m.key} value={m.key}>{m.name}</option>)}</select></Field>

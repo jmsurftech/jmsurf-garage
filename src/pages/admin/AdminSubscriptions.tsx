@@ -220,7 +220,7 @@ export default function AdminSubscriptions() {
     return (
       <div className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Package name" required className="sm:col-span-3"><input className="fi" value={data.name} onChange={(e) => set({ ...data, name: e.target.value })} placeholder="e.g. Standard" /></Field>
+          <Field label="Package name" required className="sm:col-span-3"><input className="fi" value={data.name} onChange={(e) => set({ ...data, name: e.target.value })} placeholder="Enter package name" /></Field>
           <Field label="Monthly price (KSh)" required><input className="fi" type="number" min={0} value={data.price_monthly || ""} onChange={num("price_monthly")} /></Field>
           <Field label="Quarterly discount %"><input className="fi" type="number" min={0} max={90} value={data.quarterly_discount} onChange={num("quarterly_discount")} /></Field>
           <Field label="Yearly discount %"><input className="fi" type="number" min={0} max={90} value={data.annual_discount} onChange={num("annual_discount")} /></Field>
@@ -247,12 +247,12 @@ export default function AdminSubscriptions() {
   };
 
   return (
-    <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Packages" description="What companies pay, what each package includes and how many companies are on it." icon={Package}
+    <div className="space-y-3">
+      <PageHeader title="Packages" icon={Package}
         actions={<Button size="sm" onClick={() => setShowAdd(true)}><Plus /> Add package</Button>} />
 
       {plans.length === 0 ? <Panel><EmptyState icon={Package} title="No packages yet" /></Panel> : (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {plans.map((plan) => {
             const stats = planStats(plan.id);
             const monthly = Number(plan.price_monthly);
@@ -314,7 +314,7 @@ export default function AdminSubscriptions() {
         {editingId && renderPlanForm(editData, setEditData, true)}
       </Modal>
 
-      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} size="sm" icon={Trash2}
+      <Modal center open={!!confirmDelete} onClose={() => setConfirmDelete(null)} size="sm" icon={Trash2}
         title={confirmDelete && planStats(confirmDelete.id).total > 0 ? "This package is in use" : "Delete this package?"}
         description={confirmDelete && planStats(confirmDelete.id).total > 0
           ? `${planStats(confirmDelete.id).total} company(ies) are on ${confirmDelete.name}. Hide it instead so new companies can't pick it.`
