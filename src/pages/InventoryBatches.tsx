@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { SideDialogContent as DialogContent } from "@/components/kit";
 import { CalendarX, Clock, PackageCheck, Plus, Pencil, Trash2, AlertTriangle, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -214,7 +215,7 @@ export default function InventoryBatches() {
       </Card>
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent>
           <DialogHeader><DialogTitle>{editing?.id ? "Edit Batch" : "Add Batch"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>

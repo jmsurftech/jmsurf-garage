@@ -49,9 +49,8 @@ export function PagedRows<T>({ rows, children, colSpan, gridSpan, pageSize = 25,
   list?: boolean;
 }) {
   const paged = usePaged(rows, pageSize);
-  const control = rows.length > 0
-    ? <Pager page={paged.page} pageSize={paged.pageSize} total={paged.total} onPage={paged.setPage} onPageSize={paged.setPageSize} className={cn(colSpan && "border-t-0", gridSpan && "col-span-full")} />
-    : null;
+  // The slim pager always shows, also under an empty list (Apex rule).
+  const control = <Pager page={paged.page} pageSize={paged.pageSize} total={paged.total} onPage={paged.setPage} onPageSize={paged.setPageSize} className={cn(colSpan && "border-t-0", gridSpan && "col-span-full")} />;
   return (
     <>
       {children(paged.pageRows)}
@@ -71,15 +70,14 @@ type PagerProps = {
   onPageSize?: (size: number) => void;
   className?: string;
   loading?: boolean;
-  /** Totals for the list, shown in the bar. */
+  /** Kept for old callers; no totals line is shown under lists any more. */
   summary?: React.ReactNode;
 };
 
 /** Footer control shared by every list: range, rows per page and page numbers. Slim, and pinned to the foot of the list (index.css). */
-export default function Pager({ page, pageSize, total, onPage, onPageSize, className, loading, summary }: PagerProps) {
+export default function Pager({ page, pageSize, total, onPage, onPageSize, className, loading }: PagerProps) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
-  if (total === 0) return null;
-  const from = (page - 1) * pageSize + 1;
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
   const first = Math.max(1, Math.min(page - 2, pages - 4));
   const numbers: number[] = [];
@@ -91,7 +89,6 @@ export default function Pager({ page, pageSize, total, onPage, onPageSize, class
       <span className={cn("tabular-nums", loading && "opacity-60")}>
         <strong className="font-medium text-foreground">{from.toLocaleString()}-{to.toLocaleString()}</strong> of <strong className="font-medium text-foreground">{total.toLocaleString()}</strong>
       </span>
-      {summary && <span className="hidden flex-wrap items-center gap-x-4 sm:ml-auto sm:flex">{summary}</span>}
       <div className="flex items-center gap-2">
         {onPageSize && (
           <label className="flex items-center gap-1">
