@@ -265,8 +265,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const feature = NAV_FEATURE_MAP[path];
     return !feature || has(feature);
   };
-  const isActive = (leaf: NavLeaf) =>
-    [leaf.path, ...(leaf.match || [])].some((p) => currentPath === p || currentPath.startsWith(p + "/"));
+  // Only the MOST SPECIFIC menu entry owns the page: "/garage" (Job cards) must not also claim
+  // "/garage/insurance/…", or two groups (Workshop + Insurance) open together.
+  const pathHits = (leaf: NavLeaf) =>
+    [leaf.path, ...(leaf.match || [])].filter((p) => currentPath === p || currentPath.startsWith(p + "/"));
+  const bestHit = useMemo(
+    () => allLeaves().reduce((best, { leaf }) => Math.max(best, ...pathHits(leaf).map((p) => p.length)), 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentPath],
+  );
+  const isActive = (leaf: NavLeaf) => pathHits(leaf).some((p) => p.length >= bestHit);
 
   const sections = useMemo(() => {
     if (!navReady) return [];
