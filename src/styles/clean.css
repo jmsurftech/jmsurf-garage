@@ -152,3 +152,28 @@
   /* the numbers in the card are not right-aligned any more */
   :is(table.dt, table.dt-phone):not(.dt-keep):not(.dt-stack):not(.dt-items) tbody td.num { text-align: left; }
 }
+
+/* ---------------------------------------------------------------- side pop-ups */
+/* Older hand-made pop-ups (overlay + box) marked side-pop open as a side panel from the right,
+   and as a sheet from the bottom on phones, like the kit Modal. */
+@keyframes clean-slide-right { from { transform: translateX(2.5rem); opacity: 0.6; } to { transform: none; opacity: 1; } }
+@keyframes clean-slide-up { from { transform: translateY(1.5rem); opacity: 0.6; } to { transform: none; opacity: 1; } }
+.side-pop { align-items: flex-end !important; justify-content: center !important; padding: 0 !important; }
+.side-pop > * {
+  width: 100% !important;
+  max-width: none !important;
+  max-height: 92svh !important;
+  overflow-y: auto !important;
+  border-radius: 1.5rem 1.5rem 0 0 !important;
+  animation: clean-slide-up 0.25s ease-out;
+}
+@media (min-width: 640px) {
+  .side-pop { align-items: stretch !important; justify-content: flex-end !important; }
+  .side-pop > * {
+    width: min(520px, 100vw) !important;
+    height: 100% !important;
+    max-height: none !important;
+    border-radius: 1.5rem 0 0 1.5rem !important;
+    animation: clean-slide-right 0.3s ease-out;
+  }
+}

@@ -1,3 +1,4 @@
+import "@/styles/clean.css";
 import { PageHeader } from "@/components/kit";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, Tag, Layers, Ruler, ImageIcon, Upload, X, Search, FolderTree } from "lucide-react";
@@ -430,7 +431,7 @@ function EditModal({ editing, categories, tenantId, onClose, onSaved }: {
   const showImage = editing.type !== "units";
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/50 side-pop flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-card border border-border rounded-2xl w-full max-w-md p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg font-semibold">

@@ -1,3 +1,4 @@
+import "@/styles/clean.css";
 import { useState } from "react";
 import { X, Plus, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,7 +65,7 @@ export default function StockAdjustment({ product, locationId, onClose }: Props)
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-foreground/40 side-pop flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-card rounded-3xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display text-lg font-bold">Adjust Stock</h2>

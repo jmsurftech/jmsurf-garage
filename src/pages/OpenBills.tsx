@@ -1,3 +1,4 @@
+import "@/styles/clean.css";
 import { PageHeader } from "@/components/kit";
 import { useMemo, useState } from "react";
 import { PagedRows } from "@/components/Pager";
@@ -192,7 +193,7 @@ export default function OpenBills() {
 
       {/* New tab dialog */}
       {showNew && (
-        <div className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center p-4" onClick={() => setShowNew(false)}>
+        <div className="fixed inset-0 z-50 bg-foreground/40 side-pop flex items-center justify-center p-4" onClick={() => setShowNew(false)}>
           <div className="bg-card rounded-2xl w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
             <h2 className="font-semibold mb-3">New tab</h2>
             <input

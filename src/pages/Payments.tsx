@@ -1,3 +1,4 @@
+import "@/styles/clean.css";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -411,7 +412,7 @@ function TransactionDetail({ tx, onClose, onReprint }: { tx: any; onClose: () =>
   const canReprint = tx.status === "completed";
 
   return (
-    <div className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-foreground/40 side-pop flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-card rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="font-display font-bold text-lg">Transaction Details</h2>

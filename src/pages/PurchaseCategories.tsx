@@ -1,3 +1,4 @@
+import "@/styles/clean.css";
 import { PageHeader } from "@/components/kit";
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, Receipt, Search, X, FolderPlus, Tags } from "lucide-react";
@@ -217,7 +218,7 @@ function EditModal({
   });
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 side-pop flex items-center justify-center p-4">
       <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="font-semibold">{isEdit ? "Edit" : "Add"} category</h2>

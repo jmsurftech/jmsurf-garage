@@ -1,3 +1,4 @@
+import "@/styles/clean.css";
 import { X, Edit, Package } from "lucide-react";
 import { formatKES } from "@/lib/format";
 import { useVariantsByProduct } from "@/hooks/useVariants";
@@ -20,7 +21,7 @@ export default function ProductDetailDialog({
   const variants = map[product.id] || [];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/50 side-pop flex items-center justify-center p-4" onClick={onClose}>
       <div
         className="bg-card border border-border rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
