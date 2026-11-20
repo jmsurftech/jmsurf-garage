@@ -2,8 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Staff accounts are managed by the app's own server, which ships with every
- * deploy. When that server is not reachable (for example inside the Lovable
- * preview) we fall back to the older backend function.
+ * deploy. When that server is not reachable we fall back to the older backend function.
  */
 
 type Result<T> = { data: T | null; error: string | null };

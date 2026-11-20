@@ -163,7 +163,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
             if (urlSlug && safe.slug && urlSlug !== safe.slug && !isSubdomainMode()) {
               const newPath = window.location.pathname.replace(`/${urlSlug}`, `/${safe.slug}`);
               window.history.replaceState({}, "", newPath + window.location.search + window.location.hash);
-              window.dispatchEvent(new Event("lovable:navigation"));
+              window.dispatchEvent(new Event("app:navigation"));
             }
           } catch {}
 

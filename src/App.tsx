@@ -126,8 +126,8 @@ function HostRedirector() {
     const host = window.location.hostname.toLowerCase();
     const path = window.location.pathname;
 
-    // Skip on lovable preview/staging hosts and bare localhost/IP
-    if (host.endsWith(".lovable.app") || host.endsWith(".lovable.dev") || host === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(host)) return;
+    // Skip on bare localhost/IP
+    if (host === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(host)) return;
 
     // Already on a tenant subdomain — routes render as-is.
     if (HOST_SLUG) return;
@@ -969,7 +969,7 @@ const App = () => (
             <Route path="/join/:token" element={<StaffJoin />} />
             {/* A customer pays an invoice from its payment link (no login). */}
             <Route path="/pay/:token" element={<PayInvoice />} />
-            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+            <Route path="/oauth/consent" element={<OAuthConsent />} />
 
             {/* Company address or app.: clean, slug-free routes */}
             {WORKSPACE_MODE && <Route path="/pos/display/:sessionId" element={<CustomerDisplay />} />}

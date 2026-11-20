@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Payments are handled by the app's own server, which ships with every deploy.
- * When that server is not available (for example the Lovable preview), we fall
+ * When that server is not available, we fall
  * back to the older backend function so nothing breaks while testing.
  */
 

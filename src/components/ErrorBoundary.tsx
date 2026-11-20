@@ -52,19 +52,19 @@ export default class ErrorBoundary extends Component<Props, State> {
     const originalReplace = window.history.replaceState;
     window.history.pushState = function (...args) {
       const result = originalPush.apply(this, args as any);
-      window.dispatchEvent(new Event("lovable:navigation"));
+      window.dispatchEvent(new Event("app:navigation"));
       return result;
     };
     window.history.replaceState = function (...args) {
       const result = originalReplace.apply(this, args as any);
-      window.dispatchEvent(new Event("lovable:navigation"));
+      window.dispatchEvent(new Event("app:navigation"));
       return result;
     };
-    window.addEventListener("lovable:navigation", reset);
+    window.addEventListener("app:navigation", reset);
 
     this.removeNavListener = () => {
       window.removeEventListener("popstate", reset);
-      window.removeEventListener("lovable:navigation", reset);
+      window.removeEventListener("app:navigation", reset);
       window.history.pushState = originalPush;
       window.history.replaceState = originalReplace;
     };

@@ -4,15 +4,13 @@ const APP_BUILD_ID = typeof __APP_BUILD_ID__ === "string" ? __APP_BUILD_ID__ : "
 const BUILD_STORAGE_KEY = "jmsurf_app_build_id";
 
 function isPreviewOrIframe() {
-  const host = window.location.hostname;
-  const isPreviewHost = host.includes("id-preview--") || host.includes("lovableproject.com");
   let inIframe = false;
   try {
     inIframe = window.self !== window.top;
   } catch {
     inIframe = true;
   }
-  return isPreviewHost || inIframe;
+  return inIframe;
 }
 
 async function clearAppCaches(forceAll: boolean) {

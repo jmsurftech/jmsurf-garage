@@ -1,8 +1,8 @@
 /**
  * Guarded service-worker registration.
  *
- * Offline support only runs on the real published shop domains. Lovable
- * previews, iframes and dev never register a worker, and `?sw=off`
+ * Offline support only runs on the real published shop domains. Iframes
+ * and dev never register a worker, and `?sw=off`
  * removes an existing one.
  */
 const SW_URL = "/sw.js";
@@ -15,10 +15,6 @@ function blocked(): boolean {
   } catch {
     return true;
   }
-  const host = window.location.hostname;
-  if (host.startsWith("id-preview--") || host.startsWith("preview--")) return true;
-  const previewRoots = ["lovableproject.com", "lovableproject-dev.com", "beta.lovable.dev"];
-  if (previewRoots.some((root) => host === root || host.endsWith(`.${root}`))) return true;
   if (new URLSearchParams(window.location.search).has("sw")
     && new URLSearchParams(window.location.search).get("sw") === "off") return true;
   return false;

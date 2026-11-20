@@ -44,7 +44,7 @@ beforeEach(() => {
     writable: true,
     value: {
       href: "http://localhost/",
-      pathname: "/.lovable/oauth/consent",
+      pathname: "/oauth/consent",
       search: "?authorization_id=abc-123",
     },
   });
@@ -59,12 +59,12 @@ describe("OAuthConsent", () => {
   it("redirects unauthenticated users to /login with next preserved", async () => {
     getSession.mockResolvedValue({ data: { session: null } });
 
-    renderAt("/.lovable/oauth/consent?authorization_id=abc-123");
+    renderAt("/oauth/consent?authorization_id=abc-123");
 
     await waitFor(() => {
       expect(window.location.href).toContain("/login?next=");
       expect(window.location.href).toContain(
-        encodeURIComponent("/.lovable/oauth/consent")
+        encodeURIComponent("/oauth/consent")
       );
       expect(window.location.href).toContain(
         encodeURIComponent("authorization_id=abc-123")
@@ -75,7 +75,7 @@ describe("OAuthConsent", () => {
   it("shows a specific error when authorization_id is missing", async () => {
     getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
 
-    renderAt("/.lovable/oauth/consent");
+    renderAt("/oauth/consent");
 
     expect(await screen.findByText(/Invalid authorization link/i)).toBeInTheDocument();
     expect(getAuthorizationDetails).not.toHaveBeenCalled();
@@ -88,7 +88,7 @@ describe("OAuthConsent", () => {
       error: { message: "authorization not found or expired" },
     });
 
-    renderAt("/.lovable/oauth/consent?authorization_id=abc-123");
+    renderAt("/oauth/consent?authorization_id=abc-123");
 
     expect(await screen.findByText(/Authorization expired/i)).toBeInTheDocument();
   });
@@ -104,7 +104,7 @@ describe("OAuthConsent", () => {
       error: null,
     });
 
-    renderAt("/.lovable/oauth/consent?authorization_id=abc-123");
+    renderAt("/oauth/consent?authorization_id=abc-123");
 
     const approve = await screen.findByTestId("oauth-approve");
     fireEvent.click(approve);
@@ -126,7 +126,7 @@ describe("OAuthConsent", () => {
       error: null,
     });
 
-    renderAt("/.lovable/oauth/consent?authorization_id=abc-123");
+    renderAt("/oauth/consent?authorization_id=abc-123");
 
     const deny = await screen.findByTestId("oauth-deny");
     fireEvent.click(deny);

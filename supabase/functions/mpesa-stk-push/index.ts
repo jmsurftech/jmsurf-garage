@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
 
     // Runtime secrets must win over saved platform settings. This prevents a
     // stale admin settings row (for example sandbox passkey) from overriding the
-    // live credentials that were securely updated in Lovable Cloud secrets.
+    // live credentials that were securely updated in the function secrets.
     // Platform DB values (JMSURF aggregator paybill) MUST win over env vars, because
     // env vars may hold a different platform shortcode (e.g. billing paybill) that
     // is not the aggregator collection account. This keeps the STK prompt showing

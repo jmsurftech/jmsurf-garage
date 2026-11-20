@@ -3,8 +3,8 @@ import { safeNextPath, buildNextQuery } from "./safeNext";
 
 describe("safeNextPath", () => {
   it("accepts a same-origin relative path", () => {
-    expect(safeNextPath("/.lovable/oauth/consent?authorization_id=abc")).toBe(
-      "/.lovable/oauth/consent?authorization_id=abc"
+    expect(safeNextPath("/oauth/consent?authorization_id=abc")).toBe(
+      "/oauth/consent?authorization_id=abc"
     );
     expect(safeNextPath("/my-store/dashboard")).toBe("/my-store/dashboard");
   });

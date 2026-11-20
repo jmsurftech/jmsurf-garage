@@ -5,7 +5,6 @@ import { belongsToShop, WRONG_SHOP_MESSAGE } from "@/lib/shopAccess";
 import { EXPIRED_SIGNIN_MESSAGE } from "@/lib/subscriptionLock";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Mail, Lock, Eye, EyeOff, Store, ArrowLeft } from "lucide-react";
 import AuthShell from "@/components/auth/AuthShell";
 import { OrbSpinner } from "@/components/orbs";

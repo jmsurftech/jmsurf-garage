@@ -1,8 +1,7 @@
 // Email helpers that talk to the mail service built into the app server
 // (server.js). It ships in the same container as the site, so every deploy
-// updates it automatically. When the app runs somewhere without that server
-// (for example the Lovable preview), the caller can fall back to the backend
-// function instead.
+// updates it automatically. When the app runs somewhere without that server,
+// the caller can fall back to the backend function instead.
 import { supabase } from "@/integrations/supabase/client";
 
 export type PlatformEmailResult = {
