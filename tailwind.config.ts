@@ -14,8 +14,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ["Plus Jakarta Sans", "Inter", "sans-serif"],
-        body: ["Inter", "sans-serif"],
+        // Through the CSS variables, so the signed-in workspace (html.erp-ws in index.css) can use the device's
+        // own font like JMSURF ISP while the website and sign-in keep Plus Jakarta Sans / Inter.
+        display: ["var(--font-display)"],
+        body: ["var(--font-body)"],
       },
       colors: {
         border: "hsl(var(--border))",

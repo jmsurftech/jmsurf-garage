@@ -496,16 +496,19 @@ button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
 [role="menuitem"], [role="option"] { font-size: 0.875rem; }
 
 /* Tight everywhere: no empty bands around pages, cards, list bars and rows. */
-.glass-shell main :is(.space-y-4,.space-y-5,.space-y-6,.space-y-8,.space-y-10) > :not([hidden]) ~ :not([hidden]),
-.glass-shell main:is(.space-y-5,.space-y-6) > :not([hidden]) ~ :not([hidden]) { margin-top: 8px; }
-.glass-shell main :is(.gap-4,.gap-5,.gap-6,.gap-8,.sm\:gap-4,.sm\:gap-5,.sm\:gap-6,.lg\:gap-6,.lg\:gap-8) { gap: 10px; }
-.glass-shell main :is(.mb-6,.mb-8) { margin-bottom: 10px; }
-.glass-shell main :is(.mt-6,.mt-8) { margin-top: 10px; }
-.glass-shell main :is(.p-5,.p-6,.p-8,.sm\:p-5,.sm\:p-6,.sm\:p-8,.md\:p-5,.md\:p-6,.lg\:p-6) { padding: 0.75rem; }
-.glass-shell main :is(.p-10,.p-12) { padding: 1.25rem; }
-.glass-shell main :is(.py-10,.py-12,.py-14,.py-16) { padding-block: 1.25rem; }
+:is(.glass-shell,.ws-shell) main :is(.space-y-4,.space-y-5,.space-y-6,.space-y-8,.space-y-10) > :not([hidden]) ~ :not([hidden]),
+:is(.glass-shell,.ws-shell) main:is(.space-y-5,.space-y-6) > :not([hidden]) ~ :not([hidden]) { margin-top: 12px; }
+:is(.glass-shell,.ws-shell) main :is(.gap-4,.gap-5,.gap-6,.gap-8,.sm\:gap-4,.sm\:gap-5,.sm\:gap-6,.lg\:gap-6,.lg\:gap-8) { gap: 12px; }
+:is(.glass-shell,.ws-shell) main :is(.mb-6,.mb-8) { margin-bottom: 12px; }
+:is(.glass-shell,.ws-shell) main :is(.mt-6,.mt-8) { margin-top: 12px; }
+:is(.glass-shell,.ws-shell) main :is(.p-5,.p-6,.p-8,.sm\:p-5,.sm\:p-6,.sm\:p-8,.md\:p-5,.md\:p-6,.lg\:p-6) { padding: 1rem; }
+:is(.glass-shell,.ws-shell) main :is(.p-10,.p-12) { padding: 1.25rem; }
+:is(.glass-shell,.ws-shell) main :is(.py-10,.py-12,.py-14,.py-16) { padding-block: 1.25rem; }
 .glass-shell main h1:not(.zd-sheet h1) { font-size: 1.1rem; line-height: 1.3; }
-.glass-shell main table:not(.zd-sheet table) :is(td,th) { padding-block: .4rem; }
+/* Page titles as in JMSURF ISP: 21px, heavy, tight. */
+.ws-shell main h1:not(.zd-sheet h1) { font-size: 21px; line-height: 1.2; font-weight: 800; letter-spacing: -.02em; }
+@media (max-width: 639px) { .ws-shell main h1:not(.zd-sheet h1) { font-size: 19px; } }
+:is(.glass-shell,.ws-shell) main table:not(.zd-sheet table) :is(td,th) { padding-block: .4rem; }
 .g-tile.xs { width: 1.75rem; height: 1.75rem; border-radius: .55rem; }
 /* List bars above a table stay one slim line. */
 .erp-main .border-b.px-4.py-3:has(> button, > div > button, > h2, > h1) { padding-block: .375rem; }
@@ -514,10 +517,10 @@ button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
 /* Tab strips wrap onto another line instead of scrolling sideways (kanban boards and data-strip rows keep scrolling). */
 [role="tablist"], .flex.gap-1.overflow-x-auto:not([data-strip]) { flex-wrap: wrap !important; overflow: visible !important; height: auto !important; max-width: 100%; }
 @media (max-width: 639px) {
-  .glass-shell main :is(.p-3,.p-4,.p-5,.p-6,.p-8,.sm\:p-5,.sm\:p-6,.md\:p-5,.md\:p-6) { padding: 0.625rem; }
-  .glass-shell main :is(.gap-3,.gap-4,.gap-5,.gap-6) { gap: 0.5rem; }
-  .glass-shell main :is(.space-y-4,.space-y-5,.space-y-6,.space-y-8) > :not([hidden]) ~ :not([hidden]) { margin-top: 0.5rem; }
-  .glass-shell main [role="tablist"] > * { height: auto; min-height: 0; padding: .2rem .6rem; font-size: .75rem; }
+  :is(.glass-shell,.ws-shell) main :is(.p-3,.p-4,.p-5,.p-6,.p-8,.sm\:p-5,.sm\:p-6,.md\:p-5,.md\:p-6) { padding: 0.625rem; }
+  :is(.glass-shell,.ws-shell) main :is(.gap-3,.gap-4,.gap-5,.gap-6) { gap: 0.5rem; }
+  :is(.glass-shell,.ws-shell) main :is(.space-y-4,.space-y-5,.space-y-6,.space-y-8) > :not([hidden]) ~ :not([hidden]) { margin-top: 0.5rem; }
+  :is(.glass-shell,.ws-shell) main [role="tablist"] > * { height: auto; min-height: 0; padding: .2rem .6rem; font-size: .75rem; }
 }
 
 /* Tables that cannot fit (lib/tableFit.ts): wrap, then tight, then fixed columns, then one card per row. */
@@ -560,7 +563,7 @@ table[data-fit="cards"].dt-items > tbody > tr > td:nth-child(2) { display: block
 table[data-fit="cards"].dt-items > tbody > tr > td:nth-child(2)::before { display: block; margin-bottom: .25rem; }
 
 /* Table cells stay on one line while the table fits; lib/tableFit.ts lets them wrap only when it does not. */
-@media (min-width: 640px) { .glass-shell main table:not([data-fit]):not(.zd-sheet table):not(.dt-items) :is(td,th) { white-space: nowrap; } }
+@media (min-width: 640px) { :is(.glass-shell,.ws-shell) main table:not([data-fit]):not(.zd-sheet table):not(.dt-items) :is(td,th) { white-space: nowrap; } }
 
 /* Top bar: only the page title and the search box shrink, so every button (and the profile) stays visible. */
 .glass-bar > :not(.min-w-0) { flex-shrink: 0; }
@@ -625,6 +628,8 @@ table[data-fit="cards"].dt-items > tbody > tr > td:nth-child(2)::before { displa
 .soft-field{border-radius:12px;box-shadow:inset 2px 2px 6px var(--soft-lo),inset -2px -2px 6px var(--soft-hi)}
 .soft-track{box-shadow:inset 2px 2px 6px var(--soft-lo),inset -2px -2px 6px var(--soft-hi)}
 .soft-tab[data-state="active"]{box-shadow:3px 3px 8px var(--soft-lo),-2px -2px 6px var(--soft-hi)}
+/* Workspace tabs are an ink pill (see ui/tabs.tsx); on the sign-in pages the chosen tab stays a light raised pill, so its text stays dark. */
+.soft-auth .soft-tab[data-state="active"]{color:hsl(var(--foreground))!important}
 .notch-nav{box-shadow:8px 8px 22px var(--soft-lo),-6px -6px 16px var(--soft-hi),0 14px 34px -14px rgba(17,19,24,.3)}
 
 /* ── Soft sign-in (same design as the JMSURF ISP sign-in): tinted page with glass discs, the form in a raised soft panel
@@ -759,33 +764,28 @@ table[data-fit="cards"].dt-items > tbody > tr > td:nth-child(2)::before { displa
 
 /* The pagination bar sits right under the last row and stays at the foot of the view while longer lists scroll.
    Cards that only clip use overflow: clip, so they do not capture the sticky bar. */
-.glass-shell main .pager-bar { position: sticky; bottom: 0; z-index: 6; background: var(--g-float, hsl(var(--card))); }
-.glass-shell main li:has(> .pager-bar) { display: contents; }
-.glass-shell main td:has(> .pager-bar) { position: sticky; bottom: 0; z-index: 6; background: var(--g-float, hsl(var(--card))); }
+:is(.glass-shell,.ws-shell) main .pager-bar { position: sticky; bottom: 0; z-index: 6; background: var(--g-float, hsl(var(--card))); }
+:is(.glass-shell,.ws-shell) main li:has(> .pager-bar) { display: contents; }
+:is(.glass-shell,.ws-shell) main td:has(> .pager-bar) { position: sticky; bottom: 0; z-index: 6; background: var(--g-float, hsl(var(--card))); }
 /* When a table turns into cards the cell is held inside its row, so the row is what stays. */
-.glass-shell main tr:has(> td > .pager-bar) { position: sticky; bottom: 0; z-index: 6; }
-.glass-shell main .dash-table-wrap:has(.pager-bar) { overflow-x: clip; overflow-y: visible; }
-.glass-shell main .overflow-hidden:has(.pager-bar) { overflow: clip; }
-.glass-shell main .overflow-x-auto:has(> .pager-bar),
-.glass-shell main .overflow-x-auto:has(> table > tbody > tr > td > .pager-bar) { overflow-x: clip; overflow-y: visible; }
-.glass-shell main .overflow-y-auto:has(> .pager-bar) { display: flex; flex-direction: column; }
-.glass-shell main .overflow-y-auto:has(> .pager-bar) > * { flex-shrink: 0; }
+:is(.glass-shell,.ws-shell) main tr:has(> td > .pager-bar) { position: sticky; bottom: 0; z-index: 6; }
+:is(.glass-shell,.ws-shell) main .dash-table-wrap:has(.pager-bar) { overflow-x: clip; overflow-y: visible; }
+:is(.glass-shell,.ws-shell) main .overflow-hidden:has(.pager-bar) { overflow: clip; }
+:is(.glass-shell,.ws-shell) main .overflow-x-auto:has(> .pager-bar),
+:is(.glass-shell,.ws-shell) main .overflow-x-auto:has(> table > tbody > tr > td > .pager-bar) { overflow-x: clip; overflow-y: visible; }
+:is(.glass-shell,.ws-shell) main .overflow-y-auto:has(> .pager-bar) { display: flex; flex-direction: column; }
+:is(.glass-shell,.ws-shell) main .overflow-y-auto:has(> .pager-bar) > * { flex-shrink: 0; }
 @media (min-width: 640px) {
-  .glass-shell main .overflow-y-auto:has(> div:not(.sm\:hidden) > .pager-bar) { display: flex; flex-direction: column; }
-  .glass-shell main .overflow-y-auto:has(> div:not(.sm\:hidden) > .pager-bar) > * { flex-shrink: 0; }
-  .glass-shell main .overflow-y-auto > div:not(.sm\:hidden):has(> .pager-bar) { display: flex; flex-direction: column; }
-  .glass-shell main .overflow-y-auto > div:not(.sm\:hidden):has(> .pager-bar) > * { flex-shrink: 0; }
+  :is(.glass-shell,.ws-shell) main .overflow-y-auto:has(> div:not(.sm\:hidden) > .pager-bar) { display: flex; flex-direction: column; }
+  :is(.glass-shell,.ws-shell) main .overflow-y-auto:has(> div:not(.sm\:hidden) > .pager-bar) > * { flex-shrink: 0; }
+  :is(.glass-shell,.ws-shell) main .overflow-y-auto > div:not(.sm\:hidden):has(> .pager-bar) { display: flex; flex-direction: column; }
+  :is(.glass-shell,.ws-shell) main .overflow-y-auto > div:not(.sm\:hidden):has(> .pager-bar) > * { flex-shrink: 0; }
 }
 /* A scroll-linked reveal would shift the pinned bar with its section, behind the phone menu or off the screen. */
-.glass-shell main :is([data-reveal],section,div):has(> .pager-bar, > * > .pager-bar) { animation: none !important; transform: none !important; }
+:is(.glass-shell,.ws-shell) main :is([data-reveal],section,div):has(> .pager-bar, > * > .pager-bar) { animation: none !important; transform: none !important; }
 table[data-fit] [data-fit-hide] { display: none !important; }
 @media print { .pager-bar, tr:has(> td > .pager-bar) { display: none !important; } }
 
-/* Key figures as one divided strip (as in JMSURF ISP): one bordered box, thin lines between figures, small grey icons. */
-.stat-strip { gap: 0 !important; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 1rem; background: hsl(var(--card)); }
-.stat-strip > * { border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: 1px 0 0 hsl(var(--border)), 0 1px 0 hsl(var(--border)) !important; padding: .55rem .8rem !important; }
-.stat-strip .g-tile { --tile: hsl(var(--muted-foreground)) !important; background: none !important; box-shadow: none !important; width: 1.25rem; height: 1.25rem; }
-@media (min-width: 640px) { .stat-strip { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important; } }
 
 /* CRM screens: denser, 13px text like a sales team's working tool (lists, record pages, forms). */
 .crm-ui { font-size: 13px; line-height: 1.45; }
@@ -799,3 +799,196 @@ table[data-fit] [data-fit-hide] { display: none !important; }
 .crm-ui textarea.fi { height: auto; }
 .crm-ui dt { font-size: 11.5px; }
 .crm-ui dd { font-size: 13px; }
+
+/* ══ Workspace shell = the JMSURF ISP workspace (2026-11-20, owner: "look like the ISP exactly… match the font size").
+   Same frame, type and sizes as jmsurfisp.co.ke: device font at 14px; flush 232px side menu (section labels in small
+   grey capitals, 36px flat rows, brand-tinted current row); flush 60px top bar (page name, search pill, quiet raised
+   icon buttons, brand gear, name + role); soft raised cards (radius 20), pressed-in fields, ink-pill tabs; key figures
+   as one divided strip. Garage red stays the brand; every tint is mixed from --primary so company colours carry over.
+   Light and dark use the same rules; only the --ws-* values change. No grid backgrounds. ══ */
+html.erp-ws { --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; --font-display: var(--font-body); }
+html.erp-ws body { font-size: 14px; font-feature-settings: normal; }
+html.erp-ws .soft-tab[data-state="active"] { box-shadow: none; }
+
+@layer components {
+  .ws-shell {
+    --ws-bg: color-mix(in srgb, hsl(var(--primary)) 4%, #eceef5);
+    --ws-card: linear-gradient(145deg, #fdfdff, #f1f3f8);
+    --ws-hi: #fff; --ws-lo: rgba(40, 46, 70, .11); --ws-edge: rgba(255, 255, 255, .9);
+    --ws-raise: 8px 8px 20px var(--ws-lo), -6px -6px 16px var(--ws-hi);
+    --ws-raise-sm: 4px 4px 10px var(--ws-lo), -3px -3px 8px var(--ws-hi);
+    --ws-press: inset 2px 2px 6px var(--ws-lo), inset -2px -2px 6px var(--ws-hi);
+    --ws-ink2: #394150; --ws-faint: #9aa1ad; --ws-surface2: #f3f4f6;
+    --ws-brand: hsl(var(--primary));
+    --ws-brand-soft: color-mix(in srgb, hsl(var(--primary)) 8%, #fff);
+    --ws-brand-ink: color-mix(in srgb, hsl(var(--primary)) 86%, #000);
+    --g-float: #fff;
+    isolation: isolate;
+    color: hsl(var(--foreground));
+    background:
+      radial-gradient(900px 520px at 100% -10%, color-mix(in srgb, hsl(var(--primary)) 9%, transparent), transparent 70%),
+      radial-gradient(800px 600px at -10% 110%, color-mix(in srgb, #7c3aed 7%, transparent), transparent 70%),
+      var(--ws-bg);
+  }
+  .dark .ws-shell {
+    --ws-bg: #0f1218;
+    --ws-card: linear-gradient(145deg, #1b2029, #151920);
+    --ws-hi: rgba(255, 255, 255, .035); --ws-lo: rgba(0, 0, 0, .5); --ws-edge: rgba(255, 255, 255, .05);
+    --ws-ink2: #c9ced6; --ws-faint: #6b7380; --ws-surface2: #1a1e24;
+    --ws-brand-soft: color-mix(in srgb, hsl(var(--primary)) 13%, transparent);
+    --ws-brand-ink: color-mix(in srgb, hsl(var(--primary)) 62%, #fff);
+    --g-float: #151920;
+  }
+  /* The two soft discs in the corners, as on the ISP page (round, not a grid). */
+  .ws-shell::before, .ws-shell::after {
+    content: ''; position: fixed; z-index: -1; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle at 35% 30%, var(--ws-hi), transparent 62%), linear-gradient(145deg, color-mix(in srgb, hsl(var(--primary)) 12%, var(--ws-bg)), var(--ws-bg));
+    box-shadow: inset 0 0 0 10px color-mix(in srgb, hsl(var(--primary)) 7%, transparent), 12px 14px 30px var(--ws-lo), -8px -8px 22px var(--ws-hi);
+  }
+  .ws-shell::before { width: 320px; height: 320px; right: -150px; top: -140px; }
+  .ws-shell::after { width: 220px; height: 220px; left: -110px; bottom: -90px; }
+  @media print { .ws-shell::before, .ws-shell::after { display: none; } .ws-shell { background: #fff; } }
+
+  /* ── Side menu ── */
+  .ws-side { background: color-mix(in srgb, var(--ws-bg) 92%, transparent); border-right: 1px solid color-mix(in srgb, hsl(var(--border)) 60%, transparent); color: hsl(var(--foreground)); }
+  @media (max-width: 1023px) { .ws-side { background: var(--ws-bg); } }
+  .ws-org { display: flex; align-items: center; gap: 10px; height: 60px; flex: none; padding: 0 14px; overflow: hidden; border-bottom: 1px solid hsl(var(--border)); }
+  .ws-org-logo { display: block; max-width: 100%; max-height: 42px; width: auto; height: auto; object-fit: contain; }
+  .ws-nav { padding: 10px 10px 14px; scrollbar-width: thin; }
+  .ws-nav-label { padding: 14px 10px 5px; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ws-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ws-nav-rule { display: none; }
+  .ws-nav-row {
+    position: relative; display: flex; align-items: center; gap: 10px; width: 100%; height: 36px; margin-bottom: 2px; padding: 0 10px;
+    border-radius: 8px; color: var(--ws-ink2); font-size: 13px; font-weight: 500; line-height: 1; text-align: left; text-decoration: none;
+    transition: background-color .15s, color .15s;
+  }
+  .ws-nav-row:hover { background: var(--ws-surface2); color: hsl(var(--foreground)); }
+  .ws-nav-ico { width: 16px; height: 16px; flex: none; color: hsl(var(--muted-foreground)); }
+  .ws-nav-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.3; }
+  .ws-nav-row.is-active { background: var(--ws-brand-soft); color: var(--ws-brand-ink); font-weight: 600; border-radius: 14px; box-shadow: var(--ws-raise-sm); }
+  .ws-nav-row.is-active .ws-nav-ico { color: var(--ws-brand); }
+  /* A module with sub-pages: same row with a quiet caret; the open list hangs off a thin line. */
+  .ws-nav-row.is-group { font-size: 13.5px; }
+  .ws-nav-row.has-active { color: hsl(var(--foreground)); font-weight: 600; }
+  .ws-nav-row.has-active .ws-nav-ico { color: var(--ws-brand); }
+  .ws-caret { width: 16px; height: 16px; flex: none; color: var(--ws-faint); transition: transform .18s ease; }
+  .ws-lock { width: 14px; height: 14px; flex: none; opacity: .5; }
+  .ws-nav-sub { position: relative; margin: 2px 0 6px 18px; padding-left: 10px; border-left: 1.5px solid hsl(var(--border)); }
+  .ws-nav-row.is-child { height: 34px; }
+  .ws-nav-row.is-child .ws-nav-ico { width: 15px; height: 15px; }
+  .ws-nav-row .ws-fav { background: inherit !important; }
+  .ws-count { flex: none; min-width: 20px; margin-left: auto; padding: 1px 7px; border-radius: 99px; background: var(--ws-surface2); color: hsl(var(--muted-foreground)); font-size: 11px; font-weight: 600; line-height: 17px; text-align: center; font-variant-numeric: tabular-nums; }
+  .ws-nav-row.is-active .ws-count { background: hsl(var(--card)); color: var(--ws-brand-ink); }
+  .ws-side-extra { flex: none; padding: 6px 10px 8px; border-top: 1px solid hsl(var(--border)); }
+  .ws-side-foot { display: flex; align-items: center; gap: 8px; padding-top: 4px; }
+  .ws-powered { color: hsl(var(--muted-foreground) / .8); }
+  @media (min-width: 1024px) {
+    .ws-side.is-collapsed .ws-org { justify-content: center; padding: 0 8px; }
+    .ws-side.is-collapsed :is(.ws-nav, .ws-side-extra) { padding-left: 8px; padding-right: 8px; }
+    .ws-side.is-collapsed .ws-nav-label { display: none; }
+    .ws-side.is-collapsed .ws-nav-rule { display: block; margin: 10px 8px; border-top: 1px solid hsl(var(--border)); }
+    .ws-side.is-collapsed .ws-nav-row { justify-content: center; padding: 0; }
+    .ws-side.is-collapsed :is(.ws-nav-text, .ws-caret, .ws-fav, .ws-lock, .ws-nav-sub, .ws-powered) { display: none; }
+    .ws-side.is-collapsed .ws-side-foot { justify-content: center; }
+    .ws-side.is-collapsed .ws-count { position: absolute; right: 2px; top: 2px; min-width: 16px; padding: 0 4px; font-size: 9px; line-height: 16px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  }
+
+  /* ── Top bar ── */
+  .ws-top {
+    position: relative; z-index: 30; display: flex; align-items: center; gap: 8px; height: 60px; flex: none; padding: 0 12px;
+    background: color-mix(in srgb, var(--ws-bg) 86%, transparent); -webkit-backdrop-filter: saturate(1.5) blur(12px); backdrop-filter: saturate(1.5) blur(12px);
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  @media (min-width: 1024px) { .ws-top { gap: 12px; padding: 0 20px 0 16px; } }
+  .ws-top > * { flex-shrink: 0; }
+  .ws-top > .ws-crumb { flex-shrink: 1; }
+  .ws-crumb { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; color: hsl(var(--muted-foreground)); }
+  .ws-crumb b { min-width: 0; color: hsl(var(--foreground)); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ws-crumb svg { width: 14px; height: 14px; flex: none; color: var(--ws-faint); }
+  .ws-top > .ws-search {
+    align-items: center; gap: 8px; height: 36px; width: min(320px, 30vw); min-width: 150px; flex-shrink: 1; margin-left: auto; padding: 0 8px 0 12px;
+    border: 1px solid var(--ws-edge); border-radius: 999px; background: var(--ws-bg); box-shadow: var(--ws-press);
+    color: var(--ws-faint); font-size: 13.5px; text-align: left; cursor: pointer;
+  }
+  .ws-search:hover { color: hsl(var(--muted-foreground)); }
+  .ws-search svg { width: 16px; height: 16px; flex: none; }
+  .ws-search span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ws-search kbd { flex: none; padding: 3px 6px; border: 1px solid hsl(var(--border)); border-radius: 6px; background: hsl(var(--card)); color: hsl(var(--muted-foreground)); font: 600 10.5px/1 var(--font-body); }
+  .ws-acts { display: flex; align-items: center; gap: 6px; }
+  @media (min-width: 1024px) { .ws-acts { gap: 8px; } }
+  /* Icon buttons: 36px rounded squares, softly raised (ISP .app-icon-btn). */
+  .ws-ib,
+  .ws-acts :is(button[aria-label="Notifications"], button[aria-label="Ask Garage AI"], button[aria-label="Notebook"]) {
+    display: grid; place-items: center; width: 36px; height: 36px; flex: none; padding: 0 !important; border-radius: 12px !important;
+    border: 1px solid var(--ws-edge); background: var(--ws-card); box-shadow: var(--ws-raise-sm); color: var(--ws-ink2); cursor: pointer; transition: color .15s;
+  }
+  .ws-acts button[aria-label="Ask Garage AI"]:not(.bg-primary) { color: var(--ws-brand); }
+  .ws-acts button[aria-label="Ask Garage AI"].bg-primary { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .ws-ib:hover, .ws-acts :is(button[aria-label="Notifications"], button[aria-label="Notebook"]):hover { color: hsl(var(--foreground)); background: var(--ws-card); }
+  .ws-ib:active, .ws-acts :is(button[aria-label="Notifications"], button[aria-label="Ask Garage AI"], button[aria-label="Notebook"]):active { box-shadow: var(--ws-press); }
+  .ws-ib svg, .ws-acts :is(button[aria-label="Notifications"], button[aria-label="Ask Garage AI"], button[aria-label="Notebook"]) svg { width: 18px; height: 18px; }
+  .ws-acts > label { height: 36px; }
+  /* Settings: a round brand-tinted gear (ISP .app-gear). */
+  .ws-gear { display: grid; place-items: center; width: 38px; height: 38px; flex: none; border-radius: 999px; color: var(--ws-brand); background: color-mix(in srgb, hsl(var(--primary)) 12%, transparent); border: 1px solid color-mix(in srgb, hsl(var(--primary)) 28%, transparent); transition: background .15s; }
+  .ws-gear svg { width: 18px; height: 18px; transition: transform .3s; }
+  .ws-gear:hover { background: color-mix(in srgb, hsl(var(--primary)) 20%, transparent); }
+  .ws-gear:hover svg { transform: rotate(45deg); }
+  .ws-gear.is-on { background: hsl(var(--primary)); border-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .ws-pill { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--ws-edge); background: var(--ws-card); box-shadow: var(--ws-raise-sm); font-size: 13.5px; font-weight: 600; color: hsl(var(--foreground)); }
+  .ws-pill:active { box-shadow: var(--ws-press); }
+  /* Account: avatar, first name and role in one raised pill (name + role from laptop width up). */
+  .ws-user > div > button { height: 42px; gap: 10px; padding: 0 10px 0 4px !important; border-radius: 999px !important; border: 1px solid hsl(var(--border)); background: var(--ws-card) !important; box-shadow: var(--ws-raise-sm); }
+  .ws-user > div > button > div:first-child { width: 32px; height: 32px; }
+  .ws-user > div > button p:first-child { font-size: 13px; font-weight: 600; line-height: 1.2; }
+  .ws-user > div > button p + p { font-size: 11.5px; line-height: 1.25; }
+  @media (min-width: 1024px) { .ws-user > div > button > div.hidden { display: block !important; } }
+  @media (max-width: 639px) { .ws-user > div > button { height: 36px; padding: 0 2px !important; border-color: transparent; background: transparent !important; box-shadow: none; } }
+
+  /* ── Page content: soft raised cards with 20px corners (ISP .jm-card) ── */
+  .ws-shell main :is(div, section, article, form, aside).bg-card:not([class*="bg-gradient"]):not(.fixed):not(.absolute),
+  .ws-shell main .soft-card:not([class*="bg-gradient"]) { background: var(--ws-card); border-color: var(--ws-edge); box-shadow: var(--ws-raise); }
+  .ws-shell main :is(.bg-card, .soft-card) :is(div, section, article, form).bg-card:not([class*="bg-gradient"]),
+  .ws-shell main :is(.bg-card, .soft-card) .soft-card { box-shadow: var(--ws-raise-sm); }
+  .ws-shell main :is(div, section, article).bg-card:is(.rounded-2xl, .rounded-3xl), .ws-shell main section.bg-card, .ws-shell main .soft-card.rounded-2xl { border-radius: 20px; }
+  .ws-shell main :is(div, article).bg-card.rounded-xl { border-radius: 16px; }
+  /* Card headers 10px 16px with a 15px title; bodies 16px (phones keep 12px). */
+  .ws-shell main section.bg-card > div.border-b:first-child { padding: 10px 16px; border-color: hsl(var(--border)); }
+  .ws-shell main section.bg-card > div.border-b:first-child h2 { font-size: 15px; font-weight: 700; }
+  @media (min-width: 640px) { .ws-shell main section.bg-card > div.p-3:last-child { padding: 16px; } }
+  /* Fields pressed in (ISP .jm-input) with 12px corners. */
+  .ws-shell .fi { border-radius: 12px; border-color: var(--ws-edge); background-color: color-mix(in srgb, var(--ws-bg) 55%, hsl(var(--card))); box-shadow: var(--ws-press); }
+  .ws-shell .fi:focus { border-color: color-mix(in srgb, hsl(var(--primary)) 45%, transparent); box-shadow: var(--ws-press), 0 0 0 3px color-mix(in srgb, hsl(var(--primary)) 14%, transparent); }
+  /* Tables as ISP .jm-table: 11.5px capital headings, rows with 10px air, a faint brand tint on hover. */
+  .ws-shell main table:is(.dt, .ui-table) thead th { font-size: 11.5px !important; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: hsl(var(--muted-foreground)); padding-top: 9px; padding-bottom: 9px; background: color-mix(in srgb, var(--ws-bg) 70%, hsl(var(--card))); }
+  .ws-shell main table:is(.dt, .ui-table):not([data-fit="cards"]) tbody td { padding-top: 10px; padding-bottom: 10px; }
+  .ws-shell main table:is(.dt, .ui-table) tbody tr:hover td { background: color-mix(in srgb, hsl(var(--primary)) 4%, transparent); }
+  /* Status pills (kit Pill) as ISP .jm-badge: 12px, 20px tall, no outline ring. */
+  .ws-shell span.inline-flex.rounded-full.ring-1.ring-inset { height: 20px; padding: 0 7px; font-size: 12px; font-weight: 600; box-shadow: none; }
+  /* Phone bottom bar: the notch is cut in the page colour. */
+  .ws-shell .notch-item.is-active .notch-ico { box-shadow: 0 0 0 5px var(--ws-bg), 0 0 0 6px hsl(var(--primary) / .22), 0 12px 22px -10px hsl(var(--primary) / .7); }
+  .ws-shell .notch-item.is-active::before { background: radial-gradient(circle at 0 100%, transparent 9px, var(--ws-bg) 10px); }
+  .ws-shell .notch-item.is-active::after { background: radial-gradient(circle at 100% 100%, transparent 9px, var(--ws-bg) 10px); }
+}
+
+/* Page rhythm on back-office pages (not the till): 14px text; buttons and fields 36px on computers (ISP sizes). */
+.erp-rhythm { font-size: 14px; }
+.erp-rhythm :is(button, a).h-11 { height: 2.5rem; }
+@media (min-width: 640px) {
+  .erp-rhythm :is(button, a).h-10 { height: 2.25rem; }
+  .erp-rhythm :is(button, a).h-10.w-10 { width: 2.25rem; }
+  .erp-rhythm .fi:not(textarea) { height: 2.25rem; }
+}
+
+/* Key figures as ONE divided strip (ISP .kpi-grid): one bordered box, 1px lines between the cells, 12.5px label,
+   22px figure, small grey icons, no colour washes. Kit StatGrid uses .stat-strip; any grid of .kpi-cell does too. */
+.stat-strip, .grid:has(> .kpi-cell, > :is(a, button) > .kpi-cell) { gap: 0 !important; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)) !important; box-shadow: none !important; }
+.stat-strip > *, .grid > .kpi-cell, .grid > :is(a, button):has(> .kpi-cell) { border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: 1px 0 0 hsl(var(--border)), 0 1px 0 hsl(var(--border)) !important; transform: none !important; }
+.stat-strip > *, .grid > .kpi-cell { padding: 13px 15px !important; align-items: flex-start !important; }
+.grid > :is(a, button) > .kpi-cell { border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: transparent !important; padding: 13px 15px !important; }
+.stat-strip .g-tile, .kpi-cell .kpi-ico { --tile: hsl(var(--muted-foreground)) !important; background: none !important; box-shadow: none !important; color: hsl(var(--muted-foreground)) !important; width: 1.25rem; height: 1.25rem; }
+.kpi-cell .kpi-wash { display: none; }
+.stat-strip > * > div > p:nth-of-type(1) { font-size: 12.5px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+.stat-strip > * > div > p:nth-of-type(2) { margin-top: 5px; font-size: 22px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; }
+.stat-strip > * > div > p:nth-of-type(3) { margin-top: 3px; font-size: 12.5px; }
+@media (max-width: 639px) { .stat-strip > * > div > p:nth-of-type(2) { font-size: 19px; } }
+@media (min-width: 640px) { .stat-strip, .grid:has(> .kpi-cell, > :is(a, button) > .kpi-cell) { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important; } }

@@ -47,10 +47,16 @@ export const NAV: NavSection[] = [
     title: null,
     entries: [
       { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      ...GARAGE_NAV,
       { path: "/approvals", label: "Approvals", icon: CheckSquare },
       { path: "/calendar", label: "Calendar", icon: CalendarIcon },
       { path: "/me", label: "My Space", icon: UserRoundCog, module: "hrm", paid: true },
+    ],
+  },
+  // Section labels as in the JMSURF ISP side menu: small grey capitals above flat rows.
+  { title: "Workshop", entries: GARAGE_NAV },
+  {
+    title: "Business",
+    entries: [
       {
         path: "/products-menu", label: "Products & Services", icon: Box,
         children: [
@@ -127,6 +133,11 @@ export const NAV: NavSection[] = [
           { path: "/accounting/lock", label: "Transaction Locking", icon: Lock, module: "accounting" },
         ],
       },
+    ],
+  },
+  {
+    title: "Customers & team",
+    entries: [
       {
         path: "/crm-menu", label: "CRM", icon: Handshake, module: "crm", lockable: true,
         children: [
@@ -183,6 +194,11 @@ export const NAV: NavSection[] = [
         ],
       },
       // Manufacturing is not offered to garages (hidden, not deleted: see src/lib/modules.ts).
+    ],
+  },
+  {
+    title: "Insights",
+    entries: [
       { path: "/reports", label: "Reports", icon: BarChart3, match: ["/finance"] },
       { path: "/documents", label: "Documents", icon: FolderOpen },
     ],

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Star, ChevronDown, ChevronLeft, Menu, PanelLeft, Plus, X, Moon, Sun, Search, Settings2, Settings as SettingsIcon, ChevronRight, LayoutGrid, Lock, Grid2x2 } from "lucide-react";
+import { Star, ChevronDown, ChevronLeft, Menu, PanelLeft, X, Moon, Sun, Search, Settings2, Settings as SettingsIcon, ChevronRight, LayoutGrid, Lock, Sparkles, LifeBuoy } from "lucide-react";
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import { preloadPages, preloadRoute } from "@/lib/lazyPage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,7 +24,6 @@ import CompanySwitcher from "@/components/CompanySwitcher";
 import QuickCreate from "@/components/QuickCreate";
 import { DashAILauncher } from "@/components/dashai/DashAILauncher";
 import { NotebookLauncher } from "@/pages/notebook/NotebookLauncher";
-import { Orbs } from "@/components/brand/Orbs";
 import { BranchSwitcher } from "@/pages/branches/Branches";
 import ClockPrompt from "@/components/ClockPrompt";
 import DocViewer from "@/components/DocViewer";
@@ -94,6 +93,12 @@ const prefetch = (path: string) => {
   preloadRoute(path).catch(() => prefetched.delete(path));
 };
 
+/** Rows just above the side menu's foot (as in JMSURF ISP). */
+const SIDE_EXTRA = [
+  { path: "/whats-new", label: "What's new", icon: Sparkles },
+  { path: "/help", label: "Help centre", icon: LifeBuoy },
+];
+
 const COLLAPSE_KEY = "garage.sidebar.collapsed";
 const HIDDEN_KEY = "garage.sidebar.hidden";
 const readFlag = (key: string) => { try { return localStorage.getItem(key) === "1"; } catch { return false; } };
@@ -130,7 +135,7 @@ function FavStar({ on, onToggle }: { on: boolean; onToggle: () => void }) {
     <span role="button" tabIndex={0} aria-label={on ? "Remove from favourites" : "Add to favourites"} title={on ? "Remove from favourites" : "Add to favourites"}
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(); }}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onToggle(); } }}
-      className={cn("rounded-md p-1 transition-opacity", on ? "-mr-1 opacity-100" : "absolute right-1 top-1/2 -translate-y-1/2 bg-sidebar opacity-0 group-hover:opacity-90 hover:!opacity-100 focus:opacity-100")}>
+      className={cn("ws-fav rounded-md p-1 transition-opacity", on ? "-mr-1 opacity-100" : "absolute right-1 top-1/2 -translate-y-1/2 bg-sidebar opacity-0 group-hover:opacity-90 hover:!opacity-100 focus:opacity-100")}>
       <Star className={cn("h-3.5 w-3.5", on && "fill-current text-warning")} />
     </span>
   );
@@ -145,7 +150,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const currentPathRef = useRef(location.pathname);
   currentPathRef.current = location.pathname;
   useRealtimeSync();
-
+  // The signed-in workspace uses the device's own font at 14px, as JMSURF ISP does; pop-ups opened
+  // outside the shell (dialogs, menus) follow it too. The website and sign-in pages keep theirs.
+  useEffect(() => {
+    document.documentElement.classList.add("erp-ws");
+    return () => document.documentElement.classList.remove("erp-ws");
+  }, []);
 
 
   const [collapsed, setCollapsedState] = useState(() => readFlag(COLLAPSE_KEY));
@@ -349,28 +359,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (profile?.must_change_password) return <ForcePasswordChange />;
 
   if (isSystemPath(currentPath)) return (
-    <div className="glass-shell flex h-screen flex-col overflow-hidden bg-background print:block print:h-auto print:overflow-visible">
-      <header className="glass-bar print:hidden relative z-30 mx-2 mt-2 flex h-14 shrink-0 items-center gap-2 rounded-[22px] border border-border/70 bg-card/95 px-3 shadow-sm backdrop-blur sm:mx-3 sm:mt-3 sm:gap-3 sm:px-5">
-        <button onClick={() => setSysMenu(!sysMenu)} className="-ml-1 rounded-lg p-2 hover:bg-muted lg:hidden" aria-label="Settings menu"><Menu className="h-5 w-5" /></button>
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/25"><Settings2 className="h-5 w-5" /></span>
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-base font-bold leading-tight">Settings</p>
-          <p className="truncate text-xs text-muted-foreground">{businessName}</p>
+    <div className="ws-shell flex h-screen flex-col overflow-hidden print:block print:h-auto print:overflow-visible">
+      <header className="ws-top print:hidden">
+        <button onClick={() => setSysMenu(!sysMenu)} className="ws-ib lg:hidden" aria-label="Settings menu"><Menu /></button>
+        <div className="ws-crumb">
+          <span className="hidden sm:inline">Settings</span><ChevronRight className="hidden sm:block" />
+          <b>{businessName}</b>
         </div>
-        <button onClick={toggleDarkMode} className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={darkMode ? "Light mode" : "Dark mode"}>{darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}</button>
-        <UserProfileMenu variant="default" />
-        <button onClick={closeSettings} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-sm font-semibold shadow-sm hover:border-primary/40 hover:text-primary" aria-label="Close settings">
+        <span className="ml-auto" />
+        <button onClick={toggleDarkMode} className="ws-ib" aria-label={darkMode ? "Light mode" : "Dark mode"} title={darkMode ? "Light mode" : "Dark mode"}>{darkMode ? <Sun /> : <Moon />}</button>
+        <span className="ws-gear is-on hidden sm:grid" aria-hidden><Settings2 /></span>
+        <div className="ws-user"><UserProfileMenu variant="default" /></div>
+        <button onClick={closeSettings} className="ws-pill" aria-label="Close settings">
           <X className="h-4 w-4" /><span className="hidden sm:inline">Close</span>
         </button>
       </header>
       <div className="relative flex min-h-0 flex-1">
-        {sysMenu && <div className="fixed inset-0 top-14 z-40 bg-foreground/30 lg:hidden" onClick={() => setSysMenu(false)} />}
-        <aside className={cn("glass-side print:hidden z-50 w-[min(290px,86vw)] shrink-0 overflow-y-auto overscroll-contain border-r border-border bg-card transition-transform duration-300",
-          "fixed bottom-0 left-0 top-14 lg:static lg:w-[272px] lg:translate-x-0", sysMenu ? "translate-x-0 shadow-2xl" : "-translate-x-full")}>
+        {sysMenu && <div className="fixed inset-0 top-[60px] z-40 bg-foreground/30 lg:hidden" onClick={() => setSysMenu(false)} />}
+        <aside className={cn("ws-side print:hidden z-50 w-[min(272px,86vw)] shrink-0 overflow-y-auto overscroll-contain transition-transform duration-300",
+          "fixed bottom-0 left-0 top-[60px] lg:static lg:w-[272px] lg:translate-x-0", sysMenu ? "translate-x-0 shadow-2xl" : "-translate-x-full")}>
           <SystemNav onPick={() => setSysMenu(false)} />
         </aside>
-        <main ref={mainRef} className="erp-main relative isolate min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-2 lg:pb-1.5 lg:pl-1.5 lg:pr-2.5 lg:pt-2.5 print:overflow-visible print:p-0">
-          <Orbs intensity="subtle" className="fixed -z-10 print:hidden" />
+        <main ref={mainRef} className="erp-main erp-rhythm relative isolate min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-3 lg:pb-2.5 lg:pl-4 lg:pr-5 lg:pt-3.5 print:overflow-visible print:p-0">
           <div key={pageKey} className="ft-page-in w-full">{children}</div>
         </main>
       </div>
@@ -381,82 +391,60 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 
-  const Badge = ({ n, tiny }: { n: number; tiny?: boolean }) =>
-    n ? (
-      <span className={cn("min-w-[20px] rounded-full bg-primary px-1.5 text-center text-[11px] font-bold leading-5 text-primary-foreground", tiny && "absolute right-1 top-1 min-w-[16px] px-1 text-[9px] leading-4")}>
-        {n > 99 ? "99+" : n}
-      </span>
-    ) : null;
+  const Count = ({ n, tiny }: { n: number; tiny?: boolean }) =>
+    n ? <span className={cn("ws-count", tiny && "is-tiny")}>{n > 99 ? "99+" : n}</span> : null;
 
   return (
-    <div className="glass-shell flex h-screen overflow-hidden bg-background print:block print:h-auto print:overflow-visible">
+    <div className="ws-shell flex h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
       {mobileOpen && <div className="fixed inset-0 z-40 bg-foreground/30 backdrop-blur-[1px] lg:hidden" onClick={() => setMobileOpen(false)} />}
 
+      {/* Side menu as in JMSURF ISP: flush full height, logo block as tall as the top bar, section labels, flat rows. */}
       <aside
         className={cn(
-          "glass-side glass-float print:hidden fixed lg:static inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width,transform] duration-300",
-          collapsed ? "w-[min(290px,86vw)] lg:w-[64px]" : "w-[min(290px,86vw)] lg:w-[240px]",
+          "ws-side print:hidden fixed lg:static inset-y-0 left-0 z-50 flex flex-col transition-[width,transform] duration-300",
+          collapsed ? "is-collapsed w-[min(272px,86vw)] lg:w-[64px]" : "w-[min(272px,86vw)] lg:w-[232px]",
           mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0",
           (sidebarHidden || layout !== "classic") && "lg:hidden",
         )}
       >
-        <div className={cn("flex shrink-0 items-center gap-2 px-3", logoUrl && !collapsed ? "min-h-[60px] py-2" : "h-12", collapsed && "justify-center px-2")}>
+        <div className="ws-org">
           {logoUrl && !collapsed ? (
             <Link to="/dashboard" className="flex min-w-0 flex-1 justify-center" title={businessName}>
-              <img src={logoUrl} alt={businessName} className="block max-h-11 w-auto max-w-full object-contain dark:rounded-lg dark:bg-white dark:px-2 dark:py-1" />
+              <img src={logoUrl} alt={businessName} className="ws-org-logo dark:rounded-lg dark:bg-white dark:px-2 dark:py-1" />
             </Link>
           ) : logoUrl ? (
-            <img src={logoUrl} alt={businessName} className="h-8 w-8 rounded-lg bg-white object-contain p-0.5 shadow-sm ring-1 ring-sidebar-border" />
+            <Link to="/dashboard" title={businessName} className="shrink-0"><img src={logoUrl} alt={businessName} className="h-[34px] w-[34px] rounded-[10px] bg-white object-contain p-0.5 ring-1 ring-border" /></Link>
           ) : (
-            <DashMark className="h-8 w-8 drop-shadow-sm" />
+            <Link to="/dashboard" title={businessName} className="shrink-0"><DashMark className="h-[34px] w-[34px]" /></Link>
           )}
           {!collapsed && !logoUrl && (
             <div className="min-w-0 flex-1">
-              <h1 className="truncate font-display text-[13px] font-bold leading-tight text-sidebar-foreground" title={businessName}>{businessName}</h1>
+              <b className="block truncate text-[14px] font-bold leading-tight tracking-[-0.01em]" title={businessName}>{businessName}</b>
             </div>
           )}
-          <button onClick={() => setMobileOpen(false)} className="-mr-1 rounded-lg p-2 text-sidebar-foreground/60 hover:bg-sidebar-accent lg:hidden" aria-label="Close menu">
-            <X className="h-5 w-5" />
+          <button onClick={() => setMobileOpen(false)} className="ws-ib -mr-1 ml-auto lg:hidden" aria-label="Close menu">
+            <X />
           </button>
         </div>
 
-        {!collapsed && (
-          <div className="px-2 pb-1.5">
-            <button onClick={() => setFindOpen(true)} className="flex w-full items-center gap-2 rounded-full border border-sidebar-border bg-background/60 px-3 py-1 text-left text-[13px] text-sidebar-foreground/55 transition-colors hover:border-primary/40 hover:text-sidebar-foreground">
-              <Search className="h-4 w-4" />
-              <span className="flex-1">Quick find</span>
-              <kbd className="hidden rounded border border-sidebar-border px-1.5 text-[10px] font-medium lg:inline">Ctrl K</kbd>
-            </button>
-          </div>
-        )}
-
-        <nav ref={navRef} onScroll={(e) => { if (navShown.current) navScroll.current = e.currentTarget.scrollTop; }} className="flex-1 overflow-y-auto overscroll-contain px-1.5 pb-2" aria-busy={!navReady}>
+        <nav ref={navRef} onScroll={(e) => { if (navShown.current) navScroll.current = e.currentTarget.scrollTop; }} className="ws-nav flex-1 overflow-y-auto overscroll-contain" aria-busy={!navReady}>
           {!navReady && (
-            <div className="space-y-2 pt-2" aria-hidden>
+            <div className="space-y-0.5 pt-1" aria-hidden>
               {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className={cn("flex items-center gap-3 rounded-lg px-3 py-2", collapsed && "justify-center")}>
-                  <span className="h-4 w-4 shrink-0 animate-pulse rounded bg-sidebar-foreground/10" />
-                  {!collapsed && <span className="h-3 animate-pulse rounded bg-sidebar-foreground/10" style={{ width: `${55 + ((i * 17) % 35)}%` }} />}
+                <div key={i} className={cn("flex h-9 items-center gap-2.5 px-2.5", collapsed && "lg:justify-center")}>
+                  <span className="h-4 w-4 shrink-0 animate-pulse rounded bg-foreground/10" />
+                  {!collapsed && <span className="h-3 animate-pulse rounded bg-foreground/10" style={{ width: `${55 + ((i * 17) % 35)}%` }} />}
                 </div>
               ))}
             </div>
           )}
 
-          {sections.map((section, si) => (
-            <div key={section.title || "top"} className={cn(si > 0 && "mt-1")}>
-              {section.title &&
-                (collapsed ? (
-                  <div className="mx-2 my-3 border-t border-sidebar-border" />
-                ) : (
-                  <div className="flex items-center gap-2 px-3 pb-1 pt-3 text-[11px] font-bold uppercase tracking-[0.12em] text-sidebar-foreground/45">
-                    <span>{section.title}</span><span className="h-px flex-1 bg-sidebar-border" />
-                  </div>
-                ))}
+          {sections.map((section) => (
+            <div key={section.title || "top"}>
+              {section.title && <div className="ws-nav-label">{section.title}</div>}
+              {section.title && <div className="ws-nav-rule" aria-hidden />}
 
-              <div className="space-y-1.5">
               {section.entries.map((item) => {
-                const chip = (on: boolean) => cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition-colors",
-                  on ? "bg-sidebar-primary text-white shadow-md shadow-primary/30" : "bg-sidebar-foreground/[0.05] text-sidebar-foreground/70 group-hover:bg-sidebar-primary/15 group-hover:text-sidebar-primary");
                 if (item.children) {
                   const childActive = item.children.some(isActive);
                   const open = openMenu === undefined ? childActive : openMenu === item.path;
@@ -466,47 +454,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       <button
                         onClick={() => {
                           closeAllDropdowns();
-                          if (collapsed) { setCollapsed(false); setOpenMenu(item.path); return; }
+                          if (collapsed && window.matchMedia("(min-width: 1024px)").matches) { setCollapsed(false); setOpenMenu(item.path); return; }
                           setOpenMenu((prev) => (prev === item.path || (prev === undefined && childActive) ? null : item.path));
                         }}
                         title={collapsed ? item.label : undefined}
                         aria-expanded={open}
-                        className={cn(
-                          "group relative flex w-full items-center gap-2.5 rounded-xl px-1.5 py-1.5 text-[13.5px] font-semibold transition-all duration-200",
-                          childActive ? "bg-sidebar-primary/10 text-sidebar-primary" : "text-sidebar-foreground/80 hover:bg-sidebar-primary/[0.08] hover:text-sidebar-primary",
-                          collapsed && "justify-center px-0",
-                        )}
+                        className={cn("group ws-nav-row is-group", childActive && "has-active")}
                       >
-                        <span className={chip(false)}><item.icon className="h-3.5 w-3.5" /></span>
-                        {!collapsed && (
-                          <>
-                            <span className="flex-1 whitespace-nowrap text-left">{item.label}</span>
-                            {!open && <Badge n={groupBadge} />}
-                            <ChevronDown className={cn("mr-1 h-4 w-4 opacity-60 transition-transform duration-200", open && "rotate-180")} />
-                          </>
-                        )}
+                        <item.icon className="ws-nav-ico" />
+                        <span className="ws-nav-text">{item.label}</span>
+                        {!open && <Count n={groupBadge} tiny={collapsed} />}
+                        {(item as any).locked && <Lock className="ws-lock" aria-label="Module off" />}
+                        <ChevronDown className={cn("ws-caret", open && "rotate-180")} />
                       </button>
-                      {!collapsed && open && (
-                        <div className="mb-2 ml-[10px] mt-1.5 space-y-1 border-l-2 border-sidebar-border pl-1.5 animate-in fade-in-0 slide-in-from-top-1">
+                      {open && (
+                        <div className="ws-nav-sub animate-in fade-in-0 slide-in-from-top-1">
                           {item.children.map((child) => {
-                            const active = !!pageTitle.leaf ? pageTitle.leaf === child : isActive(child);
+                            const active = pageTitle.leaf ? pageTitle.leaf === child : isActive(child);
                             return (
                               <Link
                                 key={child.path}
                                 to={child.path}
                                 data-nav-active={active || undefined}
+                                aria-current={active ? "page" : undefined}
                                 onClick={() => { closeAllDropdowns(); setOpenMenu(item.path); }}
                                 onMouseEnter={() => prefetch(child.path)}
                                 onFocus={() => prefetch(child.path)}
-                                className={cn(
-                                  "group relative flex items-center gap-1.5 rounded-lg px-1.5 py-1.5 text-[12.5px] transition-colors",
-                                  active ? "bg-sidebar-primary/12 font-semibold text-sidebar-primary ring-1 ring-sidebar-primary/15" : "text-sidebar-foreground/70 hover:bg-sidebar-primary/[0.08] hover:text-sidebar-primary",
-                                )}
+                                className={cn("group ws-nav-row is-child", active && "is-active")}
                               >
-                                {active && <span className="absolute -left-[9px] top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-sidebar-primary" />}
-                                <child.icon className="h-4 w-4 shrink-0" />
-                                <span className="flex-1 whitespace-nowrap">{child.label}</span>
-                                <Badge n={badgeFor(child.path)} />
+                                <child.icon className="ws-nav-ico" />
+                                <span className="ws-nav-text">{child.label}</span>
+                                <Count n={badgeFor(child.path)} />
                                 <FavStar on={favs.includes(child.path)} onToggle={() => toggleFav(child.path)} />
                               </Link>
                             );
@@ -522,84 +500,93 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <Link
                     key={item.path}
                     to={item.path}
+                    data-nav-active={active || undefined}
+                    aria-current={active ? "page" : undefined}
                     onClick={() => { closeAllDropdowns(); setOpenMenu(null); }}
                     onMouseEnter={() => prefetch(item.path)}
                     onFocus={() => prefetch(item.path)}
                     title={collapsed ? item.label : undefined}
-                    className={cn(
-                      "group relative flex items-center gap-2.5 rounded-xl px-1.5 py-1.5 text-[13.5px] font-semibold transition-all duration-200",
-                      active ? "bg-sidebar-primary/12 text-sidebar-primary ring-1 ring-sidebar-primary/15" : "text-sidebar-foreground/80 hover:bg-sidebar-primary/[0.08] hover:text-sidebar-primary",
-                      collapsed && "justify-center px-0",
-                    )}
+                    className={cn("group ws-nav-row", active && "is-active")}
                   >
-                    <span className={chip(active)}><item.icon className="h-3.5 w-3.5" /></span>
-                    {!collapsed && <span className={cn("flex-1 whitespace-nowrap", (item as any).locked && "opacity-60")}>{item.label}</span>}
-                    {!collapsed && !(item as any).locked && item.path !== "/dashboard" && <FavStar on={favs.includes(item.path)} onToggle={() => toggleFav(item.path)} />}
-                    {!collapsed && (item as any).locked && <Lock className="mr-1 h-3.5 w-3.5 opacity-50" aria-label="Module off" />}
-                    <Badge n={badgeFor(item.path)} tiny={collapsed} />
+                    <item.icon className="ws-nav-ico" />
+                    <span className={cn("ws-nav-text", (item as any).locked && "opacity-60")}>{item.label}</span>
+                    {!(item as any).locked && item.path !== "/dashboard" && <FavStar on={favs.includes(item.path)} onToggle={() => toggleFav(item.path)} />}
+                    {(item as any).locked && <Lock className="ws-lock" aria-label="Module off" />}
+                    <Count n={badgeFor(item.path)} tiny={collapsed} />
                   </Link>
                 );
               })}
-              </div>
             </div>
           ))}
         </nav>
 
-        <div className={cn("flex shrink-0 items-center gap-2 border-t border-sidebar-border px-2 py-1", collapsed && "justify-center")}>
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="hidden shrink-0 items-center rounded-lg p-1.5 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent lg:flex"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand" : "Collapse"}
-          >
-            <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
+        {/* What's new and Help sit just above the foot, as in JMSURF ISP. */}
+        <div className="ws-side-extra">
+          {SIDE_EXTRA.map(({ path, label, icon: Icon }) => {
+            const active = currentPath === path || currentPath.startsWith(path + "/");
+            return (
+              <Link key={path} to={path} title={collapsed ? label : undefined} aria-current={active ? "page" : undefined}
+                onMouseEnter={() => prefetch(path)} className={cn("group ws-nav-row", active && "is-active")}>
+                <Icon className="ws-nav-ico" /><span className="ws-nav-text">{label}</span>
+              </Link>
+            );
+          })}
+          <div className="ws-side-foot">
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:flex"
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand" : "Collapse"}
+            >
+              <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
             </button>
-          {!collapsed && <PoweredBy className="ml-auto whitespace-nowrap text-right text-[9px] text-sidebar-foreground/45" />}
+            <PoweredBy className="ws-powered ml-auto whitespace-nowrap text-right text-[10px]" />
+          </div>
         </div>
       </aside>
 
       {layout === "dual" && navReady && <DualSidebar {...altNav} />}
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden print:block print:overflow-visible">
-        <header className="glass-bar print:hidden relative z-30 mx-2 mt-2 flex h-14 shrink-0 items-center gap-1 rounded-[22px] border border-border/70 bg-card/95 px-2 shadow-sm backdrop-blur sm:mx-2 sm:mt-2 lg:ml-1.5 lg:mr-2.5 supports-[backdrop-filter]:bg-card/80 sm:h-12 sm:gap-2 sm:px-3 xl:gap-3 xl:px-4">
-          <button onClick={toggleSidebar} className={cn("-ml-1 rounded-lg p-2 hover:bg-muted", layout !== "classic" && "lg:hidden")} aria-label="Menu" title="Menu">
-            <Menu className="h-5 w-5 lg:hidden" />
-            <PanelLeft className="hidden h-5 w-5 lg:block" />
+        {/* Top bar as in JMSURF ISP: flush, 60px, page name, search pill, quiet icon buttons, gear, name and role. */}
+        <header className="ws-top print:hidden">
+          <button onClick={toggleSidebar} className={cn("ws-ib", layout !== "classic" && "lg:hidden")} aria-label="Menu" title="Menu">
+            <Menu className="lg:hidden" />
+            <PanelLeft className="hidden lg:block" />
           </button>
           {layout !== "classic" && (
             <Link to="/dashboard" className="hidden shrink-0 items-center gap-2 lg:flex" title={businessName}>
-              {logoUrl ? <img src={logoUrl} alt="" className="h-9 w-9 rounded-xl bg-white object-contain p-1 ring-1 ring-border" /> : <DashMark className="h-9 w-9" />}
-              <span className="hidden max-w-[11rem] truncate font-display text-sm font-bold 2xl:block">{businessName}</span>
+              {logoUrl ? <img src={logoUrl} alt="" className="h-9 w-9 rounded-[10px] bg-white object-contain p-1 ring-1 ring-border" /> : <DashMark className="h-9 w-9" />}
+              <span className="hidden max-w-[11rem] truncate text-sm font-bold 2xl:block">{businessName}</span>
               <span className="mx-1 h-6 w-px bg-border" />
             </Link>
           )}
-          <div className="min-w-0 flex-1 2xl:max-w-[14rem]">
-            {pageTitle.section && <p className="mb-1 hidden truncate text-[11px] leading-none text-muted-foreground sm:block">{pageTitle.section}</p>}
-            <p className="truncate font-display text-[15px] font-semibold">{pageTitle.title || businessName}</p>
+          <div className="ws-crumb" title={pageTitle.section ? `${pageTitle.section} › ${pageTitle.title}` : undefined}>
+            <b>{pageTitle.title || businessName}</b>
           </div>
-          <button onClick={() => setFindOpen(true)} className="mx-auto hidden h-11 min-w-0 max-w-xl flex-[2] items-center gap-2.5 rounded-2xl border border-white/70 bg-white/55 px-4 text-left text-sm text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,.9),0_6px_18px_-12px_rgba(30,40,80,.35)] backdrop-blur transition hover:border-primary/30 hover:text-foreground dark:border-white/10 dark:bg-white/5 2xl:flex" aria-label="Search">
-            <Search className="h-4 w-4 shrink-0" /><span className="flex-1 truncate">Search customers, invoices, items, orders…</span>
-            <kbd className="rounded-md border border-border bg-card/70 px-1.5 text-[10px] font-semibold">Ctrl K</kbd>
+          <button onClick={() => setFindOpen(true)} className="ws-search hidden lg:flex" aria-label="Search">
+            <Search /><span>Search or jump to…</span><kbd>Ctrl K</kbd>
           </button>
-          <button onClick={() => setFindOpen(true)} className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground 2xl:hidden" aria-label="Quick find">
-            <Search className="h-5 w-5" />
+          <button onClick={() => setFindOpen(true)} className="ws-ib ml-auto lg:hidden" aria-label="Quick find">
+            <Search />
           </button>
-          <BranchSwitcher />
-          <CompanySwitcher />
-          <QuickCreate canPos={currentPath !== "/pos" && hasModule("pos")} />
-          <DashAILauncher />
-          <span className="hidden sm:contents"><NotebookLauncher /></span>
-          {modulesReady && hasModule("callcentre") && <PhoneButton />}
-          <button onClick={toggleDarkMode} className="hidden rounded-full p-2 text-muted-foreground xl:block hover:bg-muted hover:text-foreground" aria-label={darkMode ? "Light mode" : "Dark mode"} title={darkMode ? "Light mode" : "Dark mode"}>
-            {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </button>
-            <NotificationBell makePath={(p: string) => p} />
-          {allowed("/settings") && (
-            <button onClick={() => navigate("/settings")} aria-label="Settings" title="Settings"
-              className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br md:flex from-primary to-[#5b0a10] text-white shadow-md shadow-primary/30 transition-transform hover:rotate-45 hover:scale-105">
-              <SettingsIcon className="h-[18px] w-[18px]" />
+          <div className="ws-acts">
+            <BranchSwitcher />
+            <CompanySwitcher />
+            <QuickCreate canPos={currentPath !== "/pos" && hasModule("pos")} />
+            <DashAILauncher />
+            <span className="hidden sm:contents"><NotebookLauncher /></span>
+            {modulesReady && hasModule("callcentre") && <PhoneButton />}
+            <button onClick={toggleDarkMode} className="ws-ib hidden xl:grid" aria-label={darkMode ? "Light mode" : "Dark mode"} title={darkMode ? "Light mode" : "Dark mode"}>
+              {darkMode ? <Sun /> : <Moon />}
             </button>
-          )}
-          <div className="shrink-0"><UserProfileMenu variant="default" settings={allowed("/settings")} help darkMode={darkMode} onToggleDark={toggleDarkMode} /></div>
+            <NotificationBell makePath={(p: string) => p} />
+            {allowed("/settings") && (
+              <button onClick={() => navigate("/settings")} aria-label="Settings" title="Settings" className="ws-gear hidden md:grid">
+                <SettingsIcon />
+              </button>
+            )}
+            <div className="ws-user"><UserProfileMenu variant="default" settings={allowed("/settings")} help darkMode={darkMode} onToggleDark={toggleDarkMode} /></div>
+          </div>
         </header>
 
         {layout === "top" && navReady && <TopMenu {...altNav} />}
@@ -616,9 +603,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <button onClick={async () => { await (supabase as any).rpc("switch_company", { p_tenant: tenant.id }); window.location.reload(); }} className="ml-auto rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">Continue here</button>
           </div>
         )}
-        <main ref={mainRef} className={cn("erp-main relative isolate print:overflow-visible print:p-0 flex-1 overflow-y-auto overflow-x-hidden p-2 lg:pb-1.5 lg:pl-1.5 lg:pr-2.5 lg:pt-2.5", primary.length ? "pb-[calc(84px+env(safe-area-inset-bottom))] md:pb-2" : "pb-2", layout === "bottom" && "lg:pb-28")}>
-          {/* The landing page's drifting orbs, softly behind every screen. */}
-          <Orbs intensity="subtle" className="fixed -z-10 print:hidden" />
+        {/* Page frame as in JMSURF ISP (14px 20px 10px 16px on computers). The till keeps its own sizing (no .erp-rhythm). */}
+        <main ref={mainRef} className={cn("erp-main relative isolate print:overflow-visible print:p-0 flex-1 overflow-y-auto overflow-x-hidden p-3 lg:pl-4 lg:pr-5 lg:pt-3.5", currentPath !== "/pos" && "erp-rhythm", primary.length ? "pb-[calc(84px+env(safe-area-inset-bottom))] md:pb-3" : "pb-3", "lg:pb-2.5", layout === "bottom" && "lg:pb-28")}>
           <div key={pageKey} className="ft-page-in">{(() => {
             const suite = suiteForPath(currentPath);
             return suite && modulesReady && !hasModule(suite) ? <SuiteOff suite={suite} canSwitch={isAdmin} /> : children;
