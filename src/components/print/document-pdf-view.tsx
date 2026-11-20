@@ -6,7 +6,8 @@ import { downloadDocumentPdf, loadDocModel, type DocumentKind } from "@/lib/docM
 import { OrbSpinner } from "@/components/orbs";
 import { DocPaper } from "@/components/print/doc-paper";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogTitle } from "@/components/ui/dialog";
+import { SideDialogContent as DialogContent } from "@/components/kit";
 
 export function useDocModel(kind: DocumentKind, id: string | null | undefined, version = "") {
   return useQuery({
@@ -79,7 +80,7 @@ export function DocumentPreviewDialog({ kind, id, open, onOpenChange, title }: {
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[94vh] w-[calc(100vw-1rem)] max-w-[880px] overflow-y-auto p-3 sm:p-5">
+      <DialogContent className="p-3 sm:w-[min(920px,100vw)] sm:p-5">
         <DialogTitle className="pr-8 text-base">{title ?? "Document preview"}</DialogTitle>
         {id && <DocumentPreview kind={kind} id={id} />}
       </DialogContent>

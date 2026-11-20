@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, Camera, ChevronLeft, ChevronRight, Droplet, FileText, Paintbrush, Pencil, Plus, Receipt, Settings2, Wrench } from "lucide-react";
-import { EmptyState, PageHeader, PageLoader, Panel } from "@/components/kit";
+import { EmptyState, PageHeader, PageLoader, Panel, MoreMenu } from "@/components/kit";
 import DocumentsPanel from "@/components/DocumentsPanel";
 import { fmtMoney } from "@/apps/format";
 import { useTenantId } from "@/hooks/useTenantId";
@@ -133,7 +133,7 @@ function Job() {
   return (
     <div className="space-y-3">
       <PageHeader title={`${job.number || ""} ${job.data?.plate || job.title}`} icon={Paintbrush} actions={<>
-        <Link to={`/apps/body_paint/bp_job?open=${job.id}`} className={btn}><Pencil className="h-4 w-4" /> Edit details</Link>
+        <MoreMenu items={[{ label: "Edit details", icon: Pencil, to: `/apps/body_paint/bp_job?open=${job.id}` }]} />
         <button className={btnPrimary} disabled={!dirty || !!busy} onClick={save}>Save</button>
       </>} />
       <StageBar stages={BP_STAGES} value={job.stage} onChange={(s) => void run("st", async () => { await moveStage(job, s.key, s.label); refresh("body_paint", job.id); })} />

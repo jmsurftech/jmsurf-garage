@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, Link2, Send, Loader2, QrCode } from "lucide-react";
-import { PageHeader, Panel, Segmented, Modal, Field, StatusPill } from "@/components/kit";
+import { PageHeader, Panel, Segmented, Modal, Field, StatusPill, MoreMenu, btnPrimaryCls } from "@/components/kit";
 import { useToast } from "@/hooks/use-toast";
 import { useTenantId } from "@/hooks/useTenantId";
 import { useTenant } from "@/hooks/useTenant";
@@ -114,11 +114,11 @@ export default function Bookings() {
   return (
     <div className="space-y-3">
       <PageHeader title="Bookings" icon={CalendarDays} actions={<>
-        {settings?.booking_enabled && link && <>
-          <button type="button" onClick={() => { void navigator.clipboard?.writeText(link); toast({ title: "Booking link copied" }); }} className="inline-flex h-9 items-center gap-1 rounded-xl border border-border px-3 text-sm"><Link2 className="h-4 w-4" />Booking link</button>
-          <button type="button" onClick={showQr} className="inline-flex h-9 items-center gap-1 rounded-xl border border-border px-3 text-sm"><QrCode className="h-4 w-4" />QR code</button>
-        </>}
-        <button type="button" onClick={() => newAt()} className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground"><Plus className="h-4 w-4" />New booking</button>
+        <MoreMenu items={[
+          { label: "Copy booking link", icon: Link2, hidden: !(settings?.booking_enabled && link), onSelect: () => { void navigator.clipboard?.writeText(link || ""); toast({ title: "Booking link copied" }); } },
+          { label: "Booking QR code", icon: QrCode, hidden: !(settings?.booking_enabled && link), onSelect: () => void showQr() },
+        ]} />
+        <button type="button" onClick={() => newAt()} className={btnPrimaryCls}><Plus className="h-4 w-4" />New booking</button>
       </>} />
       {!settings?.booking_enabled && <p className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs">Online booking is off. Switch it on in <button type="button" className="font-semibold text-primary" onClick={() => go("/garage/settings")}>Workshop settings</button> to get a booking link and QR code for your customers.</p>}
 

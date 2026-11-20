@@ -1,3 +1,4 @@
+import "@/styles/clean.css";
 import CustomerStatement from "@/components/CustomerStatement";
 import { PageHeader, PageLoader } from "@/components/kit";
 import { useState, useMemo } from "react";
@@ -212,7 +213,7 @@ function RecordPaymentModal({ customer, creditTransactions, onClose }: { custome
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-foreground/40 side-pop flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-card rounded-2xl w-full max-w-md max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="font-display font-bold text-lg">Record Credit Payment</h2>
@@ -328,7 +329,7 @@ function AddCreditCustomerForm({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-foreground/40 side-pop flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-card rounded-2xl w-full max-w-md max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="font-display font-bold text-lg">Add Credit Customer</h2>

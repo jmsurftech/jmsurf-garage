@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Car, Download, FileSignature, FileText, Pencil, Receipt, Send, ShieldCheck, Wrench, BellRing, Plus } from "lucide-react";
+import { Car, Download, FileSignature, FileText, Pencil, Receipt, Send, ShieldCheck, Wrench, BellRing, Plus, List } from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader, PageLoader, Panel, Segmented, EmptyState } from "@/components/kit";
+import { PageHeader, PageLoader, Panel, Segmented, EmptyState, MoreMenu } from "@/components/kit";
 import DocumentsPanel from "@/components/DocumentsPanel";
 import { SignaturePad } from "@/apps/fields";
 import { fmtMoney } from "@/apps/format";
@@ -235,8 +235,7 @@ function ClaimFileInner() {
     <div className="space-y-3">
       <PageHeader title={`${claim.number || "Claim"} · ${claim.title}`} icon={ShieldCheck}
         actions={<>
-          <Link to={`/apps/insurance/claim?open=${claim.id}`} className={btn}><Pencil className="h-4 w-4" /> Edit details</Link>
-          <Link to="/garage/insurance" className={btn}>All claims</Link>
+          <MoreMenu items={[{ label: "Edit details", icon: Pencil, to: `/apps/insurance/claim?open=${claim.id}` }, { label: "All claims", icon: List, to: "/garage/insurance", separator: true }]} />
         </>} />
       <StageBar stages={CLAIM_STAGES} value={claim.stage} onChange={(s) => void run("stage", async () => { await moveStage(claim, s.key, s.label); refresh("insurance", claim.id); })} />
       <Panel>

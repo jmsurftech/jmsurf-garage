@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Anchor, Calculator, ClipboardList, Download, FileText, PackageCheck, Pencil, Save, Ship } from "lucide-react";
-import { EmptyState, PageHeader, PageLoader, Panel, Segmented } from "@/components/kit";
+import { AlertTriangle, Anchor, Calculator, ClipboardList, Download, FileText, PackageCheck, Pencil, Save, Ship, List } from "lucide-react";
+import { EmptyState, PageHeader, PageLoader, Panel, Segmented, MoreMenu } from "@/components/kit";
 import DocumentsPanel from "@/components/DocumentsPanel";
 import { Picker } from "@/apps/fields";
 import { fmtMoney } from "@/apps/format";
@@ -169,8 +169,7 @@ function Inner() {
   return (
     <div className="space-y-3">
       <PageHeader title={`${rec.number || ""} ${rec.title}`} icon={Ship} actions={<>
-        <Link to={`/apps/imports/shipment?open=${rec.id}`} className={btn}><Pencil className="h-4 w-4" /> Edit details</Link>
-        <Link to="/garage/imports" className={btn}>Imports</Link>
+        <MoreMenu items={[{ label: "Edit details", icon: Pencil, to: `/apps/imports/shipment?open=${rec.id}` }, { label: "All imports", icon: List, to: "/garage/imports", separator: true }]} />
       </>} />
       <StageBar stages={SHIPMENT_STAGES} value={rec.stage} onChange={(s) => void run("st", async () => { await moveStage(rec, s.key, s.label); if (s.key === "at_port" && !rec.data?.arrived) await patchRec(rec.id, { data: { arrived: today() } }); refresh("imports", rec.id); })} />
       {warn && (

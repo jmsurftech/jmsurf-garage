@@ -60,21 +60,13 @@ export function DashCard({ title, action, children, className, icon: Icon }: { t
   );
 }
 
-/** The period: pills, or a dropdown where there is no room for them. */
+/** The period: one dropdown, never a row of buttons. */
 export function Periods({ preset, onPreset }: { preset: string; onPreset: (key: string) => void }) {
   return (
-    <>
-      <select value={preset} onChange={(e) => onPreset(e.target.value)} className="fi h-8 w-auto text-xs font-medium sm:hidden" aria-label="Period">
-        {PRESETS.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
-        {!PRESETS.some((x) => x.key === preset) && <option value={preset}>Custom dates</option>}
-      </select>
-      <div className="hidden items-center gap-0.5 rounded-lg bg-muted p-0.5 sm:flex" role="group" aria-label="Period">
-        {PRESETS.map((x) => (
-          <button key={x.key} onClick={() => onPreset(x.key)} aria-pressed={preset === x.key}
-            className={cn("whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-colors", preset === x.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>{x.label}</button>
-        ))}
-      </div>
-    </>
+    <select value={preset} onChange={(e) => onPreset(e.target.value)} className="fi h-8 w-auto text-xs font-medium" aria-label="Period">
+      {PRESETS.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
+      {!PRESETS.some((x) => x.key === preset) && <option value={preset}>Custom dates</option>}
+    </select>
   );
 }
 

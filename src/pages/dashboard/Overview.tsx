@@ -1,15 +1,17 @@
 /**
- * Overview: four key figures across the top, the sales line with what needs doing beside it,
- * then who and what sold, the year's money and the stock that is running low.
+ * Overview, in the JMSURF Apex order: ONE strip of key figures (the garage's day first, then the
+ * money), then what needs attention, then the charts. Nothing is shown twice.
  */
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip } from "recharts";
 import {
   ArrowDown, ArrowDownLeft, ArrowRight, ArrowUp, ArrowUpRight, BadgeCheck, Bell, Boxes, CircleCheck, Clock, CreditCard,
-  Globe, Landmark, ListChecks, PackageMinus, PieChart, Receipt, ShoppingBag, TrendingUp, Trophy, Wallet,
+  Globe, Landmark, ListChecks, PackageMinus, PieChart, Receipt, ShoppingBag, TrendingUp, Trophy, Wallet, Car, CheckCircle2, Smartphone,
 } from "lucide-react";
 import { useModules } from "@/hooks/useModules";
+import { tenantPath } from "@/lib/host";
+import { garageAttention, type GarageToday } from "@/garage/workshop/components/DashboardPanel";
 import { OrbSpinner } from "@/components/orbs";
 import { formatKES } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -32,21 +34,21 @@ const TONE: Record<Tone, string> = {
   destructive: "bg-destructive/10 text-destructive",
 };
 
-/** One key figure: a coloured icon, the amount, and one line under it. */
+/** One key figure in the strip (kpi-cell): label with a small icon, the amount, one short line. */
 function Kpi({ label, value, sub, subTone, to, icon: Icon, tone, danger }: {
   label: string; value?: string; sub?: React.ReactNode; subTone?: "bad" | "good"; to: string;
   icon: React.ComponentType<{ className?: string }>; tone: Tone; danger?: boolean;
 }) {
   return (
-    <Link to={to} className="group flex min-w-0 flex-col gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-[0_1px_2px_rgba(16,24,40,.04),0_8px_24px_-16px_rgba(16,24,40,.12)] transition-all hover:-translate-y-0.5 hover:border-primary/30 sm:p-5 max-sm:p-3.5" style={{ containerType: "inline-size" }}>
-      <span className="flex items-center gap-2.5">
-        <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", TONE[tone])}><Icon className="h-4 w-4" /></span>
-        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-muted-foreground">{label}</span>
-        <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground" />
+    <Link to={to} className="kpi-cell group flex min-w-0 flex-col justify-center gap-1 rounded-2xl border border-border/70 bg-card px-3 py-2 transition-colors hover:border-primary/30">
+      <span className="flex items-center gap-1.5">
+        <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-md", TONE[tone])}><Icon className="h-3 w-3" /></span>
+        <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium text-muted-foreground">{label}</span>
+        <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground" />
       </span>
-      {value === undefined ? <span className="block h-7 w-32 animate-pulse rounded-md bg-muted" />
-        : <span className={cn("block truncate font-display font-bold leading-none tracking-tight tabular-nums", danger && "text-destructive")} style={{ fontSize: "clamp(0.95rem, 10.5cqi, 1.45rem)" }} title={value}>{value}</span>}
-      <span className={cn("block truncate text-xs", subTone === "bad" ? "text-destructive" : subTone === "good" ? "text-success" : "text-muted-foreground")}>{sub || " "}</span>
+      {value === undefined ? <span className="block h-5 w-24 animate-pulse rounded-md bg-muted" />
+        : <span className={cn("block truncate whitespace-nowrap font-display text-[17px] font-bold leading-tight tracking-tight tabular-nums", danger && "text-destructive")} title={value}>{value}</span>}
+      <span className={cn("block truncate text-[11px]", subTone === "bad" ? "text-destructive" : subTone === "good" ? "text-success" : "text-muted-foreground")}>{sub || " "}</span>
     </Link>
   );
 }
@@ -84,10 +86,15 @@ export interface OverviewProps {
   year: number;
   onSales: () => void;
   onMoney: () => void;
+  /** Today's garage figures (useGarageToday); left out for a business without the workshop. */
+  garage?: GarageToday | null;
 }
 
-export default function Overview({ lines, loading, fetching, from, to, preset, onPreset, prevRevenue, home, books: b, year, onSales, onMoney }: OverviewProps) {
+export default function Overview({ lines, loading, fetching, from, to, preset, onPreset, prevRevenue, home, books: b, year, onSales, onMoney, garage }: OverviewProps) {
   const { has } = useModules();
+  const { slug } = useParams<{ slug: string }>();
+  const g = garage?.ok ? garage : null;
+  const garageNotes = garageAttention(g);
   const today = iso(new Date());
   const [rank, setRank] = useState<"items" | "customers">("items");
   const revenue = useMemo(() => lines.reduce((a, l) => a + l.revenue, 0), [lines]);
@@ -140,13 +147,19 @@ export default function Overview({ lines, loading, fetching, from, to, preset, o
   if (lowStock) notes.push({ to: "/warehouse/reorder", text: `${plural(lowStock, "item")} to reorder`, icon: PackageMinus, tone: "warning" });
   if (home?.reminders_due) notes.push({ to: "/sales/reminders", text: `${plural(home.reminders_due, "reminder")} due`, icon: Bell, tone: "info" });
   if (has("ecommerce") && home?.web_orders) notes.push({ to: "/sales/online-orders", text: `${plural(home.web_orders, "web order")} open`, icon: Globe, tone: "info" });
-  const todo = (home?.overdue_list.length || 0) + (home?.bills_due.length || 0) + notes.length;
+  const todo = (home?.overdue_list.length || 0) + (home?.bills_due.length || 0) + notes.length + garageNotes.length;
   const count = (n: number) => <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">{n}</span>;
 
   return (
     <div className="space-y-4">
-      {/* Key figures */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+      {/* Key figures: one strip */}
+      <div className={cn("grid grid-cols-2 gap-2", g ? "sm:grid-cols-4 2xl:grid-cols-8" : "lg:grid-cols-4")}>
+        {g && <>
+          <Kpi label="Sales today" icon={Wallet} tone="success" to="/sales/invoices" value={formatKES(g.invoiced)} sub="Invoices issued today" />
+          <Kpi label="M-Pesa today" icon={Smartphone} tone="success" to="/sales/payments" value={formatKES(g.mpesa)} sub="Received today" />
+          <Kpi label="Cars in" icon={Car} tone="primary" to={tenantPath(slug, "/garage")} value={String(g.open)} sub={`${plural(g.bookingsToday, "booking")} today`} />
+          <Kpi label="Ready" icon={CheckCircle2} tone="success" to={tenantPath(slug, "/garage/jobs?view=ready")} value={String(g.ready)} sub={g.ready ? "Call to collect" : "None waiting"} />
+        </>}
         <Kpi label="To collect" icon={ArrowDownLeft} tone="success" to="/sales/invoices"
           value={b ? formatKES(Number(b.receivables.total)) : undefined}
           sub={b && (late(b.receivables) > 0 ? `${formatKES(late(b.receivables))} overdue` : "Nothing overdue")} subTone={b && late(b.receivables) > 0 ? "bad" : undefined} />
@@ -159,8 +172,31 @@ export default function Overview({ lines, loading, fetching, from, to, preset, o
           value={b ? formatKES(profit) : undefined} sub={b && `${formatKES(income)} income`} />
       </div>
 
-      {/* Sales and to do */}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      {/* What needs attention first, then the sales chart */}
+      <div className="grid gap-4 xl:grid-cols-[22rem_minmax(0,1fr)]">
+        <DashCard title="Needs attention" icon={ListChecks} className="xl:h-0 xl:min-h-full" action={todo > 0 ? count(todo) : undefined}>
+          {!home && !garageNotes.length ? <div className="h-48 animate-pulse rounded-xl bg-muted/50" /> : todo === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 py-10 text-center">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-success/10"><CircleCheck className="h-5 w-5 text-success" /></span>
+              <p className="text-sm font-medium">All clear</p>
+              <p className="text-xs text-muted-foreground">Nothing late or waiting on you.</p>
+            </div>
+          ) : (
+            <div className="-mx-2 max-h-80 min-h-0 flex-1 overflow-y-auto overscroll-contain xl:max-h-none">
+              {garageNotes.map((n) => <TodoRow key={n.key} to={tenantPath(slug, n.to)} icon={n.icon} tone={n.tone} title={n.title} sub={n.sub} />)}
+              {notes.map((n) => <TodoRow key={n.to} to={n.to} icon={n.icon} tone={n.tone} title={n.text} />)}
+              {home?.overdue_list.map((x) => (
+                <TodoRow key={x.invoice_id} to={`/sales/invoices/${x.invoice_id}`} icon={Clock} tone="destructive" title={x.customer_name}
+                  sub={`Collect · ${x.days_overdue} days late`} amount={formatKES(Number(x.balance))} amountTone="text-destructive" />
+              ))}
+              {home?.bills_due.map((x) => (
+                <TodoRow key={x.id} to={`/purchases/bills/${x.id}`} icon={CreditCard} tone="warning" title={x.bill_number || "Bill"}
+                  sub={`Pay · ${x.due_date < today ? "was due" : "due"} ${day(x.due_date)}`} amount={formatKES(Number(x.amount) - Number(x.amount_paid || 0))} />
+              ))}
+            </div>
+          )}
+        </DashCard>
+
         <section className="flex min-w-0 flex-col rounded-2xl border border-border/70 bg-card shadow-[0_1px_2px_rgba(16,24,40,.04),0_8px_24px_-16px_rgba(16,24,40,.12)]">
           <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5">
             <div className="min-w-0">
@@ -195,28 +231,6 @@ export default function Overview({ lines, loading, fetching, from, to, preset, o
             ))}
           </dl>
         </section>
-
-        <DashCard title="Needs attention" icon={ListChecks} className="xl:h-0 xl:min-h-full" action={todo > 0 ? count(todo) : undefined}>
-          {!home ? <div className="h-48 animate-pulse rounded-xl bg-muted/50" /> : todo === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-2 py-10 text-center">
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-success/10"><CircleCheck className="h-5 w-5 text-success" /></span>
-              <p className="text-sm font-medium">All clear</p>
-              <p className="text-xs text-muted-foreground">Nothing overdue or waiting on you.</p>
-            </div>
-          ) : (
-            <div className="-mx-2 max-h-80 min-h-0 flex-1 overflow-y-auto overscroll-contain xl:max-h-none">
-              {notes.map((n) => <TodoRow key={n.to} to={n.to} icon={n.icon} tone={n.tone} title={n.text} />)}
-              {home.overdue_list.map((x) => (
-                <TodoRow key={x.invoice_id} to={`/sales/invoices/${x.invoice_id}`} icon={Clock} tone="destructive" title={x.customer_name}
-                  sub={`Collect · ${x.days_overdue} days late`} amount={formatKES(Number(x.balance))} amountTone="text-destructive" />
-              ))}
-              {home.bills_due.map((x) => (
-                <TodoRow key={x.id} to={`/purchases/bills/${x.id}`} icon={CreditCard} tone="warning" title={x.bill_number || "Bill"}
-                  sub={`Pay · ${x.due_date < today ? "was due" : "due"} ${day(x.due_date)}`} amount={formatKES(Number(x.amount) - Number(x.amount_paid || 0))} />
-              ))}
-            </div>
-          )}
-        </DashCard>
       </div>
 
       {/* Best sellers, latest, income vs expenses */}

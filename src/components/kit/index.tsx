@@ -2,17 +2,26 @@
  * Shared page kit: the building blocks every screen uses so headers, filters,
  * panels, tables, forms and pop-ups look and behave the same everywhere.
  */
-import { useEffect, useState, type ReactNode } from "react";
+import { forwardRef, useEffect, useState, type ComponentPropsWithoutRef, type ElementRef, type ReactNode } from "react";
 import { closeAllDropdowns as __closeDropdowns } from "@/lib/singleDropdown";
 import { createPortal } from "react-dom";
+import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { tabTitle } from "@/lib/brand";
-import { Search, X, type LucideIcon, Info } from "lucide-react";
+import { Search, X, type LucideIcon, Info, MoreHorizontal, Download, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OrbLoader } from "@/components/Orb";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import "@/styles/clean.css";
 
 /* ------------------------------------------------------------------ header */
 
+/**
+ * The page title row: ONE line, title on the left, actions on the right, and it stays at the
+ * top while the page scrolls. No subtitles: `description` is accepted for old callers and not shown.
+ * Keep one primary action; put the rest in <MoreMenu> and exports in <ExportMenu>.
+ */
 export function PageHeader({
   title, icon: Icon, actions, children, className,
 }: {
@@ -25,19 +34,119 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <header className={cn("space-y-3", className)}>
+    <header className={cn("page-head space-y-2", className)}>
       {typeof title === "string" && <Helmet><title>{tabTitle(title)}</title></Helmet>}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-h-9 items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           {Icon && <span className="g-tile xs hidden sm:inline-flex"><Icon className="h-4 w-4" /></span>}
-          <div className="min-w-0">
-            <h1 className="truncate font-display text-[1.1rem] font-bold leading-tight tracking-tight">{title}</h1>
-          </div>
+          <h1 className="min-w-0 truncate font-display text-[1.1rem] font-bold leading-tight tracking-tight">{title}</h1>
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-2 sm:justify-end">{actions}</div>}
+        {actions && <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">{actions}</div>}
       </div>
       {children}
     </header>
+  );
+}
+
+/* ------------------------------------------------------------- buttons */
+
+/** Button looks shared by page actions, so every page has the same two kinds. */
+export const btnCls = "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-border bg-card px-3 text-sm font-medium hover:bg-muted disabled:opacity-50";
+export const btnPrimaryCls = "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-50";
+
+export interface MenuAction {
+  label: ReactNode;
+  icon?: LucideIcon;
+  onSelect?: () => void;
+  /** In-app link (react-router). */
+  to?: string;
+  /** Plain link, e.g. a page that opens in a new tab. */
+  href?: string;
+  newTab?: boolean;
+  danger?: boolean;
+  disabled?: boolean;
+  hidden?: boolean;
+  /** Draws a line above this entry. */
+  separator?: boolean;
+  /** Small heading above this entry. */
+  group?: string;
+}
+
+function MenuItems({ items }: { items: MenuAction[] }) {
+  const shown = items.filter((i) => !i.hidden);
+  return (
+    <>
+      {shown.map((a, i) => {
+        const inner = <>{a.icon && <a.icon className="mr-2 h-4 w-4 shrink-0" />}<span className="truncate">{a.label}</span></>;
+        const cls = cn("rounded-lg", a.danger && "text-destructive focus:text-destructive");
+        return (
+          <div key={i}>
+            {(a.separator || a.group) && i > 0 && <DropdownMenuSeparator />}
+            {a.group && <DropdownMenuLabel className="px-2 pb-0.5 pt-1 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">{a.group}</DropdownMenuLabel>}
+            {a.to ? <DropdownMenuItem asChild disabled={a.disabled} className={cls}><Link to={a.to}>{inner}</Link></DropdownMenuItem>
+              : a.href ? <DropdownMenuItem asChild disabled={a.disabled} className={cls}><a href={a.href} target={a.newTab ? "_blank" : undefined} rel={a.newTab ? "noopener noreferrer" : undefined}>{inner}</a></DropdownMenuItem>
+                : <DropdownMenuItem disabled={a.disabled} onSelect={() => a.onSelect?.()} className={cls}>{inner}</DropdownMenuItem>}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+/** "⋯ More": the page's secondary actions in one menu. Renders nothing when every entry is hidden. */
+export function MoreMenu({ items, label = "More", iconOnly, className, align = "end" }: { items: MenuAction[]; label?: string; iconOnly?: boolean; className?: string; align?: "start" | "end" }) {
+  if (!items.some((i) => !i.hidden)) return null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button type="button" className={cn(btnCls, iconOnly && "w-9 px-0", className)} aria-label={label} title={label}>
+          <MoreHorizontal className="h-4 w-4" />{!iconOnly && <span className="hidden sm:inline">{label}</span>}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={align} className="max-h-[70vh] min-w-52 max-w-[min(20rem,92vw)] overflow-y-auto"><MenuItems items={items} /></DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** "Export": downloads and prints in one menu. */
+export function ExportMenu({ items, className }: { items: MenuAction[]; className?: string }) {
+  if (!items.some((i) => !i.hidden)) return null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button type="button" className={cn(btnCls, className)} aria-label="Export">
+          <Download className="h-4 w-4" /><span className="hidden sm:inline">Export</span><ChevronDown className="hidden h-3.5 w-3.5 opacity-60 sm:inline" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-44"><MenuItems items={items} /></DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** A period or view picker as one dropdown instead of a row of buttons. */
+export function PickMenu<T extends string>({ value, onChange, options, className, ariaLabel }: {
+  value: T; onChange: (v: T) => void; options: { value: T; label: string; count?: number }[]; className?: string; ariaLabel?: string;
+}) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value as T)} aria-label={ariaLabel} className={cn("fi h-9 w-auto text-sm font-medium", className)}>
+      {options.map((o) => <option key={o.value} value={o.value}>{o.label}{o.count !== undefined ? ` (${o.count})` : ""}</option>)}
+      {!options.some((o) => o.value === value) && <option value={value}>Custom dates</option>}
+    </select>
+  );
+}
+
+/** Underlined tabs for a record page; scrolls sideways on phones instead of wrapping. */
+export function LineTabs<T extends string>({ value, onChange, options, className }: {
+  value: T; onChange: (v: T) => void; options: { value: T; label: ReactNode; count?: number; hidden?: boolean }[]; className?: string;
+}) {
+  return (
+    <div role="tablist" className={cn("clean-tabs", className)}>
+      {options.filter((o) => !o.hidden).map((o) => (
+        <button key={o.value} type="button" role="tab" aria-selected={value === o.value} onClick={() => onChange(o.value)}>
+          {o.label}{o.count ? <span className="tab-count">{o.count}</span> : null}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -121,7 +230,7 @@ export function Panel({
                 {title && <h2 className="truncate font-display text-sm font-bold">{title}</h2>}
                 {description && <button type="button" onClick={() => setWhy(!why)} aria-expanded={why} aria-label="About this section" title={typeof description === "string" ? description : undefined} className="shrink-0 rounded-full p-0.5 text-muted-foreground/70 hover:text-foreground"><Info className="h-3.5 w-3.5" /></button>}
               </div>
-              {description && why && <p className="text-xs text-muted-foreground">{description}</p>}
+              {description && why && <p className="truncate text-xs text-muted-foreground">{description}</p>}
             </div>
           </div>
           {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
@@ -144,8 +253,12 @@ const TILE: Record<string, string> = {
   danger: "hsl(var(--destructive))", info: "hsl(var(--info))", muted: "hsl(var(--muted-foreground))",
 };
 
+/**
+ * One key figure. Tiles carry `kpi-cell`, so a grid of them is drawn as one divided strip
+ * (about 80px tall). `to` makes the tile a link to the list behind the figure.
+ */
 export function StatTile({
-  label, value, hint, icon: Icon, tone = "primary", className,
+  label, value, hint, icon: Icon, tone = "primary", className, to,
 }: {
   label: ReactNode;
   value: ReactNode;
@@ -153,6 +266,7 @@ export function StatTile({
   icon?: LucideIcon;
   tone?: "primary" | "success" | "warning" | "danger" | "info" | "muted";
   className?: string;
+  to?: string;
 }) {
   const tones: Record<string, string> = {
     primary: "bg-primary text-primary-foreground shadow-md shadow-primary/30",
@@ -171,16 +285,18 @@ export function StatTile({
     muted: "from-muted via-card to-card border-border",
   };
   void tones; void cards;
-  return (
-    <div data-reveal className={cn("group relative flex items-center gap-2 overflow-hidden rounded-2xl border border-border bg-card px-2.5 py-1.5", className)}>
+  const cls = cn("kpi-cell group relative flex items-center gap-2 overflow-hidden rounded-2xl border border-border bg-card px-2.5 py-1.5", to && "transition-colors hover:border-primary/40", className);
+  const body = (
+    <>
       {Icon && <span className="g-tile xs" style={{ ["--tile" as any]: TILE[tone] }}><Icon className="h-3.5 w-3.5" /></span>}
       <div className="min-w-0 flex-1">
       <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
       <p className="overflow-hidden text-ellipsis whitespace-nowrap font-display text-[15px] font-bold leading-tight tabular-nums" title={typeof value === "string" || typeof value === "number" ? String(value) : undefined}>{value}</p>
       {hint && <p className="truncate text-[10px] text-muted-foreground">{hint}</p>}
       </div>
-    </div>
+    </>
   );
+  return to ? <Link to={to} data-reveal className={cls}>{body}</Link> : <div data-reveal className={cls}>{body}</div>;
 }
 
 export function StatGrid({ children, className }: { children: ReactNode; className?: string }) {
@@ -193,15 +309,15 @@ export function EmptyState({
   icon: Icon, title, description, action, className,
 }: { icon?: LucideIcon; title: ReactNode; description?: ReactNode; action?: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center px-6 py-14 text-center", className)}>
+    <div className={cn("flex flex-col items-center justify-center px-6 py-10 text-center", className)}>
       {Icon && (
-        <span className="g-tile mb-3 h-14 w-14" style={{ ["--tile" as any]: "hsl(var(--muted-foreground))" }}>
-          <Icon className="h-6 w-6" />
+        <span className="g-tile mb-2.5 h-11 w-11" style={{ ["--tile" as any]: "hsl(var(--muted-foreground))" }}>
+          <Icon className="h-5 w-5" />
         </span>
       )}
       <p className="font-semibold">{title}</p>
       {description && <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>}
-      {action && <div className="mt-4">{action}</div>}
+      {action && <div className="mt-3">{action}</div>}
     </div>
   );
 }
@@ -338,4 +454,100 @@ export function StatusPill({ status, className }: { status?: string | null; clas
           : "muted";
   const label = s ? s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()) : "—";
   return <Pill tone={tone} className={className}>{label}</Pill>;
+}
+
+/* ------------------------------------------------------- side dialog */
+
+/**
+ * Drop-in for the ui `DialogContent`: the same Radix dialog, but it slides in from the RIGHT as a
+ * side panel (a bottom sheet on phones), like every other pop-up. Use `center` only for
+ * confirm / alert boxes.
+ */
+export const SideDialogContent = forwardRef<
+  ElementRef<typeof DialogPrimitive.Content>,
+  ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { center?: boolean }
+>(({ className, children, center, ...props }, ref) => (
+  <DialogPrimitive.Portal>
+    <DialogPrimitive.Overlay className="fixed inset-0 z-[95] bg-black/45 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed z-[95] grid content-start gap-4 overflow-y-auto border border-border bg-card p-5 text-card-foreground shadow-2xl duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        center
+          ? "left-1/2 top-1/2 max-h-[92svh] w-[calc(100%-1rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-3xl data-[state=open]:zoom-in-95"
+          : "inset-x-0 bottom-0 max-h-[92svh] w-full rounded-t-3xl data-[state=open]:slide-in-from-bottom-10 sm:inset-y-0 sm:left-auto sm:right-0 sm:h-full sm:max-h-none sm:w-[min(560px,100vw)] sm:max-w-[100vw] sm:rounded-none sm:rounded-l-3xl sm:border-y-0 sm:border-r-0 sm:data-[state=open]:slide-in-from-right-10 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:slide-out-to-right-10",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg p-1 text-muted-foreground opacity-80 hover:bg-muted hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring">
+        <X className="h-4 w-4" />
+        <span className="sr-only">Close</span>
+      </DialogPrimitive.Close>
+    </DialogPrimitive.Content>
+  </DialogPrimitive.Portal>
+));
+SideDialogContent.displayName = "SideDialogContent";
+
+/* ------------------------------------------------------- record beside the list */
+
+export interface RailRow { id: string; title: ReactNode; sub?: ReactNode; right?: ReactNode; meta?: ReactNode; search?: string }
+
+/**
+ * A record page with its list beside it (the JMSURF Apex RecordSplit): from 1280px wide the list
+ * sits in a 300px column on the left and clicking another row switches the record without going
+ * back. Below that only the record shows.
+ */
+export function RecordSplit({ title, listTo, rows, currentId, hrefOf, loading, children, newAction }: {
+  title: string;
+  listTo: string;
+  rows: RailRow[];
+  currentId?: string;
+  hrefOf: (id: string) => string;
+  loading?: boolean;
+  newAction?: ReactNode;
+  children: ReactNode;
+}) {
+  const [q, setQ] = useState("");
+  const needle = q.trim().toLowerCase().replace(/\s/g, "");
+  const shown = needle ? rows.filter((r) => String(r.search ?? "").toLowerCase().replace(/\s/g, "").includes(needle)) : rows;
+  return (
+    <div className="rec-split">
+      <aside className="rec-rail" aria-label={`${title} list`}>
+        <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+          <Link to={listTo} className="min-w-0 flex-1 truncate font-display text-sm font-bold hover:text-primary">{title}</Link>
+          <span className="rounded-full bg-muted px-1.5 text-[11px] tabular-nums text-muted-foreground">{rows.length}</span>
+          {newAction}
+        </div>
+        <div className="border-b border-border p-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" aria-label={`Search ${title.toLowerCase()}`} className="fi h-8 pl-8 text-xs" />
+          </div>
+        </div>
+        <nav className="rec-rail-list">
+          {shown.map((r) => (
+            <Link key={r.id} to={hrefOf(r.id)} aria-current={r.id === currentId ? "page" : undefined} className={cn("rec-rail-row", r.id === currentId && "is-active")}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate text-sm font-semibold">{r.title}</span>
+                {r.right && <span className="shrink-0 whitespace-nowrap text-xs tabular-nums">{r.right}</span>}
+              </div>
+              {(r.sub || r.meta) && (
+                <div className="mt-0.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span className="min-w-0 truncate">{r.sub}</span>
+                  {r.meta && <span className="shrink-0">{r.meta}</span>}
+                </div>
+              )}
+            </Link>
+          ))}
+          {loading && !rows.length && Array.from({ length: 6 }, (_, i) => (
+            <div key={i} className="rec-rail-row space-y-1.5" aria-hidden><div className="h-3.5 w-3/4 animate-pulse rounded bg-muted" /><div className="h-3 w-1/2 animate-pulse rounded bg-muted/70" /></div>
+          ))}
+          {!loading && !shown.length && <p className="px-3 py-8 text-center text-xs text-muted-foreground">Nothing found.</p>}
+        </nav>
+      </aside>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
 }

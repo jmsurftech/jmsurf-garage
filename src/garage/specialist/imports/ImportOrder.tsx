@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Car, FileText, Globe2, Landmark, Pencil, Save } from "lucide-react";
+import { Car, FileText, Globe2, Landmark, Pencil, Save, List } from "lucide-react";
 import { toast } from "sonner";
-import { EmptyState, PageHeader, PageLoader, Panel } from "@/components/kit";
+import { EmptyState, PageHeader, PageLoader, Panel, MoreMenu } from "@/components/kit";
 import DocumentsPanel from "@/components/DocumentsPanel";
 import { fmtMoney } from "@/apps/format";
 import { useLookup } from "@/apps/data";
@@ -98,8 +98,7 @@ function Inner() {
   return (
     <div className="space-y-3">
       <PageHeader title={`${rec.number || ""} ${rec.title}`} icon={Globe2} actions={<>
-        <Link to={`/apps/imports/import_order?open=${rec.id}`} className={btn}><Pencil className="h-4 w-4" /> Edit details</Link>
-        <Link to="/garage/imports" className={btn}>Imports</Link>
+        <MoreMenu items={[{ label: "Edit details", icon: Pencil, to: `/apps/imports/import_order?open=${rec.id}` }, { label: "All imports", icon: List, to: "/garage/imports", separator: true }]} />
       </>} />
       <StageBar stages={ORDER_STAGES} value={rec.stage} onChange={(s) => void run("st", async () => { await moveStage(rec, s.key, s.label); refresh("imports", rec.id); })} />
       <Panel>
