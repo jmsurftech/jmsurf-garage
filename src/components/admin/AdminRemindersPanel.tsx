@@ -4,7 +4,7 @@ import { BellRing, Save, Send, Mail, MessageSquare, MessageCircle, RefreshCw } f
 import { formatDistanceToNowStrict } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Field, Pill, EmptyState, StatusPill } from "@/components/kit";
+import { Field, Pill, EmptyState, StatusPill, Panel } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { OrbSpinner } from "@/components/orbs";
@@ -101,11 +101,11 @@ export default function AdminRemindersPanel() {
   const channelIcon = (c: string) => (c === "email" ? <Mail className="h-3.5 w-3.5" /> : c === "sms" ? <MessageSquare className="h-3.5 w-3.5" /> : <MessageCircle className="h-3.5 w-3.5" />);
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="space-y-4 rounded-xl border border-border bg-muted/30 p-5">
+    <div className="space-y-4">
+      <div className="grid gap-3 lg:grid-cols-2">
+        <Panel title="Schedule" icon={BellRing} bodyClassName="space-y-4">
           <label className="flex items-center justify-between gap-3">
-            <span><span className="block font-semibold">Send reminders automatically</span><span className="text-xs text-muted-foreground">To the company's contact email and phone</span></span>
+            <span className="min-w-0"><span className="block font-semibold">Send automatically</span><span className="text-xs text-muted-foreground">To the company's email and phone</span></span>
             <input type="checkbox" className="h-5 w-5 accent-primary" checked={!!cfg.enabled} onChange={(e) => set("enabled", e.target.checked)} />
           </label>
           <div>
@@ -118,7 +118,7 @@ export default function AdminRemindersPanel() {
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-[11px] text-muted-foreground">SMS and WhatsApp use the keys under SMS & WhatsApp. SMS reaches Kenyan numbers; WhatsApp works everywhere.</p>
+            <p className="mt-2 text-[11px] text-muted-foreground">Uses the SMS & WhatsApp keys. SMS: Kenyan numbers only.</p>
           </div>
           <div>
             <p className="mb-2 text-sm font-medium">When</p>
@@ -131,26 +131,22 @@ export default function AdminRemindersPanel() {
               ))}
             </div>
           </div>
-          <Field label="Send at (Nairobi time, 24h)" hint="The 'expired' message goes out as soon as the package ends">
+          <Field label="Send at hour (Nairobi, 24h)" hint="The 'expired' message goes out when the package ends">
             <input className="fi w-28" type="number" min={0} max={23} value={cfg.send_hour} onChange={(e) => set("send_hour", e.target.value)} />
           </Field>
-        </section>
+        </Panel>
 
-        <section className="space-y-3 rounded-xl border border-border bg-muted/30 p-5">
-          <p className="text-sm font-medium">Message wording</p>
-          <p className="text-[11px] text-muted-foreground">Placeholders: {"{name} {company} {kind} {plan} {days} {dayword} {date} {link} {support}"}</p>
+        <Panel title="Message wording" icon={MessageSquare} bodyClassName="space-y-3">
+          <p className="break-words text-[11px] text-muted-foreground">Placeholders: {"{name} {company} {kind} {plan} {days} {dayword} {date} {link} {support}"}</p>
           <Field label="Before it ends"><textarea className="fi" rows={3} value={cfg.templates.before} onChange={(e) => setTpl("before", e.target.value)} /></Field>
           <Field label="On the day it expires"><textarea className="fi" rows={2} value={cfg.templates.today} onChange={(e) => setTpl("today", e.target.value)} /></Field>
           <Field label="After it expired"><textarea className="fi" rows={3} value={cfg.templates.after} onChange={(e) => setTpl("after", e.target.value)} /></Field>
-        </section>
+        </Panel>
       </div>
       <Button onClick={save} disabled={saving}>{saving ? <OrbSpinner /> : <Save />} Save reminders</Button>
 
-      <section className="rounded-xl border border-border">
-        <div className="flex items-center justify-between gap-3 border-b border-border p-4">
-          <div><h4 className="font-semibold">Ending soon or recently expired</h4><p className="text-xs text-muted-foreground">Next 7 days and the last 14. Send a reminder by hand any time.</p></div>
-          <Button size="sm" variant="outline" onClick={() => due.refetch()}><RefreshCw className={due.isFetching ? "animate-spin" : ""} /> Refresh</Button>
-        </div>
+      <Panel title="Ending soon" icon={BellRing} description="Next 7 days and the last 14." flush
+        actions={<Button size="sm" variant="outline" onClick={() => due.refetch()} aria-label="Refresh"><RefreshCw className={due.isFetching ? "animate-spin" : ""} /><span className="hidden sm:inline">Refresh</span></Button>}>
         {due.isLoading ? <p className="p-6 text-sm text-muted-foreground">Loading…</p> : !(due.data || []).length ? <EmptyState icon={BellRing} title="No packages ending around now" className="py-10" /> : (
           <div className="max-h-[420px] overflow-auto">
             <table className="dt">
@@ -171,10 +167,9 @@ export default function AdminRemindersPanel() {
             </table>
           </div>
         )}
-      </section>
+      </Panel>
 
-      <section className="rounded-xl border border-border">
-        <div className="border-b border-border p-4"><h4 className="font-semibold">Recently sent</h4></div>
+      <Panel title="Recently sent" icon={Send} flush>
         {!(log.data || []).length ? <EmptyState title="Nothing sent yet" className="py-8" /> : (
           <div className="max-h-[360px] overflow-auto">
             <table className="dt">
@@ -193,7 +188,7 @@ export default function AdminRemindersPanel() {
             </table>
           </div>
         )}
-      </section>
+      </Panel>
     </div>
   );
 }

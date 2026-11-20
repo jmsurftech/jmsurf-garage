@@ -8,7 +8,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { allRows, downloadCsv } from "@/lib/fetchAll";
 import { useAuth } from "@/hooks/useAuth";
-import { PageHeader, Panel, Modal, Field, Pill, EmptyState, StatGrid, StatTile, TableWrap, Segmented } from "@/components/kit";
+import { PageHeader, Panel, Modal, Field, Pill, EmptyState, StatGrid, StatTile, TableWrap, Segmented, ExportMenu } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { OrbLoader, OrbSpinner } from "@/components/orbs";
 import { confirmAction } from "@/components/books/confirm";
@@ -58,12 +58,12 @@ export default function AdminCrm() {
   const open$ = leads.filter((l) => !["won", "lost"].includes(l.stage));
   const due = leads.filter((l) => l.next_follow_up && l.next_follow_up <= new Date().toISOString().slice(0, 10) && !["won", "lost"].includes(l.stage));
   return (
-    <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Leads & CRM" icon={Target} description="Everyone who could become a JMSURF Garage customer: sign-ups, website enquiries, demos and referrals. Move them through the pipeline and reach them with campaigns."
+    <div className="space-y-3">
+      <PageHeader title="Leads & CRM" icon={Target}
         actions={<>
-          <Button variant="outline" disabled={!list.length} onClick={() => downloadCsv(`jmsurf-leads-${new Date().toISOString().slice(0, 10)}.csv`,
+          <ExportMenu items={[{ label: "Download CSV", icon: Download, disabled: !list.length, onSelect: () => downloadCsv(`jmsurf-leads-${new Date().toISOString().slice(0, 10)}.csv`,
             ["Name", "Company", "Email", "Phone", "Country", "Product", "Source", "Heard from", "Stage", "Value (KES)", "Next follow-up", "Tags", "Notes", "Added"],
-            list.map((l) => [l.name, l.company, l.email, l.phone, l.country, PRODUCT_LABEL[l.product || "dash"] || l.product, l.source, l.heard_from, l.stage, l.value, l.next_follow_up, (l.tags || []).join("; "), l.notes, l.created_at.slice(0, 10)]))}><Download /> Export</Button>
+            list.map((l) => [l.name, l.company, l.email, l.phone, l.country, PRODUCT_LABEL[l.product || "dash"] || l.product, l.source, l.heard_from, l.stage, l.value, l.next_follow_up, (l.tags || []).join("; "), l.notes, l.created_at.slice(0, 10)])) }]} />
           <Button onClick={() => setOpen("new")}><Plus /> Add lead</Button>
         </>} />
       <StatGrid>
@@ -73,13 +73,13 @@ export default function AdminCrm() {
         <StatTile label="Follow-ups due" value={due.length} icon={CalendarClock} tone={due.length ? "danger" : "muted"} />
       </StatGrid>
       {sources.length > 0 && (
-        <Panel title="Where leads come from" icon={TrendingUp} description="From 'How did you hear about us?' on every JMSURF sign-up: put marketing where it works.">
+        <Panel title="Where leads come from" icon={TrendingUp} description="From 'How did you hear about us?' on sign-up.">
           <div className="space-y-2">
             {sources.slice(0, 12).map(([k, v]) => (
-              <div key={k} className="flex items-center gap-3 text-sm">
-                <span className="w-48 shrink-0 truncate">{k}</span>
-                <span className="relative h-6 flex-1 overflow-hidden rounded-full bg-muted"><span className="absolute inset-y-0 left-0 rounded-full bg-primary/80" style={{ width: `${Math.max(4, (v.n / sources[0][1].n) * 100)}%` }} /></span>
-                <span className="w-24 shrink-0 text-right tabular-nums"><b>{v.n}</b>{v.won ? <span className="text-xs text-success"> · {v.won} won</span> : null}</span>
+              <div key={k} className="flex min-w-0 items-center gap-2 text-sm sm:gap-3">
+                <span className="w-24 shrink-0 truncate sm:w-48">{k}</span>
+                <span className="relative h-6 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"><span className="absolute inset-y-0 left-0 rounded-full bg-primary/80" style={{ width: `${Math.max(4, (v.n / sources[0][1].n) * 100)}%` }} /></span>
+                <span className="w-20 shrink-0 text-right tabular-nums sm:w-24"><b>{v.n}</b>{v.won ? <span className="text-xs text-success"> · {v.won} won</span> : null}</span>
               </div>
             ))}
           </div>
@@ -90,7 +90,7 @@ export default function AdminCrm() {
         <Segmented value={tab} onChange={(v) => setTab(v as any)} options={[
           { value: "board", label: <><KanbanSquare className="h-4 w-4" /> Pipeline</> }, { value: "list", label: <><List className="h-4 w-4" /> Leads</> }, { value: "campaigns", label: <><Megaphone className="h-4 w-4" /> Campaigns</> },
         ]} />
-        {tab !== "campaigns" && <div className="relative ml-auto w-full sm:w-72"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input className="fi pl-9" placeholder="Name, company, phone, tag" value={q} onChange={(e) => setQ(e.target.value)} /></div>}
+        {tab !== "campaigns" && <div className="relative ml-auto w-full sm:w-72"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input className="fi pl-9" placeholder="Search leads" value={q} onChange={(e) => setQ(e.target.value)} /></div>}
       </div>
 
       {tab === "board" && (
@@ -98,7 +98,7 @@ export default function AdminCrm() {
           {STAGES.map((s) => {
             const col = list.filter((l) => l.stage === s.key);
             return (
-              <div key={s.key} className="w-72 shrink-0 rounded-2xl border border-border bg-muted/30 p-2"
+              <div key={s.key} className="w-64 shrink-0 rounded-2xl sm:w-72 border border-border bg-muted/30 p-2"
                 onDragOver={(e) => e.preventDefault()} onDrop={(e) => { const id = e.dataTransfer.getData("text/lead"); const l = leads.find((x) => x.id === id); if (l && l.stage !== s.key) void move(l, s.key); }}>
                 <div className="flex items-center justify-between px-2 py-1.5"><Pill tone={s.tone as any}>{s.label}</Pill><span className="text-xs text-muted-foreground">{col.length} · {kes(col.reduce((a, l) => a + Number(l.value || 0), 0))}</span></div>
                 <div className="mt-1 max-h-[60vh] space-y-2 overflow-y-auto">
@@ -174,10 +174,10 @@ function LeadModal({ lead, onClose }: { lead: Lead | null; onClose: () => void }
       footer={<>{lead && <Button variant="ghost" className="mr-auto text-destructive" onClick={remove}><Trash2 /> Delete</Button>}<Button variant="ghost" onClick={onClose}>Close</Button><Button onClick={save} disabled={busy}>{busy && <OrbSpinner />} Save</Button></>}>
       <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Contact name"><input className="fi" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
-          <Field label="Company"><input className="fi" value={f.company || ""} onChange={(e) => setF({ ...f, company: e.target.value })} /></Field>
-          <Field label="Email"><input className="fi" type="email" value={f.email || ""} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
-          <Field label="Phone"><input className="fi" value={f.phone || ""} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
+          <Field label="Contact name"><input className="fi" placeholder="Enter name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
+          <Field label="Company"><input className="fi" placeholder="Enter company" value={f.company || ""} onChange={(e) => setF({ ...f, company: e.target.value })} /></Field>
+          <Field label="Email"><input className="fi" type="email" placeholder="Enter email" value={f.email || ""} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
+          <Field label="Phone"><input className="fi" placeholder="Enter phone" value={f.phone || ""} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
           <Field label="Stage"><select className="fi" value={f.stage} onChange={(e) => setF({ ...f, stage: e.target.value })}>{STAGES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select></Field>
           <Field label="Source"><select className="fi capitalize" value={f.source} onChange={(e) => setF({ ...f, source: e.target.value })}>{SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}</select></Field>
           <Field label="Expected value (KES / month)"><input className="fi" type="number" min={0} value={f.value || 0} onChange={(e) => setF({ ...f, value: e.target.value })} /></Field>
@@ -202,9 +202,9 @@ function LeadModal({ lead, onClose }: { lead: Lead | null; onClose: () => void }
         <div>
           <p className="mb-2 text-sm font-semibold">Activity</p>
           {lead ? <>
-            <div className="flex gap-2">
-              <select className="fi h-9 w-28 text-xs" value={note.kind} onChange={(e) => setNote({ ...note, kind: e.target.value })}>{["note", "call", "email", "sms", "meeting"].map((k) => <option key={k} value={k}>{k}</option>)}</select>
-              <input className="fi h-9" placeholder="What happened?" value={note.body} onChange={(e) => setNote({ ...note, body: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") void addNote(); }} />
+            <div className="flex min-w-0 gap-2">
+              <select className="fi h-9 w-24 shrink-0 text-xs" value={note.kind} onChange={(e) => setNote({ ...note, kind: e.target.value })}>{["note", "call", "email", "sms", "meeting"].map((k) => <option key={k} value={k}>{k}</option>)}</select>
+              <input className="fi h-9 min-w-0" placeholder="Enter what happened" value={note.body} onChange={(e) => setNote({ ...note, body: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") void addNote(); }} />
               <Button size="sm" onClick={addNote}>Add</Button>
             </div>
             <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto">
@@ -243,7 +243,7 @@ function Campaigns() {
   const aud = (a: any) => (a?.type === "companies" ? `Companies${a.statuses?.length ? ` (${a.statuses.join(", ")})` : ""}` : `Leads${a?.stages?.length ? ` (${a.stages.join(", ")})` : ""}`);
   return (
     <Panel title="Campaigns" icon={Megaphone} flush actions={<Button size="sm" onClick={() => { setEdit(blank); setCount(null); }}><Plus /> New campaign</Button>}>
-      {!list.length ? <EmptyState icon={Megaphone} title="No campaigns yet" description="Email, SMS or WhatsApp your leads and companies: launch news, trial reminders, offers." /> : (
+      {!list.length ? <EmptyState icon={Megaphone} title="No campaigns yet" /> : (
         <TableWrap><table className="dt">
           <thead><tr><th>Campaign</th><th>Channel</th><th className="hidden md:table-cell">Audience</th><th>Status</th><th /></tr></thead>
           <tbody><PagedRows rows={list} colSpan={5}>{(pageRows) => pageRows.map((c) => (
@@ -262,7 +262,7 @@ function Campaigns() {
       {edit && (
         <Modal open onClose={() => setEdit(null)} size="lg" title={edit.id ? "Edit campaign" : "New campaign"} icon={Megaphone} footer={<Button onClick={save}>Save as draft</Button>}>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Name"><input className="fi" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
+            <Field label="Name"><input className="fi" placeholder="Enter campaign name" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
             <Field label="Channel"><select className="fi" value={edit.channel} onChange={(e) => setEdit({ ...edit, channel: e.target.value })}><option value="email">Email</option><option value="sms">SMS</option><option value="whatsapp">WhatsApp</option></select></Field>
             <Field label="Send to" className="sm:col-span-2">
               <div className="flex flex-wrap gap-2">
@@ -279,7 +279,7 @@ function Campaigns() {
               </div>
               {count && <p className="mt-1 text-xs text-muted-foreground">{count.total} people · {count.with_email} with email · {count.with_phone} with a phone. Nothing ticked = everyone.</p>}
             </Field>
-            {edit.channel === "email" && <Field label="Subject" className="sm:col-span-2"><input className="fi" value={edit.subject || ""} onChange={(e) => setEdit({ ...edit, subject: e.target.value })} /></Field>}
+            {edit.channel === "email" && <Field label="Subject" className="sm:col-span-2"><input className="fi" placeholder="Enter subject" value={edit.subject || ""} onChange={(e) => setEdit({ ...edit, subject: e.target.value })} /></Field>}
             <Field label="Message" hint="{{name}} and {{company}} are filled in for each person" className="sm:col-span-2"><textarea className="fi" rows={7} value={edit.body} onChange={(e) => setEdit({ ...edit, body: e.target.value })} /></Field>
           </div>
         </Modal>

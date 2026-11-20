@@ -3,8 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, Mail, Smartphone, MessageSquare, Save, Send, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { PageHeader, Panel, Field, Pill, EmptyState, TableWrap } from "@/components/kit";
-import { Button } from "@/components/ui/button";
+import { PageHeader, Panel, Field, Pill, EmptyState, TableWrap, MoreMenu, btnPrimaryCls } from "@/components/kit";
 import { OrbSpinner } from "@/components/orbs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -24,10 +23,10 @@ function IntakePanel() {
   const { data: key } = useQuery({ queryKey: ["lead-intake-key"], queryFn: async () => ((await sb.from("platform_settings").select("value").eq("key", "lead_intake").maybeSingle()).data?.value?.key as string) || "" });
   const [show, setShow] = useState(false);
   return (
-    <Panel title="Sign-ups from your other products" icon={Send} description="JMSURF ISP, SMS, RMS and any other product post each new sign-up here; it appears in Leads & CRM with how they heard about you, and you are alerted.">
-      <div className="space-y-2 text-sm">
-        <p>Address: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">POST https://garage.jmsurf.co.ke/api/public/lead</code></p>
-        <p>Header <code className="rounded bg-muted px-1.5 py-0.5 text-xs">x-lead-key</code>: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{show ? key : "••••••••••••"}</code> <button className="text-xs font-semibold text-primary" onClick={() => setShow(!show)}>{show ? "Hide" : "Show"}</button></p>
+    <Panel title="Sign-ups from other products" icon={Send} description="Other JMSURF products post new sign-ups here; they appear in Leads & CRM.">
+      <div className="min-w-0 space-y-2 text-sm">
+        <p className="break-all">Address: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">POST https://garage.jmsurf.co.ke/api/public/lead</code></p>
+        <p className="break-all">Header <code className="rounded bg-muted px-1.5 py-0.5 text-xs">x-lead-key</code>: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{show ? key : "••••••••••••"}</code> <button className="text-xs font-semibold text-primary" onClick={() => setShow(!show)}>{show ? "Hide" : "Show"}</button></p>
         <p className="text-xs text-muted-foreground">JSON body: product (isp, sms, rms…), name, company, email, phone, country, heard_from, heard_detail, details {"{…}"}.</p>
       </div>
     </Panel>
@@ -65,11 +64,15 @@ export default function AdminNotifications() {
     } catch (e: any) { toast.error(e.message); } finally { setBusy(""); refetch(); }
   };
   return (
-    <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Notifications" icon={Bell} description="What you, the platform owner, are told about and how. Companies set their own alerts inside their workspace." />
+    <div className="space-y-3">
+      <PageHeader title="Notifications" icon={Bell}
+        actions={<>
+          <MoreMenu items={[{ label: "Send test", icon: Send, disabled: !!busy, onSelect: () => void test() }]} />
+          <button type="button" className={btnPrimaryCls} onClick={() => void save()} disabled={!!busy}>{busy === "save" ? <OrbSpinner /> : <Save className="h-4 w-4" />} Save</button>
+        </>} />
       <Panel title="Events" icon={Bell} flush>
         <TableWrap><table className="dt">
-          <thead><tr><th>When</th>{CHANNELS.map((c) => <th key={c.key} className="w-24 text-center"><span className="inline-flex flex-col items-center gap-1"><c.icon className="h-4 w-4 text-primary" />{c.label}</span></th>)}</tr></thead>
+          <thead><tr><th>When</th>{CHANNELS.map((c) => <th key={c.key} className="w-16 text-center sm:w-24"><span className="inline-flex flex-col items-center gap-1"><c.icon className="h-4 w-4 text-primary" />{c.label}</span></th>)}</tr></thead>
           <tbody><PagedRows rows={EVENTS} colSpan={CHANNELS.length + 1}>{(pageRows) => pageRows.map((e) => (
             <tr key={e.key}><td className="text-sm">{e.label}</td>{CHANNELS.map((c) => {
               const on = !!v.events?.[e.key]?.[c.key];
@@ -80,13 +83,10 @@ export default function AdminNotifications() {
       </Panel>
       <Panel title="Send to" icon={Mail}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Email addresses" hint="Separate with commas"><input className="fi" value={emails} onChange={(e) => setEmails(e.target.value)} placeholder="you@jmsurf.co.ke" /></Field>
-          <Field label="Phone numbers (SMS / WhatsApp)" hint="Uses the platform's SMS and WhatsApp accounts"><input className="fi" value={phones} onChange={(e) => setPhones(e.target.value)} placeholder="07…" /></Field>
+          <Field label="Emails" hint="Separate with commas"><input className="fi" value={emails} onChange={(e) => setEmails(e.target.value)} placeholder="Enter emails" /></Field>
+          <Field label="Phones (SMS / WhatsApp)" hint="Separate with commas"><input className="fi" value={phones} onChange={(e) => setPhones(e.target.value)} placeholder="Enter phone numbers" /></Field>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button onClick={() => void save()} disabled={!!busy}>{busy === "save" ? <OrbSpinner /> : <Save />} Save</Button>
-          <Button variant="outline" onClick={() => void test()} disabled={!!busy}>{busy === "test" ? <OrbSpinner /> : <Send />} Send a test on every channel</Button>
-        </div>
+        {busy === "test" && <p className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground"><OrbSpinner /> Sending test…</p>}
       </Panel>
       <IntakePanel />
       <Panel title="Recent alerts" icon={History} flush>
