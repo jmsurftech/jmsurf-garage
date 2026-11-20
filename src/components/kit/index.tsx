@@ -36,12 +36,13 @@ export function PageHeader({
   return (
     <header className={cn("page-head space-y-2", className)}>
       {typeof title === "string" && <Helmet><title>{tabTitle(title)}</title></Helmet>}
-      <div className="flex min-h-9 items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
+      {/* One line when it fits; on narrow phones the actions drop under the title instead of cutting it to "Job c…". */}
+      <div className="flex min-h-9 flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-[9.5rem] flex-1 items-center gap-2">
           {Icon && <span className="g-tile xs hidden sm:inline-flex"><Icon className="h-4 w-4" /></span>}
           <h1 className="min-w-0 truncate font-display text-[1.1rem] font-bold leading-tight tracking-tight">{title}</h1>
         </div>
-        {actions && <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">{actions}</div>}
+        {actions && <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1.5">{actions}</div>}
       </div>
       {children}
     </header>

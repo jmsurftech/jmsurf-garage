@@ -994,3 +994,7 @@ html.erp-ws .soft-tab[data-state="active"] { box-shadow: none; }
 .stat-strip > * > div > p:nth-of-type(3) { margin-top: 3px; font-size: 12.5px; }
 @media (max-width: 639px) { .stat-strip > * > div > p:nth-of-type(2) { font-size: 19px; } }
 @media (min-width: 640px) { .stat-strip, .grid:has(> .kpi-cell, > :is(a, button) > .kpi-cell) { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important; } }
+/* 8 figures (dashboard) never wrap 6 + 2: two even rows of 4, one row of 8 only on very wide screens. */
+@media (min-width: 640px) and (max-width: 1799px) {
+  .grid:has(> :nth-child(8):last-child):has(> .kpi-cell, > :is(a, button) > .kpi-cell) { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+}
