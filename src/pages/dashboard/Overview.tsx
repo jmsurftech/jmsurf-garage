@@ -263,7 +263,7 @@ export default function Overview({ lines, loading, fetching, from, to, preset, o
             <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-destructive/70" />Expenses <b className="font-semibold tabular-nums">{b ? formatKES(expense) : "—"}</b></span>
           </div>
           <div className="h-48 shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer debounce={120} width="100%" height="100%">
               <BarChart data={months} margin={{ left: 0, right: 0, top: 4, bottom: 0 }} barGap={2} barCategoryGap="22%">
                 <XAxis dataKey="month" tick={axis} tickLine={false} axisLine={false} interval={0} />
                 <Tooltip formatter={(v: any) => formatKES(Number(v))} labelFormatter={(_: any, p: any) => p?.[0]?.payload?.name} contentStyle={tip} cursor={{ fill: "hsl(var(--muted))", opacity: 0.5 }} />

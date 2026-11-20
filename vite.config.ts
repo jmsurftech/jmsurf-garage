@@ -4,9 +4,13 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
+// One id per build: baked into the app and written to /build.json, so open tabs can tell a new release is live
+// (lib/staleBuildReload). Not the entry script: Cloudflare keeps /assets/* for a year, so it keeps answering.
+const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA || process.env.COMMIT_REF || Date.now().toString();
+
 export default defineConfig(({ mode }) => ({
   define: {
-    __APP_BUILD_ID__: JSON.stringify(process.env.VERCEL_GIT_COMMIT_SHA || process.env.COMMIT_REF || Date.now().toString()),
+    __APP_BUILD_ID__: JSON.stringify(BUILD_ID),
   },
   server: {
     host: "::",
@@ -32,6 +36,14 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
+    {
+      name: "garage-build-id",
+      apply: "build" as const,
+      generateBundle() {
+        // Not in the service worker's precache (no .json there), and the server sends it as "no-cache".
+        this.emitFile({ type: "asset", fileName: "build.json", source: JSON.stringify({ id: BUILD_ID }) });
+      },
+    },
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: null,

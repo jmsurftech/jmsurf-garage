@@ -51,7 +51,7 @@ export default function Reports() {
       <div className="grid gap-3 lg:grid-cols-2">
         <Panel title="Jobs by status">
           <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer debounce={120} width="100%" height="100%">
               <BarChart data={statusRows} margin={{ left: 0, right: 8, top: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} interval={0} angle={-25} textAnchor="end" height={50} />

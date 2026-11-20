@@ -24,6 +24,7 @@ import { setCurrency } from "@/lib/format";
 import { useSubscriptionLock } from "@/hooks/useSubscriptionLock";
 import { RENEWAL_ROLES } from "@/lib/subscriptionLock";
 import { trackPageView } from "@/lib/tracking";
+import { reloadIfNewBuild } from "@/lib/staleBuildReload";
 import { startOutbox } from "@/lib/offlineOutbox";
 import { installOutboxGuard } from "@/lib/offlineGuard";
 
@@ -31,7 +32,12 @@ import { installOutboxGuard } from "@/lib/offlineGuard";
 function RouteTracker() {
   const loc = useLocation();
   const [first, setFirst] = useState(true);
-  useEffect(() => { if (first) { setFirst(false); return; } trackPageView(); }, [loc.pathname]);
+  useEffect(() => {
+    if (first) { setFirst(false); return; }
+    trackPageView();
+    // A newer release went live while this tab was open: the page being opened loads on it.
+    reloadIfNewBuild();
+  }, [loc.pathname]);
   return null;
 }
 
@@ -284,7 +290,7 @@ const PhotoCredits = lazyPage(() => import("@/pages/PhotoCredits"));
 const DemoStart = lazyPage(() => import("@/pages/DemoStart"));
 const Legal = lazyPage(() => import("@/pages/Legal"));
 const Status = lazyPage(() => import("@/pages/Status"));
-const AdminHealth = lazyPage(() => import("@/pages/admin/AdminHealth"));
+const AdminHealth = lazyPage(() => import("@/pages/admin/AdminHealth"), "admin");
 const TenantLogin = lazyPage(() => import("@/pages/TenantLogin"));
 const SubscriptionExpired = lazyPage(() => import("@/pages/SubscriptionExpired"));
 const NotFound = lazyPage(() => import("@/pages/NotFound"));
@@ -411,24 +417,24 @@ const DeliveryConfirmation = lazyPage(() => import("@/pages/DeliveryConfirmation
 const CustomerDisplay = lazyPage(() => import("@/pages/CustomerDisplay"));
 const AuditLog = lazyPage(() => import("@/pages/AuditLog"));
 
-const AdminLayout = lazyPage(() => import("@/pages/admin/AdminLayout"));
-const AdminDashboard = lazyPage(() => import("@/pages/admin/AdminDashboard"));
-const AdminCustomers = lazyPage(() => import("@/pages/admin/AdminCustomers"));
-const AdminSubscriptions = lazyPage(() => import("@/pages/admin/AdminSubscriptions"));
-const AdminCMS = lazyPage(() => import("@/pages/admin/AdminCMS"));
-const AdminSettings = lazyPage(() => import("@/pages/admin/AdminSettings"));
-const AdminPayments = lazyPage(() => import("@/pages/admin/AdminPayments"));
-const AdminUsers = lazyPage(() => import("@/pages/admin/AdminUsers"));
-const AdminAuditLog = lazyPage(() => import("@/pages/admin/AdminAuditLog"));
-const AdminUsage = lazyPage(() => import("@/pages/admin/AdminUsage"));
-const AdminDomains = lazyPage(() => import("@/pages/admin/AdminDomains"));
-const AdminEtimsTokens = lazyPage(() => import("@/pages/admin/AdminEtimsTokens"));
-const AdminMessages = lazyPage(() => import("@/pages/admin/AdminMessages"));
-const AdminReports = lazyPage(() => import("@/pages/admin/AdminReports"));
-const AdminModules = lazyPage(() => import("@/pages/admin/AdminModules"));
-const AdminCrm = lazyPage(() => import("@/pages/admin/AdminCrm"));
-const AdminNotifications = lazyPage(() => import("@/pages/admin/AdminNotifications"));
-const AdminSupport = lazyPage(() => import("@/pages/admin/AdminSupport"));
+const AdminLayout = lazyPage(() => import("@/pages/admin/AdminLayout"), "admin");
+const AdminDashboard = lazyPage(() => import("@/pages/admin/AdminDashboard"), "admin");
+const AdminCustomers = lazyPage(() => import("@/pages/admin/AdminCustomers"), "admin");
+const AdminSubscriptions = lazyPage(() => import("@/pages/admin/AdminSubscriptions"), "admin");
+const AdminCMS = lazyPage(() => import("@/pages/admin/AdminCMS"), "admin");
+const AdminSettings = lazyPage(() => import("@/pages/admin/AdminSettings"), "admin");
+const AdminPayments = lazyPage(() => import("@/pages/admin/AdminPayments"), "admin");
+const AdminUsers = lazyPage(() => import("@/pages/admin/AdminUsers"), "admin");
+const AdminAuditLog = lazyPage(() => import("@/pages/admin/AdminAuditLog"), "admin");
+const AdminUsage = lazyPage(() => import("@/pages/admin/AdminUsage"), "admin");
+const AdminDomains = lazyPage(() => import("@/pages/admin/AdminDomains"), "admin");
+const AdminEtimsTokens = lazyPage(() => import("@/pages/admin/AdminEtimsTokens"), "admin");
+const AdminMessages = lazyPage(() => import("@/pages/admin/AdminMessages"), "admin");
+const AdminReports = lazyPage(() => import("@/pages/admin/AdminReports"), "admin");
+const AdminModules = lazyPage(() => import("@/pages/admin/AdminModules"), "admin");
+const AdminCrm = lazyPage(() => import("@/pages/admin/AdminCrm"), "admin");
+const AdminNotifications = lazyPage(() => import("@/pages/admin/AdminNotifications"), "admin");
+const AdminSupport = lazyPage(() => import("@/pages/admin/AdminSupport"), "admin");
 const ModulesStore = lazyPage(() => import("@/pages/modules/ModulesStore"));
 const AppPage = lazyPage(() => import("@/apps/AppPage"));
 const Studio = lazyPage(() => import("@/apps/Studio"));

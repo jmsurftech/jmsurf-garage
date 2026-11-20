@@ -47,7 +47,35 @@ export const devicePersister: Persister = {
   },
 };
 
-/** Sign-out: nothing of this company's stays on the device. */
+/**
+ * Whose data the saved copy holds ("<user>|<company>"). The database's row rules (RLS) already stop one company
+ * reading another's rows, but the copy kept on this device is shown before any request: it must belong to the
+ * person and company now signed in. Another person, or another company (app. switches company on the same
+ * address), starts from an empty copy.
+ */
+const OWNER_KEY = "garage.cache-owner";
+
+function readOwner(): string {
+  try { return localStorage.getItem(OWNER_KEY) || ""; } catch { return ""; }
+}
+
+/**
+ * Call when the signed-in person is known (and again once their company is). Returns true when the saved copy
+ * belonged to someone else or another company and was dropped: the caller then resets the queries in memory.
+ */
+export function checkCacheOwner(userId: string, tenantId?: string | null): boolean {
+  if (!userId) return false;
+  const prev = readOwner();
+  const [prevUser, prevTenant = ""] = prev.split("|");
+  const changed = !!prev && (prevUser !== userId || (!!tenantId && !!prevTenant && prevTenant !== tenantId));
+  const next = `${userId}|${tenantId || (prevUser === userId && !changed ? prevTenant : "")}`;
+  try { localStorage.setItem(OWNER_KEY, next); } catch { /* storage off */ }
+  if (changed) void devicePersister.removeClient();
+  return changed;
+}
+
+/** Sign-out or a company switch: nothing of this company's stays on the device. */
 export async function clearDeviceCache() {
+  try { localStorage.removeItem(OWNER_KEY); } catch { /* storage off */ }
   await devicePersister.removeClient();
 }

@@ -57,7 +57,7 @@ export default function MoneyView({ books: b, year, onYear, stockValue }: { book
         }>
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_12rem]">
         <div className="h-64 min-w-0">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer debounce={120} width="100%" height="100%">
             {chart === "pl" ? (
               <BarChart data={pl} margin={{ left: 0, right: 4, top: 4, bottom: 0 }} barGap={2}>
                 <CartesianGrid vertical={false} stroke="hsl(var(--border))" />

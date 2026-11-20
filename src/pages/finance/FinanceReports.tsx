@@ -160,7 +160,7 @@ export default function FinanceReports() {
                   <tbody>{r.monthly.map((m) => <tr key={m.month}><td>{m.label}</td><td className="num">{formatKES(m.in)}</td><td className="num">{formatKES(m.out)}</td><td className="num font-semibold">{formatKES(m.in - m.out)}</td></tr>)}</tbody></table>
               ) : (
                 <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer debounce={120} width="100%" height="100%">
                     <BarChart data={r.monthly} margin={{ left: 0, right: 8, top: 16, bottom: 0 }} barGap={2}>
                       <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
                       <XAxis dataKey="label" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />

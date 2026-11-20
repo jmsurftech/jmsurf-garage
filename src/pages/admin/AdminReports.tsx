@@ -134,7 +134,7 @@ export default function AdminReports() {
       </div>
 
       <Panel title="Daily revenue" description={RANGE_LABEL[range]} icon={TrendingUp}>
-        <ResponsiveContainer width="100%" height={250}>
+        <ResponsiveContainer debounce={120} width="100%" height={250}>
           <AreaChart data={dailySeries}>
             <defs>
               <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
@@ -153,7 +153,7 @@ export default function AdminReports() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel title="Last 6 months" icon={BarChart3}>
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer debounce={120} width="100%" height={240}>
             <BarChart data={monthlySeries}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
               <XAxis dataKey="month" tick={axis} axisLine={false} tickLine={false} />
@@ -167,7 +167,7 @@ export default function AdminReports() {
         <Panel title="How companies pay" description={RANGE_LABEL[range]} icon={CreditCard}>
           {methodRev.length === 0 ? <EmptyState title="No payments in this period" /> : (
             <div className="flex items-center gap-4">
-              <ResponsiveContainer width="55%" height={220}>
+              <ResponsiveContainer debounce={120} width="55%" height={220}>
                 <PieChart>
                   <Pie data={methodRev} cx="50%" cy="50%" innerRadius={52} outerRadius={85} dataKey="value" paddingAngle={3} stroke="none">
                     {methodRev.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -192,7 +192,7 @@ export default function AdminReports() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel title="Revenue by package" description={RANGE_LABEL[range]} icon={BarChart3}>
           {planRev.length === 0 ? <EmptyState title="No payments in this period" /> : (
-            <ResponsiveContainer width="100%" height={240}>
+            <ResponsiveContainer debounce={120} width="100%" height={240}>
               <BarChart data={planRev} layout="vertical" margin={{ left: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                 <XAxis type="number" tick={axis} axisLine={false} tickLine={false} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : v)} />

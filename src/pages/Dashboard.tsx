@@ -236,7 +236,7 @@ export default function Dashboard() {
       <Card title="Sales by hour"
         action={<span className="text-xs text-muted-foreground">{hourly.busiest ? `Busiest today: ${hourly.busiest}` : "Today vs yesterday"}</span>}>
         <div className="h-56 px-2 pb-4">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer debounce={120} width="100%" height="100%">
             <BarChart data={hourly.rows} margin={{ left: 0, right: 12, top: 8 }} barGap={2}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
               <XAxis dataKey="hour" tickLine={false} axisLine={false} interval="preserveStartEnd" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
@@ -253,7 +253,7 @@ export default function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Last 7 days" className="lg:col-span-2" action={<span className="text-xs text-muted-foreground">{formatKES(sum(sales.filter((t: any) => new Date(t.created_at).getTime() >= Date.now() - 7 * 86_400_000)))}</span>}>
           <div className="h-64 px-2 pb-4">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer debounce={120} width="100%" height="100%">
               <AreaChart data={week} margin={{ left: 0, right: 12, top: 8 }}>
                 <defs>
                   <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">

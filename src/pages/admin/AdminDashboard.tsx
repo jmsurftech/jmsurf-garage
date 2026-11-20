@@ -133,7 +133,7 @@ export default function AdminDashboard() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Panel title="Revenue" description="Completed payments, last 6 months" icon={BarChart3} className="lg:col-span-2">
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer debounce={120} width="100%" height={240}>
             <BarChart data={data.revenueByMonth}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
               <XAxis dataKey="month" tick={axis} axisLine={false} tickLine={false} />
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
         <Panel title="Packages" description="Active companies by package" icon={CreditCard}>
           {data.planDist.length === 0 ? <EmptyState title="No subscriptions yet" /> : (
             <div className="flex items-center gap-4">
-              <ResponsiveContainer width="55%" height={200}>
+              <ResponsiveContainer debounce={120} width="55%" height={200}>
                 <PieChart>
                   <Pie data={data.planDist} cx="50%" cy="50%" innerRadius={48} outerRadius={78} dataKey="value" paddingAngle={3} stroke="none">
                     {data.planDist.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -171,7 +171,7 @@ export default function AdminDashboard() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Panel title="Sign-ups" description="New companies, last 30 days" icon={Activity} className="lg:col-span-2">
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer debounce={120} width="100%" height={200}>
             <AreaChart data={data.signupTrend}>
               <defs>
                 <linearGradient id="signupGrad" x1="0" y1="0" x2="0" y2="1">

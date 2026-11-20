@@ -2,7 +2,9 @@ import { createElement, lazy, useState, type ComponentType } from "react";
 
 type Loader<T> = () => Promise<{ default: T }>;
 
-const preloaders: Array<() => Promise<unknown>> = [];
+/** Which background fetch a page belongs to: company workspace, platform console, or the public site (never preloaded). */
+export type PageGroup = "app" | "admin" | "public";
+const preloaders: Array<{ fetch: () => Promise<unknown>; group: PageGroup }> = [];
 
 /**
  * Like React.lazy, but once the page's code has arrived (opened before, or
@@ -10,7 +12,7 @@ const preloaders: Array<() => Promise<unknown>> = [];
  * of suspending, so a sidebar click swaps only the page, with no loader.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function lazyPage<T extends ComponentType<any>>(load: Loader<T>) {
+export function lazyPage<T extends ComponentType<any>>(load: Loader<T>, group: PageGroup = "app") {
   let loaded: T | null = null;
   let pending: Promise<{ default: T }> | null = null;
   const fetch = () => {
@@ -29,7 +31,7 @@ export function lazyPage<T extends ComponentType<any>>(load: Loader<T>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return createElement(C as ComponentType<any>, props);
   };
-  preloaders.push(fetch);
+  preloaders.push({ fetch, group });
   (Page as unknown as { preload: () => Promise<unknown> }).preload = fetch;
   return Page as unknown as T;
 }
@@ -57,20 +59,28 @@ export function preloadRoute(path: string) {
   return loaderFor(path)?.() ?? Promise.resolve();
 }
 
-let started = false;
+const started = new Set<PageGroup>();
+
+/** Slow or metered connections: page code is fetched when opened, not in the background. */
+export function slowConnection() {
+  if (typeof navigator === "undefined") return false;
+  const conn = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  return !!conn?.saveData || /(^|-)(2g|3g)$/.test(conn?.effectiveType ?? "");
+}
 
 /**
- * Fetches pages' code in the background so a menu click swaps only the page, with no loader. It waits for the
- * open page to settle, takes two files at a time and stays off on a slow or data-saving connection: fetching
- * every page after each deploy competed with the page's own data. Pass the paths this person can open;
- * without paths it takes every page (platform admins).
+ * Fetches pages' code in the background so a menu click swaps only the page, with no loader. It starts 1.5 s
+ * after the menu is ready, takes four files at a time while the browser is idle and stays off on a slow or
+ * data-saving connection. Workspace: pass the menu paths this person can open; only those are fetched (never
+ * the website or the platform console). Without paths it takes the platform console's own pages (group "admin").
  */
-export function preloadPages(paths?: string[]) {
-  if (started || typeof window === "undefined") return;
-  const conn = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
-  if (conn?.saveData || /2g|3g/.test(conn?.effectiveType ?? "")) return;
-  started = true;
-  const wanted = paths ? paths.map(loaderFor).filter((l): l is () => Promise<unknown> => !!l) : preloaders;
+export function preloadPages(paths?: string[], group: PageGroup = paths ? "app" : "admin") {
+  if (started.has(group) || typeof window === "undefined") return;
+  started.add(group);
+  if (slowConnection()) return;
+  const wanted = paths
+    ? paths.map(loaderFor).filter((l): l is () => Promise<unknown> => !!l)
+    : preloaders.filter((p) => p.group === group).map((p) => p.fetch);
   const queue = [...new Set(wanted)];
   const next = () => {
     const batch = queue.splice(0, 4);
@@ -79,6 +89,9 @@ export function preloadPages(paths?: string[]) {
   };
   window.setTimeout(() => idle(next), 1500);
 }
+
+/** How many pages a group holds (tests). */
+export const pagesInGroup = (group: PageGroup) => preloaders.filter((p) => p.group === group).length;
 
 function idle(fn: () => void) {
   const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;

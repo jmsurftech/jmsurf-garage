@@ -82,7 +82,7 @@ export function Periods({ preset, onPreset }: { preset: string; onPreset: (key: 
 export function SalesLine({ data, className }: { data: { label: string; value: number }[]; className?: string }) {
   return (
     <div className={className}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer debounce={120} width="100%" height="100%">
         <AreaChart data={data} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
           <defs><linearGradient id="dash-line" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.18} /><stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} /></linearGradient></defs>
           <XAxis dataKey="label" tick={axis} tickLine={false} axisLine={false} minTickGap={48} padding={{ left: 16, right: 16 }} />

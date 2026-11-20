@@ -1,6 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getHostSlug, isAppHost, isDevHost, tenantPath, tenantUrl } from "@/lib/host";
 import { ensureNoWaitingChanges } from "@/lib/offlineGuard";
+import { clearDeviceCache } from "@/lib/queryPersist";
+import { clearCachedState } from "@/lib/memoryCache";
 
 export interface MyCompany {
   tenant_id: string;
@@ -34,6 +36,9 @@ export async function goToCompany(slug: string, path = "/dashboard") {
       const { data: t } = await (supabase as any).from("tenants_public").select("id").ilike("slug", slug).maybeSingle();
       if (t?.id) await (supabase as any).rpc("switch_company", { p_tenant: t.id });
     } catch { /* the workspace opens the company the login is set to */ }
+    // Same address, another company: the lists kept on this device (and in this tab) were the old company's.
+    await clearDeviceCache().catch(() => undefined);
+    clearCachedState();
     window.location.assign(tenantPath(slug, path));
     return;
   }

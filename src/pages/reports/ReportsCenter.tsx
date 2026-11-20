@@ -196,7 +196,7 @@ function Table({ head, rows, empty = "Nothing for these filters", align, footer,
 function ChartCard({ title, subtitle, children, actions, tall }: { title: string; subtitle?: string; children: React.ReactElement; actions?: React.ReactNode; tall?: boolean }) {
   return (
     <Panel title={title} subtitle={subtitle} actions={actions}>
-      <div className={cn("p-3", tall ? "h-80" : "h-64")}><ResponsiveContainer>{children}</ResponsiveContainer></div>
+      <div className={cn("p-3", tall ? "h-80" : "h-64")}><ResponsiveContainer debounce={120}>{children}</ResponsiveContainer></div>
     </Panel>
   );
 }

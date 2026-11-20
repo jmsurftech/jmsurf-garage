@@ -212,7 +212,7 @@ function ReportViewer({ r, onBack }: { r: Report; onBack: () => void }) {
         {view === "both" && chartData.length > 1 && (
           <Panel title="Chart" icon={BarChart3}>
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer debounce={120} width="100%" height="100%">
                 <BarChart data={chartData} margin={{ left: 0, right: 8, top: 8, bottom: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" angle={-30} textAnchor="end" interval={0} fontSize={10} height={60} tickLine={false} />

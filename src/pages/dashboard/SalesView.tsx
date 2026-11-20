@@ -178,7 +178,7 @@ export default function SalesView({ lines, loading, fetching, from, to, preset, 
           {showHours && (
             <DashCard title="Sales by hour">
               <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer debounce={120} width="100%" height="100%">
                   <BarChart data={hours} margin={{ left: 0, right: 4, top: 4, bottom: 0 }} barCategoryGap={4}>
                     <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
                     <XAxis dataKey="label" tick={axis} tickLine={false} axisLine={false} minTickGap={16} />

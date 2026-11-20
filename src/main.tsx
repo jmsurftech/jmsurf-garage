@@ -7,6 +7,7 @@ import { initTheme } from "./hooks/useTheme";
 import { startReveal } from "./lib/reveal";
 import { initFreshAppCache } from "./lib/cacheControl";
 import { registerAppServiceWorker } from "./lib/registerSW";
+import { installStaleBuildReload } from "./lib/staleBuildReload";
 import { installErrorReporter } from "./lib/errorReporter";
 import { installResponsiveTables } from "./lib/responsiveTables";
 import { installTableFit } from "./lib/tableFit";
@@ -22,6 +23,8 @@ initTheme();
 startReveal();
 initFreshAppCache();
 registerAppServiceWorker();
+// Open tabs move to a new release within ~20 s of a deploy, at a quiet moment (never on the till).
+installStaleBuildReload();
 
 // The browser offers installation once, usually before the sidebar exists.
 // Keep the offer so the "Install app" button can use it whenever it appears.

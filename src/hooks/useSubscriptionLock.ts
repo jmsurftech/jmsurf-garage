@@ -15,12 +15,15 @@ export function useSubscriptionLock(): LockState {
 
   const end = subscriptionEndMs(subscription);
   useEffect(() => {
-    const tick = setInterval(() => setNow(Date.now()), 60_000);
+    // A hidden tab skips the minute tick (it re-rendered the whole layout); it catches up when looked at again.
+    const tick = setInterval(() => { if (!document.hidden) setNow(Date.now()); }, 60_000);
+    const onShow = () => { if (!document.hidden) setNow(Date.now()); };
+    document.addEventListener("visibilitychange", onShow);
     let atEnd: ReturnType<typeof setTimeout> | undefined;
     if (end !== null && end > Date.now()) {
       atEnd = setTimeout(() => setNow(Date.now()), Math.min(end - Date.now() + 250, MAX_TIMEOUT));
     }
-    return () => { clearInterval(tick); if (atEnd) clearTimeout(atEnd); };
+    return () => { clearInterval(tick); document.removeEventListener("visibilitychange", onShow); if (atEnd) clearTimeout(atEnd); };
   }, [end]);
 
   return lockState(subscription, Math.max(now, Date.now()));

@@ -72,7 +72,7 @@ function csv(name: string, rows: (string | number)[][]) {
 function ChartCard({ title, subtitle, children, tall }: { title: string; subtitle?: string; children: React.ReactElement; tall?: boolean }) {
   return (
     <Panel title={title} description={subtitle} icon={PieIcon}>
-      <div className={tall ? "h-80" : "h-64"}><ResponsiveContainer>{children}</ResponsiveContainer></div>
+      <div className={tall ? "h-80" : "h-64"}><ResponsiveContainer debounce={120}>{children}</ResponsiveContainer></div>
     </Panel>
   );
 }
@@ -279,7 +279,7 @@ export default function WaterReports() {
         <div className="space-y-4">
           <Panel title="Litres sold per day" icon={Droplets}>
             {r.days.length === 0 ? <p className="text-sm text-muted-foreground">No sales in this period.</p> : (
-              <div className="h-56"><ResponsiveContainer>
+              <div className="h-56"><ResponsiveContainer debounce={120}>
                 <BarChart data={r.days.map((d) => ({ ...d, label: d.key.slice(5) }))}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                   <XAxis dataKey="label" {...axis} /><YAxis {...axis} width={44} tickFormatter={short} />

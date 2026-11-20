@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { cacheAuthData, getCachedAuthData, wipeAllOfflineCaches } from "@/lib/offlineDb";
 import { logActivity, buildAuthEventMetadata } from "@/lib/auditLog";
+import { checkCacheOwner, clearDeviceCache } from "@/lib/queryPersist";
+import { clearCachedState } from "@/lib/memoryCache";
 
 interface Subscription {
   id: string;
@@ -151,6 +153,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function loadProfile(userId: string) {
+    // The copy of lists kept on this device belongs to whoever used it last: another person starts empty.
+    if (checkCacheOwner(userId)) void queryClient.resetQueries();
     if (!navigator.onLine) {
       // Offline: use cached data
       try {
@@ -224,6 +228,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
+        // Another company than the saved copy's (e.g. switched on app.): its lists are fetched fresh.
+        if (checkCacheOwner(userId, (prof as any).tenant_id || null)) void queryClient.resetQueries();
         // Together, so the company is looked up once rather than once for each of them.
         setProfile(prof as any);
         if (subData) setSubscription(subData);
@@ -257,7 +263,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     // The saved copy of this company's data never outlives the session.
     try { localStorage.removeItem("dash-cache-v1"); sessionStorage.removeItem(LOGIN_LOGGED); } catch { /* blocked */ }
-    void import("@/lib/queryPersist").then((m) => m.clearDeviceCache()).catch(() => undefined);
+    void clearDeviceCache().catch(() => undefined);
+    clearCachedState();
     const tenantId = profile?.tenant_id || null;
     if (user && tenantId) {
       try {

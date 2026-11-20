@@ -63,7 +63,7 @@ export default function Visits() {
           <div className="grid gap-4 xl:grid-cols-3">
             <Panel title="Page views per day" icon={Eye} className="xl:col-span-2">
               <div className="h-52">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer debounce={120} width="100%" height="100%">
                   <BarChart data={daily} margin={{ left: 0, right: 8, top: 8 }}>
                     <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="hsl(var(--border))" />
                     <XAxis dataKey="day" tickLine={false} axisLine={false} fontSize={10} interval="preserveStartEnd" />

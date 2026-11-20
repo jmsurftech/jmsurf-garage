@@ -49,6 +49,8 @@ export function registerAppServiceWorker() {
     if (!hadController || handled) return;
     handled = true;
     if (Date.now() - opened < 60_000) return;
+    // lib/staleBuildReload is already reloading this tab onto the new release: no card in between.
+    if ((window as unknown as { __garageBuildReload?: boolean }).__garageBuildReload) return;
     showUpdateCard();
     // Otherwise the next page change loads the new release (the page being left is done with).
     onNextNavigation(() => window.location.reload());
