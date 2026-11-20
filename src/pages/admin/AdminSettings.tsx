@@ -218,7 +218,7 @@ export default function AdminSettings() {
             <div className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Meta Pixel ID" hint="Events Manager → Data sources → your pixel. Numbers only.">
-                  <input className="fi" inputMode="numeric" value={settings.tracking?.meta_pixel_id || ""} onChange={(e) => updateField("tracking", "meta_pixel_id", e.target.value.replace(/D/g, ""))} placeholder="Enter pixel ID" />
+                  <input className="fi" inputMode="numeric" value={settings.tracking?.meta_pixel_id || ""} onChange={(e) => updateField("tracking", "meta_pixel_id", e.target.value.replace(/\D/g, ""))} placeholder="Enter pixel ID" />
                 </Field>
                 <Field label="Google Analytics 4 ID" hint="Admin → Data streams → Measurement ID.">
                   <input className="fi" value={settings.tracking?.ga4_id || ""} onChange={(e) => updateField("tracking", "ga4_id", e.target.value.trim().toUpperCase())} placeholder="Enter measurement ID" />
