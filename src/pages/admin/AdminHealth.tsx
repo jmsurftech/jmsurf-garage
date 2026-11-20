@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { HeartPulse, Bug, CheckCircle2, XCircle, ExternalLink, RefreshCw } from "lucide-react";
 import { formatDistanceToNowStrict, format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { PageHeader, Panel, TableWrap, EmptyState, StatTile, StatGrid, Segmented, PageLoader, Pill } from "@/components/kit";
-import { Button } from "@/components/ui/button";
+import { PageHeader, Panel, TableWrap, EmptyState, StatTile, StatGrid, PickMenu, MoreMenu, PageLoader, Pill, btnCls } from "@/components/kit";
 import { cn } from "@/lib/utils";
 
 import { PagedRows } from "@/components/Pager";
@@ -46,18 +45,20 @@ export default function AdminHealth() {
     return [...m.values()].map((s) => ({ ...s, avgMs: Math.round(s.avgMs / Math.max(1, s.total)) }));
   }, [data?.checks]);
 
-  if (isLoading) return <div className="p-4 sm:p-6"><PageLoader label="Loading system health…" /></div>;
+  if (isLoading) return <div><PageLoader label="Loading system health…" /></div>;
   const failures = (data?.checks || []).filter((c) => !c.ok).slice(0, 20);
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
-      <PageHeader title="System health" icon={HeartPulse} description="Uptime checks every 5 minutes and error reports from companies' browsers. Alerts go to the support email in Settings."
+    <div className="space-y-3">
+      <PageHeader title="System health" icon={HeartPulse}
         actions={<>
-          <a href="/status" target="_blank" rel="noopener noreferrer"><Button variant="outline" size="sm"><ExternalLink /> Public status page</Button></a>
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={isFetching ? "animate-spin" : ""} /> Refresh</Button>
-        </>}>
-        <Segmented value={range} onChange={(v) => setRange(v as any)} options={[{ value: "24h", label: "24 hours" }, { value: "7d", label: "7 days" }, { value: "30d", label: "30 days" }]} />
-      </PageHeader>
+          <PickMenu ariaLabel="Period" value={range} onChange={(v) => setRange(v as any)} options={[{ value: "24h", label: "24 hours" }, { value: "7d", label: "7 days" }, { value: "30d", label: "30 days" }]} />
+          <button type="button" className={cn(btnCls, "w-9 px-0")} onClick={() => refetch()} disabled={isFetching} aria-label="Refresh" title="Refresh">
+            <RefreshCw className={isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+          </button>
+          <MoreMenu items={[{ label: "Public status page", icon: ExternalLink, href: "/status", newTab: true }]} />
+        </>} />
+      <p className="text-xs text-muted-foreground">Checks run every 5 minutes. Alerts go to the support email in Settings.</p>
 
       <StatGrid className="lg:grid-cols-3">
         {services.length === 0 ? <StatTile label="Uptime checks" value="Starting…" icon={HeartPulse} tone="muted" /> : services.map((s) => (
@@ -68,7 +69,7 @@ export default function AdminHealth() {
       </StatGrid>
 
       <Panel title="Errors" description={`${data?.errors.length || 0} reports, ${groups.length} different problems`} icon={Bug} flush>
-        {groups.length === 0 ? <EmptyState icon={CheckCircle2} title="No errors reported" description="Nice — nothing crashed in this period." /> : (
+        {groups.length === 0 ? <EmptyState icon={CheckCircle2} title="No errors reported" description="Nothing crashed in this period." /> : (
           <ul className="divide-y divide-border">
             {groups.map((g) => (
               <li key={g.fp}>

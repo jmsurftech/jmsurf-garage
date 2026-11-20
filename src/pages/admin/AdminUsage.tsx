@@ -5,7 +5,8 @@ import { Activity, ArrowLeft, Building2, Download, LogIn, RefreshCw, Users, Wifi
 import { supabase } from "@/integrations/supabase/client";
 import { downloadCsv } from "@/lib/fetchAll";
 import { Button } from "@/components/ui/button";
-import { EmptyState, PageHeader, Panel, Pill, SearchBox, Segmented, StatGrid, StatTile, TableWrap, Toolbar } from "@/components/kit";
+import { EmptyState, ExportMenu, PageHeader, Panel, PickMenu, Pill, SearchBox, Segmented, StatGrid, StatTile, TableWrap, Toolbar, btnCls } from "@/components/kit";
+import { cn } from "@/lib/utils";
 import { PagedRows } from "@/components/Pager";
 import { ROOT_HOST } from "@/lib/host";
 
@@ -62,20 +63,20 @@ export default function AdminUsage() {
   }), [companies]);
 
   const period = days === "1" ? "today" : `last ${days} days`;
-  const periodPick = <Segmented value={days} onChange={setDays} options={[{ value: "1", label: "Today" }, { value: "7", label: "7 days" }, { value: "30", label: "30 days" }, { value: "90", label: "90 days" }]} />;
+  const periodPick = <PickMenu ariaLabel="Period" value={days} onChange={setDays} options={[{ value: "1", label: "Today" }, { value: "7", label: "7 days" }, { value: "30", label: "30 days" }, { value: "90", label: "90 days" }]} />;
 
   if (open) {
     const onlineHere = people.filter((p) => p.here_now).length;
     return (
-      <div className="space-y-5 p-4 sm:p-6">
-        <PageHeader title={open.business_name} icon={Building2} description={`Who used the system, ${period}`}
+      <div className="space-y-3">
+        <PageHeader title={open.business_name} icon={Building2}
           actions={<>
-            <Button variant="outline" size="sm" onClick={() => { setOpen(null); setPeople([]); }}><ArrowLeft /> All companies</Button>
-            <Button variant="outline" size="sm" disabled={!people.length} onClick={() => downloadCsv(`usage-${open.slug || "company"}-${days}d.csv`,
+            <button type="button" className={btnCls} onClick={() => { setOpen(null); setPeople([]); }}><ArrowLeft className="h-4 w-4" /><span className="hidden sm:inline">All companies</span></button>
+            {periodPick}
+            <ExportMenu items={[{ label: "People CSV", icon: Download, disabled: !people.length, onSelect: () => downloadCsv(`usage-${open.slug || "company"}-${days}d.csv`,
               ["Name", "Email", "Role", "Sign-ins", "Last sign-in", "Last seen", "Days used", "Minutes", "Online now"],
-              people.map((p) => [p.display_name || "", p.email || "", p.role, p.logins, p.last_login || "", p.last_seen || "", p.days_used, p.minutes, p.here_now ? "yes" : ""]))}><Download /> Export</Button>
+              people.map((p) => [p.display_name || "", p.email || "", p.role, p.logins, p.last_login || "", p.last_seen || "", p.days_used, p.minutes, p.here_now ? "yes" : ""])) }]} />
           </>} />
-        <Toolbar>{periodPick}</Toolbar>
         <StatGrid className="lg:grid-cols-4">
           <StatTile label="People" value={people.length} icon={Users} tone="muted" />
           <StatTile label={`Used it (${period})`} value={people.filter((p) => p.logins > 0 || p.minutes > 0).length} icon={Activity} tone="primary" />
@@ -110,19 +111,22 @@ export default function AdminUsage() {
             </TableWrap>
           )}
         </Panel>
-        <p className="text-xs text-muted-foreground">Sign-ins count every sign-in of the person (also into their other companies). Days used and time are counted from 16 Nov 2026, while the system is open on screen.</p>
+        <p className="text-xs text-muted-foreground">Sign-ins include the person's other companies. Days used and time count from 16 Nov 2026.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Usage & sign-ins" icon={Activity} description="Who signs in to each company's system, how often, and who is online now."
+    <div className="space-y-3">
+      <PageHeader title="Usage" icon={Activity}
         actions={<>
-          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}><RefreshCw /> Refresh</Button>
-          <Button variant="outline" size="sm" disabled={!list.length} onClick={() => downloadCsv(`usage-companies-${days}d.csv`,
+          {periodPick}
+          <button type="button" className={cn(btnCls, "w-9 px-0")} onClick={() => void load()} disabled={loading} aria-label="Refresh" title="Refresh">
+            <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+          </button>
+          <ExportMenu items={[{ label: "Companies CSV", icon: Download, disabled: !list.length, onSelect: () => downloadCsv(`usage-companies-${days}d.csv`,
             ["Company", "Address", "People", "Used it", "Sign-ins", "Last sign-in", "Last seen", "Online now", "Days used", "Minutes"],
-            list.map((c) => [c.business_name, c.slug ? `${c.slug}.${ROOT_HOST}` : "", c.people, c.active_people, c.logins, c.last_login || "", c.last_seen || "", c.online_now, c.days_used, c.minutes]))}><Download /> Export</Button>
+            list.map((c) => [c.business_name, c.slug ? `${c.slug}.${ROOT_HOST}` : "", c.people, c.active_people, c.logins, c.last_login || "", c.last_seen || "", c.online_now, c.days_used, c.minutes])) }]} />
         </>} />
 
       {error && <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
@@ -134,7 +138,7 @@ export default function AdminUsage() {
         <StatTile label="Sign-ins" value={totals.logins} icon={LogIn} tone="muted" />
       </StatGrid>
 
-      <Panel flush title="Online now" icon={Wifi} description="Anyone with the system open in the last five minutes. Refreshes every minute.">
+      <Panel flush title="Online now" icon={Wifi} description="System open in the last 5 minutes. Refreshes every minute.">
         {online.length === 0 ? <EmptyState icon={Wifi} title="Nobody is online right now" /> : (
           <ul className="divide-y divide-border">
             {online.map((o) => (
@@ -144,7 +148,7 @@ export default function AdminUsage() {
                   <p className="truncate text-sm font-medium">{o.display_name || o.email} <span className="font-normal text-muted-foreground">· {o.business_name || "—"}</span></p>
                   <p className="truncate text-xs text-muted-foreground">{o.path || ""}{o.user_agent ? ` · ${o.user_agent}` : ""} · on for {formatDistanceToNowStrict(new Date(o.started_at))}</p>
                 </div>
-                {o.tenant_id && <Button size="sm" variant="ghost" onClick={() => { const c = companies.find((x) => x.tenant_id === o.tenant_id); if (c) setOpen(c); }}>View company</Button>}
+                {o.tenant_id && <Button size="sm" variant="ghost" onClick={() => { const c = companies.find((x) => x.tenant_id === o.tenant_id); if (c) setOpen(c); }}>View</Button>}
               </li>
             ))}
           </ul>
@@ -153,7 +157,6 @@ export default function AdminUsage() {
 
       <Toolbar>
         <SearchBox value={search} onChange={setSearch} placeholder="Search company…" />
-        {periodPick}
         <Segmented value={show} onChange={(v) => setShow(v as "used" | "all")} options={[{ value: "used", label: "Used" }, { value: "all", label: "All companies" }]} />
       </Toolbar>
 
@@ -183,7 +186,7 @@ export default function AdminUsage() {
         )}
       </Panel>
       <p className="text-xs text-muted-foreground">
-        Your own visits are left out. Sign-ins come from the sign-in log; days used and time are counted from 16 Nov 2026, while the system is open on screen. Full activity is in the <Link to="/admin/audit" className="text-primary underline">Audit log</Link>.
+        Your own visits are left out. Days used and time count from 16 Nov 2026. Full activity: <Link to="/admin/audit" className="text-primary underline">Audit log</Link>.
       </p>
     </div>
   );

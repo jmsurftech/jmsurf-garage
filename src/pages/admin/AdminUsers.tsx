@@ -4,10 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { createStaffAccount, deleteStaffAccount, listStaffAccounts, resetStaffPassword, verifyUserAccount } from "@/lib/serverStaff";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Key, Trash2, UserPlus, AlertTriangle, MailCheck, Users as UsersIcon, Building2, ShieldOff, LogOut, Download } from "lucide-react";
+import { Key, Trash2, UserPlus, AlertTriangle, MailCheck, Users as UsersIcon, Building2, ShieldOff, LogOut, Download, ShieldCheck, LogIn } from "lucide-react";
 import { fetchAll, downloadCsv } from "@/lib/fetchAll";
 import AdminUserAccess from "./AdminUserAccess";
-import { PageHeader, Toolbar, SearchBox, Panel, TableWrap, EmptyState, Field, Modal, Pill } from "@/components/kit";
+import { PageHeader, Toolbar, SearchBox, Panel, TableWrap, EmptyState, Field, Modal, Pill, StatGrid, StatTile, MoreMenu, ExportMenu, btnPrimaryCls } from "@/components/kit";
 
 interface UserRow {
   user_id: string;
@@ -245,19 +245,26 @@ export default function AdminUsers() {
   const resetTarget = users.find((u) => u.user_id === resetPwId) || null;
 
   return (
-    <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Users" description={`${stats.total} logins · ${stats.mfa} with two-step · ${stats.online} signed in · ${stats.unverified} not verified`} icon={UsersIcon}
+    <div className="space-y-3">
+      <PageHeader title="Users" icon={UsersIcon}
         actions={<>
-          <Button variant="outline" size="sm" onClick={exportCsv} disabled={!filtered.length}><Download /> Export</Button>
-          <Button variant="outline" size="sm" onClick={() => setShowVerify(true)}><MailCheck /> Verify an email</Button>
-          <Button size="sm" onClick={() => setShowAdd(true)}><UserPlus /> Add user</Button>
+          <ExportMenu items={[{ label: "Download CSV", icon: Download, disabled: !filtered.length, onSelect: exportCsv }]} />
+          <MoreMenu items={[{ label: "Verify an email", icon: MailCheck, onSelect: () => setShowVerify(true) }]} />
+          <button type="button" className={btnPrimaryCls} onClick={() => setShowAdd(true)}><UserPlus className="h-4 w-4" /> Add user</button>
         </>} />
 
+      <StatGrid>
+        <StatTile label="Logins" value={stats.total} icon={UsersIcon} />
+        <StatTile label="Two-step on" value={stats.mfa} icon={ShieldCheck} tone="success" />
+        <StatTile label="Signed in" value={stats.online} icon={LogIn} tone="info" />
+        <StatTile label="Not verified" value={stats.unverified} icon={MailCheck} tone={stats.unverified ? "warning" : "muted"} />
+      </StatGrid>
+
       <Toolbar>
-        <SearchBox value={search} onChange={setSearch} placeholder="Name, email, phone or company…" />
-        <select className="fi w-auto" value={shopFilter} onChange={(e) => setShopFilter(e.target.value)} aria-label="Company">
+        <SearchBox value={search} onChange={setSearch} placeholder="Search users" />
+        <select className="fi w-auto max-w-full" value={shopFilter} onChange={(e) => setShopFilter(e.target.value)} aria-label="Company">
           <option value="all">All companies</option>
-          <option value="none">Admin panel (no company)</option>
+          <option value="none">Admin panel only</option>
           {tenants.map((t) => <option key={t.id} value={t.id}>{t.business_name}</option>)}
         </select>
         <select className="fi w-auto" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} aria-label="Role">
@@ -305,7 +312,7 @@ export default function AdminUsers() {
                       </div>
                     </td>
                     <td className="hidden whitespace-nowrap text-muted-foreground xl:table-cell" title={`Joined ${new Date(u.created_at).toLocaleDateString()}`}>
-                      {ago(u.last_sign_in)}{u.sessions > 0 && <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-emerald-500 align-middle" title={`${u.sessions} active session(s)`} />}
+                      {ago(u.last_sign_in)}{u.sessions > 0 && <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-success align-middle" title={`${u.sessions} active session(s)`} />}
                     </td>
                     <td>
                       <div className="flex justify-end gap-0.5">
@@ -331,15 +338,15 @@ export default function AdminUsers() {
       </Panel>
 
       <Modal open={showAdd} onClose={() => setShowAdd(false)} size="lg" icon={UserPlus} title="Add a user"
-        description={newUser.tenant_id ? "They will sign in to the selected company." : "No company selected: they will only have the admin panel."}
+        description={newUser.tenant_id ? "Signs in to the selected company." : "No company: admin panel only."}
         footer={<>
           <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
           <Button onClick={addUser} disabled={loading || !newUser.email || !newUser.password || !newUser.display_name}>{loading ? "Creating…" : "Create user"}</Button>
         </>}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Full name" required><input className="fi" value={newUser.display_name} onChange={(e) => setNewUser({ ...newUser, display_name: e.target.value })} /></Field>
-          <Field label="Email" required><input className="fi" type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} /></Field>
-          <Field label="Password" required hint="At least 6 characters"><input className="fi" type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} /></Field>
+          <Field label="Full name" required><input className="fi" placeholder="Enter full name" value={newUser.display_name} onChange={(e) => setNewUser({ ...newUser, display_name: e.target.value })} /></Field>
+          <Field label="Email" required><input className="fi" type="email" placeholder="Enter email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} /></Field>
+          <Field label="Password" required hint="At least 6 characters"><input className="fi" type="password" placeholder="Enter password" autoComplete="new-password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} /></Field>
           <Field label="Role">
             <select className="fi" value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}>
               {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
@@ -355,7 +362,7 @@ export default function AdminUsers() {
       </Modal>
 
       <Modal open={showVerify} onClose={() => setShowVerify(false)} size="sm" icon={MailCheck} title="Verify an email"
-        description="For an owner who never got their verification link. Marks the email verified straight away."
+        description="Marks the email verified at once."
         footer={<>
           <Button variant="outline" onClick={() => setShowVerify(false)}>Cancel</Button>
           <Button disabled={loading || !verifyLookup.includes("@")} onClick={() => verifyUser({ email: verifyLookup.trim() })}>{loading ? "Working…" : "Verify"}</Button>
@@ -363,7 +370,7 @@ export default function AdminUsers() {
         <Field label="Email address"><input className="fi" type="email" value={verifyLookup} onChange={(e) => setVerifyLookup(e.target.value)} placeholder="Enter email address" autoFocus /></Field>
       </Modal>
 
-      <Modal open={!!resetTarget} onClose={() => setResetPwId(null)} size="sm" icon={Key} title="Send a temporary password?"
+      <Modal center open={!!resetTarget} onClose={() => setResetPwId(null)} size="sm" icon={Key} title="Send a temporary password?"
         description="A new password is emailed to the user. Their current password stops working."
         footer={<>
           <Button variant="outline" onClick={() => setResetPwId(null)}>Cancel</Button>
@@ -372,7 +379,7 @@ export default function AdminUsers() {
         {resetTarget && <div className="rounded-xl bg-muted/60 p-3 text-sm"><p className="font-semibold">{resetTarget.display_name}</p><p className="text-muted-foreground">{resetTarget.email}</p></div>}
       </Modal>
 
-      <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} size="sm" icon={AlertTriangle} title="Delete this login?"
+      <Modal center open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} size="sm" icon={AlertTriangle} title="Delete this login?"
         description="The person can no longer sign in. Their past sales and records are kept."
         footer={<>
           <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
@@ -386,9 +393,9 @@ export default function AdminUsers() {
           </div>
         )}
       </Modal>
-      <Modal open={!!confirm} onClose={() => setConfirm(null)} size="sm" icon={confirm?.kind === "mfa" ? ShieldOff : LogOut}
+      <Modal center open={!!confirm} onClose={() => setConfirm(null)} size="sm" icon={confirm?.kind === "mfa" ? ShieldOff : LogOut}
         title={confirm?.kind === "mfa" ? "Reset two-step sign-in?" : "Sign out everywhere?"}
-        description={confirm?.kind === "mfa" ? "Removes their authenticator app, for someone who lost their phone. They sign in with just the password and can turn two-step on again." : "Ends every session on every device. They have to sign in again."}
+        description={confirm?.kind === "mfa" ? "Removes their authenticator app (lost phone). They sign in with the password and can set it up again." : "Ends every session on every device. They have to sign in again."}
         footer={<>
           <Button variant="outline" onClick={() => setConfirm(null)}>Cancel</Button>
           <Button variant="destructive" onClick={runSecurity} disabled={loading}>{loading ? "Working…" : confirm?.kind === "mfa" ? "Reset two-step" : "Sign out"}</Button>

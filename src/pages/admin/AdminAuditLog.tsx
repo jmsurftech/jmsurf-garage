@@ -3,9 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Activity, Users, CreditCard, Building2, Package, RefreshCw, ShieldAlert, UserCog, ToggleRight, Download } from "lucide-react";
 import { allRows, downloadCsv } from "@/lib/fetchAll";
-import { PageHeader, Toolbar, SearchBox, Segmented, Panel, EmptyState, PageLoader } from "@/components/kit";
+import { PageHeader, Toolbar, SearchBox, Segmented, Panel, EmptyState, PageLoader, PickMenu, ExportMenu, btnCls } from "@/components/kit";
 import Pager from "@/components/Pager";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface AuditEntry {
   id: string;
@@ -145,18 +145,20 @@ export default function AdminAuditLog() {
     filtered.map((e) => [format(new Date(e.created_at), "yyyy-MM-dd HH:mm"), META[e.type].label, e.tenant_name, e.description]));
 
   return (
-    <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Audit log" description="Sign-ups, package changes, payments, admin actions, feature changes and blocked cross-company access." icon={Activity}
+    <div className="space-y-3">
+      <PageHeader title="Audit log" icon={Activity}
         actions={<>
-          <select className="fi h-9 w-auto" value={days} onChange={(e) => setDays(e.target.value)} aria-label="Period">
-            <option value="7">Last 7 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 90 days</option>
-            <option value="365">Last 12 months</option>
-            <option value="all">Everything</option>
-          </select>
-          <Button variant="outline" size="sm" onClick={exportCsv} disabled={!filtered.length}><Download /> Export</Button>
-          <Button variant="outline" size="sm" onClick={loadAudit} disabled={loading}><RefreshCw className={loading ? "animate-spin" : ""} /> Refresh</Button>
+          <PickMenu ariaLabel="Period" value={days} onChange={setDays} options={[
+            { value: "7", label: "Last 7 days" },
+            { value: "30", label: "Last 30 days" },
+            { value: "90", label: "Last 90 days" },
+            { value: "365", label: "Last 12 months" },
+            { value: "all", label: "Everything" },
+          ]} />
+          <button type="button" className={cn(btnCls, "w-9 px-0")} onClick={loadAudit} disabled={loading} aria-label="Refresh" title="Refresh">
+            <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+          </button>
+          <ExportMenu items={[{ label: "Events CSV", icon: Download, onSelect: exportCsv, disabled: !filtered.length }]} />
         </>} />
       <Toolbar>
         <SearchBox value={search} onChange={setSearch} placeholder="Search events…" />
@@ -180,7 +182,7 @@ export default function AdminAuditLog() {
                   <li key={entry.id} className="flex items-start gap-3 px-4 py-3 sm:px-5">
                     <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${m.tone}`}><m.icon className="h-4 w-4" /></span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm">{entry.description}</p>
+                      <p className="break-words text-sm [overflow-wrap:anywhere]">{entry.description}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{m.label}{entry.tenant_name ? ` · ${entry.tenant_name}` : ""}</p>
                     </div>
                     <time className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">{format(new Date(entry.created_at), "d MMM, HH:mm")}</time>

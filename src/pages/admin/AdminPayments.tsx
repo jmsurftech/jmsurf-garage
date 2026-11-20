@@ -4,8 +4,7 @@ import { PagedRows } from "@/components/Pager";
 import { supabase } from "@/integrations/supabase/client";
 import { Banknote, CheckCircle2, Clock, XCircle, Download } from "lucide-react";
 import { format, startOfDay, endOfDay, subDays } from "date-fns";
-import { PageHeader, Toolbar, SearchBox, Panel, StatTile, StatGrid, TableWrap, EmptyState, StatusPill, PageLoader, Pill } from "@/components/kit";
-import { Button } from "@/components/ui/button";
+import { PageHeader, Toolbar, SearchBox, Panel, StatTile, StatGrid, TableWrap, EmptyState, StatusPill, PageLoader, Pill, ExportMenu } from "@/components/kit";
 import { fetchAll, downloadCsv } from "@/lib/fetchAll";
 
 const ksh = (n: number) => `KSh ${Math.round(n).toLocaleString()}`;
@@ -78,15 +77,15 @@ export default function AdminPayments() {
   const exportCsv = () => downloadCsv(`jmsurf-payments-${from}-to-${to}.csv`, ["Date", "Product", "For", "Company", "Amount", "Currency", "Method", "Reference", "Status"],
     filtered.map((p) => [format(new Date(p.created_at), "yyyy-MM-dd HH:mm"), p.product, p.what, names[p.tenant_id] || "", p.amount, p.currency, gatewayLabel(p.gateway), p.reference, p.status]));
 
-  if (isLoading) return <div className="p-4 sm:p-6"><PageLoader label="Loading payments…" /></div>;
+  if (isLoading) return <div><PageLoader label="Loading payments…" /></div>;
 
   return (
-    <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Payments" description="Every payment to JMSURF: JMSURF Garage plans and modules, JMSURF Mail plans and Call Centre plans and numbers." icon={Banknote}
-        actions={<Button variant="outline" size="sm" onClick={exportCsv} disabled={!filtered.length}><Download /> Export CSV</Button>} />
+    <div className="space-y-3">
+      <PageHeader title="Payments" icon={Banknote}
+        actions={<ExportMenu items={[{ label: "Payments CSV", icon: Download, onSelect: exportCsv, disabled: !filtered.length }]} />} />
 
       <StatGrid>
-        <StatTile label="Collected" value={ksh(totals.revenue)} icon={Banknote} tone="success" hint={totals.usd ? `+ US$ ${totals.usd.toLocaleString()} by card` : "In the selected period"} />
+        <StatTile label="Collected" value={ksh(totals.revenue)} icon={Banknote} tone="success" hint={totals.usd ? `+ US$ ${totals.usd.toLocaleString()} by card` : undefined} />
         <StatTile label="Paid" value={totals.paid} icon={CheckCircle2} tone="success" />
         <StatTile label="Pending" value={totals.pending} icon={Clock} tone="warning" />
         <StatTile label="Failed or cancelled" value={totals.failed} icon={XCircle} tone="danger" />
@@ -94,8 +93,11 @@ export default function AdminPayments() {
 
       <Toolbar>
         <SearchBox value={search} onChange={setSearch} placeholder="Company or reference…" />
-        <input type="date" className="fi w-auto" value={from} max={to} onChange={(e) => setFrom(e.target.value)} aria-label="From" />
-        <input type="date" className="fi w-auto" value={to} min={from} onChange={(e) => setTo(e.target.value)} aria-label="To" />
+        <div className="flex min-w-0 items-center gap-1.5">
+          <input type="date" className="fi w-auto min-w-0" value={from} max={to} onChange={(e) => setFrom(e.target.value)} aria-label="From" />
+          <span className="text-xs text-muted-foreground">to</span>
+          <input type="date" className="fi w-auto min-w-0" value={to} min={from} onChange={(e) => setTo(e.target.value)} aria-label="To" />
+        </div>
         <select className="fi w-auto" value={product} onChange={(e) => setProduct(e.target.value)} aria-label="Product">
           <option value="all">All products</option><option>Garage</option><option>JMSURF Mail</option><option>Call Centre</option>
         </select>

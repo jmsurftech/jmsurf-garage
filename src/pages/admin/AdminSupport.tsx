@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Headset, PhoneIncoming, PhoneOutgoing, Phone, Check, ExternalLink, PhoneMissed } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { PageHeader, Panel, Pill, EmptyState, TableWrap, StatGrid, StatTile } from "@/components/kit";
+import { PageHeader, Panel, Pill, EmptyState, TableWrap, StatGrid, StatTile, btnCls } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { callNumber } from "@/components/PhoneDock";
 import { toast } from "sonner";
@@ -30,10 +30,10 @@ export default function AdminSupport() {
   const today = (data?.calls || []).filter((c) => c.started_at?.slice(0, 10) === new Date().toISOString().slice(0, 10));
   const done = async (id: string) => { const { error } = await sb.rpc("support_callback_done", { p_id: id }); if (error) toast.error(error.message); else { toast.success("Marked done"); void refetch(); } };
   return (
-    <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Support" icon={Headset} description="Tickets companies raise from their Help centre, their calls and call-back requests. Take and make calls with the phone in the bottom corner."
-        actions={<a href="https://app.jmsurfcallcentre.co.ke/" target="_blank" rel="noopener noreferrer"><Button variant="outline"><ExternalLink /> Open the full call centre</Button></a>} />
-      {data && !data.line && <p className="rounded-2xl border border-warning/30 bg-warning/10 p-4 text-sm">The support line is not connected yet. In the call centre (your company), go to Settings → Phone line and connect your Africa's Talking number, then add yourself as an agent. Until then companies are offered your support phone and WhatsApp instead.</p>}
+    <div className="space-y-3">
+      <PageHeader title="Support" icon={Headset}
+        actions={<a href="https://app.jmsurfcallcentre.co.ke/" target="_blank" rel="noopener noreferrer" className={btnCls}><ExternalLink className="h-4 w-4" /> Call centre</a>} />
+      {data && !data.line && <p className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-sm">Support line not connected. In the call centre, open Settings → Phone line, connect the number and add yourself as an agent.</p>}
       <StatGrid>
         <StatTile label="Support line" value={data?.line || "Not connected"} icon={Phone} />
         <StatTile label="Calls today" value={today.length} icon={PhoneIncoming} tone="info" />
@@ -42,7 +42,7 @@ export default function AdminSupport() {
       </StatGrid>
       <AdminTickets />
       <Panel title="Call back requests" icon={PhoneOutgoing} flush>
-        {!(data?.callbacks || []).length ? <EmptyState icon={PhoneOutgoing} title="No requests" description="When a company presses 'Request a call back' in its Help centre, it shows here." /> : (
+        {!(data?.callbacks || []).length ? <EmptyState icon={PhoneOutgoing} title="No requests" /> : (
           <TableWrap><table className="dt"><thead><tr><th>Who</th><th>Number</th><th className="hidden md:table-cell">Note</th><th>When</th><th /></tr></thead><tbody>
             <PagedRows rows={data!.callbacks} colSpan={5}>{(pageRows) => pageRows.map((b) => (
               <tr key={b.id}>

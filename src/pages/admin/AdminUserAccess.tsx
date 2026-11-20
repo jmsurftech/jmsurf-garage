@@ -24,11 +24,11 @@ export default function AdminUserAccess({ user, tenants, onClose }: { user: { us
     <Modal open onClose={onClose} size="lg" title={`Access · ${user.display_name || user.email}`} description={user.email} icon={KeyRound}>
       <div className="space-y-6">
         <section>
-          <p className="mb-2 flex items-center gap-2 text-sm font-semibold"><Building2 className="h-4 w-4 text-primary" /> Companies this login can open</p>
+          <p className="mb-2 flex items-center gap-2 text-sm font-semibold"><Building2 className="h-4 w-4 text-primary" /> Companies</p>
           <div className="space-y-2">
             {companies.map((c) => (
               <div key={c.tenant_id} className="flex flex-wrap items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm">
-                <span className="min-w-0 flex-1"><b className="block truncate">{c.business_name}</b><span className="text-xs text-muted-foreground">{c.slug}.garage.jmsurf.co.ke</span></span>
+                <span className="min-w-0 flex-1"><b className="block truncate">{c.business_name}</b><span className="block truncate text-xs text-muted-foreground">{c.slug}.garage.jmsurf.co.ke</span></span>
                 {c.is_owner && <Pill tone="success">Owner</Pill>}
                 <select className="fi h-8 w-36 text-xs" value={c.role} disabled={c.is_owner} onChange={(e) => void run("admin_set_company_access", { p_user: user.user_id, p_tenant: c.tenant_id, p_role: e.target.value }, "Role changed")}>
                   {ROLES.map((r) => <option key={r} value={r}>{r.replace("_", " ")}</option>)}
@@ -39,14 +39,14 @@ export default function AdminUserAccess({ user, tenants, onClose }: { user: { us
             {!companies.length && <p className="text-sm text-muted-foreground">No companies yet.</p>}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <select className="fi h-9 flex-1" value={add.tenant} onChange={(e) => setAdd({ ...add, tenant: e.target.value })}><option value="">Add a company…</option>{free.map((t) => <option key={t.id} value={t.id}>{t.business_name}</option>)}</select>
+            <select className="fi h-9 min-w-0 flex-1 basis-40" value={add.tenant} onChange={(e) => setAdd({ ...add, tenant: e.target.value })}><option value="">Add a company…</option>{free.map((t) => <option key={t.id} value={t.id}>{t.business_name}</option>)}</select>
             <select className="fi h-9 w-36" value={add.role} onChange={(e) => setAdd({ ...add, role: e.target.value })}>{ROLES.map((r) => <option key={r} value={r}>{r.replace("_", " ")}</option>)}</select>
             <Button size="sm" disabled={!add.tenant} onClick={() => { void run("admin_set_company_access", { p_user: user.user_id, p_tenant: add.tenant, p_role: add.role }, "Access given"); setAdd({ ...add, tenant: "" }); }}><Plus /> Give access</Button>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">They switch between these companies from the company menu at the top, with the same login.</p>
+          <p className="mt-1 text-xs text-muted-foreground">They switch company from the menu at the top.</p>
         </section>
         <section>
-          <p className="mb-2 flex items-center gap-2 text-sm font-semibold"><Link2 className="h-4 w-4 text-primary" /> Linked logins (other emails of the same person)</p>
+          <p className="mb-2 flex items-center gap-2 text-sm font-semibold"><Link2 className="h-4 w-4 text-primary" /> Linked logins</p>
           <div className="space-y-2">
             {(data?.links || []).map((l: any) => (
               <div key={l.user_id} className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm">
@@ -54,10 +54,10 @@ export default function AdminUserAccess({ user, tenants, onClose }: { user: { us
                 <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void run("admin_link_logins", { p_a: user.user_id, p_b: l.user_id, p_link: false }, "Unlinked")}>Unlink</Button>
               </div>
             ))}
-            {!(data?.links || []).length && <p className="text-sm text-muted-foreground">None. Linked logins see each other's companies in the company menu and switch without signing in again.</p>}
+            {!(data?.links || []).length && <p className="text-sm text-muted-foreground">None. Linked logins share companies without signing in again.</p>}
           </div>
           <Field label="Link another login" className="mt-3">
-            <div className="flex gap-2"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input className="fi pl-9" placeholder="Search by email" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void search(); }} /></div><Button variant="outline" onClick={() => void search()}>Find</Button></div>
+            <div className="flex gap-2"><div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input className="fi pl-9" placeholder="Enter email" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void search(); }} /></div><Button variant="outline" onClick={() => void search()}>Find</Button></div>
           </Field>
           {found.map((x) => (
             <div key={x.user_id} className="mt-2 flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2 text-sm">

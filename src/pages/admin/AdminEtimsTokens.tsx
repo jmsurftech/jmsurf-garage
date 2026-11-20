@@ -71,14 +71,14 @@ export default function AdminEtimsTokens() {
   };
   const rows = data.filter((r: any) => view === "all" || r.status === view);
   return (
-    <div className="space-y-5">
-      <PageHeader title="KRA tokens" icon={KeyRound} description="Companies asking JMSURF TAX for their eTIMS integration token. KRA issues the token: press Email KRA to send the request to KRA eTIMS Integrator Support with the taxpayer and integrator details, then paste the token KRA replies with and press Issue. The company sees it in System → KRA eTIMS." />
+    <div className="space-y-4">
+      <PageHeader title="KRA tokens" icon={KeyRound} />
       <Segmented<"requested" | "issued" | "all"> value={view} onChange={setView} options={[
         { value: "requested", label: "Waiting", count: data.filter((r: any) => r.status === "requested").length },
         { value: "issued", label: "Issued", count: data.filter((r: any) => r.status === "issued").length },
         { value: "all", label: "All", count: data.length },
       ]} />
-      <Panel flush>
+      <Panel flush title="Token requests" description="Press Email KRA, paste the token KRA replies with, then press Issue. The company sees it in System → KRA eTIMS.">
         {rows.length === 0 ? <p className="p-6 text-sm text-muted-foreground">Nothing here.</p> : (
           <div className="overflow-x-auto"><table className="dt">
             <thead><tr><th>Company</th><th>KRA PIN</th><th>Branch</th><th>Device serial</th><th>Contact</th><th>Requested</th><th>Token</th><th /></tr></thead>
@@ -91,13 +91,13 @@ export default function AdminEtimsTokens() {
                 <td className="text-xs">{[r.contact_phone, r.contact_email].filter(Boolean).join(" · ") || "—"}</td>
                 <td className="text-xs">{new Date(r.requested_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
                 <td>{r.status === "requested"
-                  ? <input className="fi h-9 w-56 font-mono text-xs" placeholder="Paste the integration token" value={tokens[r.id] || ""} onChange={(e) => setTokens({ ...tokens, [r.id]: e.target.value })} />
-                  : r.status === "issued" ? <span className="font-mono text-xs">{r.token}</span> : <Pill tone="muted">Closed</Pill>}</td>
-                <td className="whitespace-nowrap text-right">{r.status === "requested" ? <>
+                  ? <input className="fi h-9 w-full min-w-0 font-mono text-xs sm:w-56" placeholder="Enter token" value={tokens[r.id] || ""} onChange={(e) => setTokens({ ...tokens, [r.id]: e.target.value })} />
+                  : r.status === "issued" ? <span className="break-all font-mono text-xs">{r.token}</span> : <Pill tone="muted">Closed</Pill>}</td>
+                <td className="text-right">{r.status === "requested" ? <div className="flex flex-wrap justify-end gap-1.5">
                   <Button size="sm" variant="outline" asChild><a href={kraTokenMail(r)}><Mail /> Email KRA</a></Button>
                   <Button size="sm" onClick={() => void decide(r, true)}><Check /> Issue</Button>
-                  <Button size="sm" variant="ghost" onClick={() => void decide(r, false)}><X /></Button>
-                </> : <Pill tone={r.status === "issued" ? "success" : "muted"}>{r.status}</Pill>}</td>
+                  <Button size="sm" variant="ghost" aria-label="Close request" title="Close request" onClick={() => void decide(r, false)}><X /></Button>
+                </div> :<Pill tone={r.status === "issued" ? "success" : "muted"}>{r.status}</Pill>}</td>
               </tr>
             ))}</tbody>
           </table></div>

@@ -998,3 +998,22 @@ html.erp-ws .soft-tab[data-state="active"] { box-shadow: none; }
 @media (min-width: 640px) and (max-width: 1799px) {
   .grid:has(> :nth-child(8):last-child):has(> .kpi-cell, > :is(a, button) > .kpi-cell) { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
 }
+
+/* ══ Admin console (admin.garage.jmsurf.co.ke, 2026-11-20): the same ISP shell as the workspace. AdminLayout puts
+   .ws-shell + .adm-ws on its root and erp-ws on <html>, so every .ws-* rule above applies unchanged; only the
+   Platform identity bits below are the admin's own. Additive: nothing here touches the workspace. No grid backgrounds. ══ */
+.adm-ws .adm-mark { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 10px; background: linear-gradient(135deg, hsl(var(--primary)), color-mix(in srgb, hsl(var(--primary)) 55%, #000)); box-shadow: 0 6px 14px -6px hsl(var(--primary) / .55); }
+.adm-ws .adm-badge { display: inline-flex; align-items: center; margin-top: 3px; height: 16px; padding: 0 6px; border-radius: 999px; background: color-mix(in srgb, hsl(var(--primary)) 12%, transparent); color: var(--ws-brand-ink); font-size: 9.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; line-height: 1; }
+.adm-ws .adm-live { display: grid; place-items: center; }
+.adm-ws .adm-live > i { width: 8px; height: 8px; border-radius: 999px; background: hsl(var(--success)); box-shadow: 0 0 0 3px hsl(var(--success) / .2); }
+.adm-ws .ws-side-extra .ws-nav-row:has(.adm-live) { color: hsl(var(--success)); }
+@media (min-width: 1024px) { .adm-ws .ws-side.is-collapsed .ws-powered { display: none; } }
+/* Account: avatar, first name and role in one raised pill (as the workspace .ws-user). */
+.adm-ws .adm-user { display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 4px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: var(--ws-card); box-shadow: var(--ws-raise-sm); cursor: pointer; }
+@media (min-width: 1024px) { .adm-ws .adm-user { padding-right: 12px; } }
+.adm-ws .adm-user:active { box-shadow: var(--ws-press); }
+.adm-ws .adm-avatar { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 999px; background: linear-gradient(135deg, hsl(var(--primary)), color-mix(in srgb, hsl(var(--primary)) 55%, #000)); color: #fff; font-size: 12px; font-weight: 700; }
+.adm-ws .adm-who { min-width: 0; max-width: 9rem; text-align: left; }
+.adm-ws .adm-who b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; line-height: 1.2; }
+.adm-ws .adm-role { display: inline-block; margin-top: 2px; padding: 0 6px; border-radius: 999px; background: color-mix(in srgb, hsl(var(--primary)) 12%, transparent); color: var(--ws-brand-ink); font-size: 10.5px; font-weight: 600; line-height: 15px; }
+@media (max-width: 639px) { .adm-ws .adm-user { height: 36px; padding: 0 2px; border-color: transparent; background: transparent; box-shadow: none; } }

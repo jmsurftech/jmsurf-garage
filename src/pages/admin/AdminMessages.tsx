@@ -1,13 +1,11 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { MessagesSquare, Mail, MessageSquare, MessageCircle, BellRing, CheckCircle2, XCircle, Settings, Download } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { allRows, downloadCsv } from "@/lib/fetchAll";
-import { PageHeader, Toolbar, SearchBox, Segmented, Panel, StatTile, StatGrid, TableWrap, EmptyState, StatusPill, PageLoader, Pill } from "@/components/kit";
+import { PageHeader, Toolbar, SearchBox, Segmented, Panel, StatTile, StatGrid, TableWrap, EmptyState, StatusPill, PageLoader, Pill, ExportMenu, MoreMenu } from "@/components/kit";
 import { PagedRows } from "@/components/Pager";
-import { Button } from "@/components/ui/button";
 
 const sb: any = supabase;
 type Tab = "messages" | "reminders";
@@ -64,15 +62,13 @@ export default function AdminMessages() {
   const stat = (rows: any[], c?: string) => rows.filter((r) => !c || (r.channel || "email") === c).length;
 
   return (
-    <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Messages" icon={MessagesSquare} description="SMS, WhatsApp and email sent by companies and the platform, last 90 days."
+    <div className="space-y-3">
+      <PageHeader title="Messages" icon={MessagesSquare}
         actions={<>
-          <Button variant="outline" size="sm" disabled={!filtered.length} onClick={() => downloadCsv(`dash-${tab}-${new Date().toISOString().slice(0, 10)}.csv`,
+          <ExportMenu items={[{ label: "Download CSV", icon: Download, disabled: !filtered.length, onSelect: () => downloadCsv(`dash-${tab}-${new Date().toISOString().slice(0, 10)}.csv`,
             ["Sent", "Company", "Channel", "Recipient", tab === "messages" ? "Subject" : "Reminder", "Status", "Detail"],
-            filtered.map((r: any) => [format(new Date(r.created_at), "yyyy-MM-dd HH:mm"), names[r.tenant_id] || "Platform", r.channel || "email", r.recipient, tab === "messages" ? r.subject : r.stage, r.status, r.smtp_response || r.detail]))}>
-            <Download className="h-4 w-4" /> Export
-          </Button>
-          <Button asChild variant="outline" size="sm"><Link to="/admin/settings"><Settings className="h-4 w-4" /> Messaging &amp; reminder settings</Link></Button>
+            filtered.map((r: any) => [format(new Date(r.created_at), "yyyy-MM-dd HH:mm"), names[r.tenant_id] || "Platform", r.channel || "email", r.recipient, tab === "messages" ? r.subject : r.stage, r.status, r.smtp_response || r.detail])) }]} />
+          <MoreMenu items={[{ label: "Message settings", icon: Settings, to: "/admin/settings" }]} />
         </>} />
 
       <StatGrid>
@@ -85,17 +81,17 @@ export default function AdminMessages() {
       <Toolbar>
         <Segmented<Tab> value={tab} onChange={setTab} options={[
           { value: "messages", label: "Messages", count: all.length },
-          { value: "reminders", label: "Renewal reminders", count: rem.length },
+          { value: "reminders", label: "Reminders", count: rem.length },
         ]} />
         <Segmented<Channel> value={channel} onChange={setChannel} options={[
           { value: "all", label: "All" }, { value: "sms", label: "SMS" }, { value: "whatsapp", label: "WhatsApp" }, { value: "email", label: "Email" },
         ]} />
-        <SearchBox value={search} onChange={setSearch} placeholder="Search recipient, company or text…" />
+        <SearchBox value={search} onChange={setSearch} placeholder="Search messages" />
       </Toolbar>
 
       <Panel flush>
         {filtered.length === 0 ? (
-          <EmptyState icon={MessagesSquare} title="Nothing here" description="No messages match these filters in the last 90 days." />
+          <EmptyState icon={MessagesSquare} title="Nothing here" description="Last 90 days." />
         ) : tab === "messages" ? (
           <TableWrap>
             <table className="dt">
@@ -108,7 +104,7 @@ export default function AdminMessages() {
                       <td>{r.tenant_id ? names[r.tenant_id] || "—" : <span className="text-muted-foreground">Platform</span>}</td>
                       <td><ChannelPill channel={r.channel || "email"} /></td>
                       <td className="whitespace-nowrap">{r.recipient}</td>
-                      <td className="max-w-[22rem] truncate" title={r.subject}>{r.subject}</td>
+                      <td className="max-w-[16rem] truncate sm:max-w-[22rem]" title={r.subject}>{r.subject}</td>
                       <td title={r.smtp_response || undefined}><StatusPill status={r.status} /></td>
                     </tr>
                   ))}

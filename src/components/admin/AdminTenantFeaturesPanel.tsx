@@ -186,24 +186,24 @@ export default function AdminTenantFeaturesPanel({
   };
 
   return (
-    <div className="bg-muted/40 border border-border rounded-2xl p-5 sm:p-6 space-y-4">
+    <div className="bg-card border border-border rounded-2xl p-4 space-y-4">
       <div>
         <h3 className="font-semibold flex items-center gap-2">
           <Settings2 className="w-4 h-4 text-primary" /> Custom deal
         </h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          This company only. The package stays {planInfo ? <b className="text-foreground">{planInfo.name}</b> : "as it is"}; renewals keep these terms.
+          This company only. Package: {planInfo ? <b className="text-foreground">{planInfo.name}</b> : "unchanged"}.
         </p>
       </div>
 
       <div className="grid gap-3 text-sm sm:grid-cols-3">
         <div>
-          <label className="text-muted-foreground text-xs mb-1 block">Price they pay (KES per month)</label>
+          <label className="text-muted-foreground text-xs mb-1 block">Price (KES / month)</label>
           <input type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className="fi" />
           {planInfo && (
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Package price KES {Number(planInfo.price_monthly).toLocaleString()}.{" "}
-              {Number(price) !== Number(planInfo.price_monthly) && <button type="button" className="font-medium text-primary underline" onClick={() => setPrice(String(planInfo.price_monthly))}>Use package price</button>}
+              Package KES {Number(planInfo.price_monthly).toLocaleString()}.{" "}
+              {Number(price) !== Number(planInfo.price_monthly) && <button type="button" className="font-medium text-primary underline" onClick={() => setPrice(String(planInfo.price_monthly))}>Use it</button>}
             </p>
           )}
         </div>
@@ -220,12 +220,12 @@ export default function AdminTenantFeaturesPanel({
       </div>
 
       <div>
-        <p className="text-xs text-muted-foreground mb-2">Screens this company can use (on top of, or instead of, the package defaults)</p>
+        <p className="text-xs text-muted-foreground mb-2">Screens this company can use</p>
         <div className="grid gap-2 sm:grid-cols-2">
           {ALL_FEATURES.map((f) => {
             const enabled = overrides[f.key] ?? true;
             return (
-              <label key={f.key} className="flex items-center gap-2 text-sm cursor-pointer p-2 rounded-lg hover:bg-muted">
+              <label key={f.key} className="flex min-w-0 items-center gap-2 text-sm cursor-pointer p-2 rounded-lg hover:bg-muted">
                 <input type="checkbox" checked={enabled} onChange={() => toggle(f.key)}
                   className="rounded border-border" />
                 <span className={enabled ? "text-foreground" : "text-muted-foreground line-through"}>{f.label}</span>
@@ -237,8 +237,8 @@ export default function AdminTenantFeaturesPanel({
 
       <EffectiveFeaturesPreview tenantId={tenantId} pendingOverrides={overrides} />
 
-      <Button onClick={save} disabled={saving} className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg gap-1">
-        <Save className="w-4 h-4" /> {saving ? "Saving…" : "Save custom deal"}
+      <Button onClick={save} disabled={saving} className="gap-1 rounded-lg">
+        <Save className="w-4 h-4" /> {saving ? "Saving…" : "Save"}
       </Button>
     </div>
   );
@@ -329,13 +329,13 @@ function EffectiveFeaturesPreview({
   if (loading) {
     return (
       <div className="rounded-lg border border-border bg-muted/40 p-3 flex items-center gap-2 text-xs text-muted-foreground">
-        <OrbSpinner className="w-3.5 h-3.5" /> Loading effective features…
+        <OrbSpinner className="w-3.5 h-3.5" /> Loading…
       </div>
     );
   }
   if (error) {
     return (
-      <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 flex items-center gap-2 text-xs text-red-300">
+      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 flex items-center gap-2 text-xs text-destructive">
         <AlertCircle className="w-3.5 h-3.5" /> Could not load features: {error}
       </div>
     );
@@ -344,12 +344,12 @@ function EffectiveFeaturesPreview({
 
   return (
     <div className="rounded-lg border border-border bg-muted/40 p-3">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs text-muted-foreground">Effective features (live, includes unsaved toggles)</p>
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <p className="text-xs text-muted-foreground">Result, with unsaved changes</p>
         <button
           type="button"
           onClick={copyJson}
-          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border hover:bg-muted"
+          className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border hover:bg-muted"
         >
           <Copy className="w-3 h-3" /> {copied ? "Copied!" : "Copy JSON"}
         </button>
@@ -362,7 +362,7 @@ function EffectiveFeaturesPreview({
               className={
                 "px-2 py-0.5 rounded-full text-[11px] border " +
                 (on
-                  ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                  ? "bg-success/10 text-success border-success/30"
                   : "bg-muted/40 text-muted-foreground border-border line-through")
               }>
               {f.label}

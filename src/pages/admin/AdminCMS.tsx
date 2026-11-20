@@ -3,15 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Save, Eye, Code, Plus, Trash2, FileText, ExternalLink } from "lucide-react";
-import { PageHeader, Panel, Segmented } from "@/components/kit";
+import { PageHeader, Panel, Segmented, MoreMenu } from "@/components/kit";
 
 const SECTION_INFO: Record<string, { title: string; where: string }> = {
-  hero: { title: "Hero", where: "Top of the home page. The subtitle and button text and link are shown." },
-  features: { title: "Features", where: "The Features grid. Each item is a card, in this order." },
-  cta: { title: "Call to action", where: "The orange banner above the contact form. The title and button link are shown." },
-  contact: { title: "Contact details", where: "Top bar, contact section and footer. Phone, email and address." },
-  whatsapp: { title: "WhatsApp button", where: "The floating green button and the WhatsApp contact card." },
-  footer: { title: "Footer", where: "Bottom of every public page. Tagline and company name." },
+  hero: { title: "Hero", where: "Top of the home page." },
+  features: { title: "Features", where: "The Features cards, in this order." },
+  cta: { title: "Call to action", where: "The banner above the contact form." },
+  contact: { title: "Contact details", where: "Top bar, contact section and footer." },
+  whatsapp: { title: "WhatsApp button", where: "The floating button and the WhatsApp card." },
+  footer: { title: "Footer", where: "Bottom of every public page." },
 };
 
 type ViewMode = "visual" | "json";
@@ -96,10 +96,10 @@ export default function AdminCMS() {
               <input value={data.title || ""} onChange={e => updateField(section, "title", e.target.value)} className={inputClass} /></div>
             <div><label className="mb-1.5 block text-sm font-medium">Subtitle</label>
               <textarea value={data.subtitle || ""} onChange={e => updateField(section, "subtitle", e.target.value)} className={inputClass + " h-20 resize-y"} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="mb-1.5 block text-sm font-medium">CTA Text</label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><label className="mb-1.5 block text-sm font-medium">Button text</label>
                 <input value={data.cta_text || ""} onChange={e => updateField(section, "cta_text", e.target.value)} className={inputClass} /></div>
-              <div><label className="mb-1.5 block text-sm font-medium">CTA Link</label>
+              <div><label className="mb-1.5 block text-sm font-medium">Button link</label>
                 <input value={data.cta_link || ""} onChange={e => updateField(section, "cta_link", e.target.value)} className={inputClass} /></div>
             </div>
           </div>
@@ -114,15 +114,15 @@ export default function AdminCMS() {
               <textarea value={data.description || ""} onChange={e => updateField(section, "description", e.target.value)} className={inputClass + " h-24 resize-y"} /></div>
             <div>
               <label className="mb-2 block text-sm font-medium">Stats</label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 {(data.stats || []).map((stat: any, i: number) => (
-                  <div key={i} className="flex gap-2">
-                    <input value={stat.value} placeholder="Value" onChange={e => {
+                  <div key={i} className="flex min-w-0 gap-2">
+                    <input value={stat.value} placeholder="Enter value" onChange={e => {
                       const stats = [...(data.stats || [])];
                       stats[i] = { ...stats[i], value: e.target.value };
                       updateField(section, "stats", stats);
                     }} className={inputClass + " w-1/3"} />
-                    <input value={stat.label} placeholder="Label" onChange={e => {
+                    <input value={stat.label} placeholder="Enter label" onChange={e => {
                       const stats = [...(data.stats || [])];
                       stats[i] = { ...stats[i], label: e.target.value };
                       updateField(section, "stats", stats);
@@ -138,7 +138,7 @@ export default function AdminCMS() {
         return (
           <div className="space-y-3">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium">Feature Items ({(data.items || []).length})</label>
+              <label className="text-sm font-medium">Items ({(data.items || []).length})</label>
               <Button size="sm" variant="ghost" className="h-7 text-primary" onClick={() => {
                 const items = [...(data.items || []), { title: "", desc: "" }];
                 updateField(section, "items", items);
@@ -147,13 +147,13 @@ export default function AdminCMS() {
             <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
               {(data.items || []).map((item: any, i: number) => (
                 <div key={i} className="flex gap-2 items-start">
-                  <div className="flex-1 grid grid-cols-2 gap-2">
-                    <input value={item.title} placeholder="Title" onChange={e => {
+                  <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
+                    <input value={item.title} placeholder="Enter title" onChange={e => {
                       const items = [...(data.items || [])];
                       items[i] = { ...items[i], title: e.target.value };
                       updateField(section, "items", items);
                     }} className={inputClass} />
-                    <input value={item.desc} placeholder="Description" onChange={e => {
+                    <input value={item.desc} placeholder="Enter description" onChange={e => {
                       const items = [...(data.items || [])];
                       items[i] = { ...items[i], desc: e.target.value };
                       updateField(section, "items", items);
@@ -176,10 +176,10 @@ export default function AdminCMS() {
               <input value={data.title || ""} onChange={e => updateField(section, "title", e.target.value)} className={inputClass} /></div>
             <div><label className="mb-1.5 block text-sm font-medium">Subtitle</label>
               <input value={data.subtitle || ""} onChange={e => updateField(section, "subtitle", e.target.value)} className={inputClass} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="mb-1.5 block text-sm font-medium">CTA Text</label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><label className="mb-1.5 block text-sm font-medium">Button text</label>
                 <input value={data.cta_text || ""} onChange={e => updateField(section, "cta_text", e.target.value)} className={inputClass} /></div>
-              <div><label className="mb-1.5 block text-sm font-medium">CTA Link</label>
+              <div><label className="mb-1.5 block text-sm font-medium">Button link</label>
                 <input value={data.cta_link || ""} onChange={e => updateField(section, "cta_link", e.target.value)} className={inputClass} /></div>
             </div>
           </div>
@@ -190,7 +190,7 @@ export default function AdminCMS() {
           <div className="space-y-3">
             <div><label className="mb-1.5 block text-sm font-medium">Title</label>
               <input value={data.title || ""} onChange={e => updateField(section, "title", e.target.value)} className={inputClass} /></div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div><label className="mb-1.5 block text-sm font-medium">Email</label>
                 <input value={data.email || ""} onChange={e => updateField(section, "email", e.target.value)} className={inputClass} /></div>
               <div><label className="mb-1.5 block text-sm font-medium">Phone</label>
@@ -210,16 +210,16 @@ export default function AdminCMS() {
                 checked={data.enabled !== false}
                 onChange={e => updateField(section, "enabled", e.target.checked)}
               />
-              Show floating WhatsApp button
+              Show the WhatsApp button
             </label>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="mb-1.5 block text-sm font-medium">WhatsApp Number (international, e.g. 254712504593)</label>
-                <input value={data.number || ""} onChange={e => updateField(section, "number", e.target.value)} className={inputClass} /></div>
-              <div><label className="mb-1.5 block text-sm font-medium">Button Label (accessibility)</label>
-                <input value={data.label || ""} onChange={e => updateField(section, "label", e.target.value)} className={inputClass} /></div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><label className="mb-1.5 block text-sm font-medium">WhatsApp number</label>
+                <input value={data.number || ""} onChange={e => updateField(section, "number", e.target.value)} placeholder="Enter number with country code" className={inputClass} /></div>
+              <div><label className="mb-1.5 block text-sm font-medium">Button label</label>
+                <input value={data.label || ""} onChange={e => updateField(section, "label", e.target.value)} placeholder="Enter button label" className={inputClass} /></div>
             </div>
-            <div><label className="mb-1.5 block text-sm font-medium">Prefilled Message Template</label>
-              <textarea value={data.message || ""} onChange={e => updateField(section, "message", e.target.value)} className={inputClass + " h-24 resize-y"} /></div>
+            <div><label className="mb-1.5 block text-sm font-medium">Opening message</label>
+              <textarea value={data.message || ""} onChange={e => updateField(section, "message", e.target.value)} placeholder="Enter message" className={inputClass + " h-24 resize-y"} /></div>
           </div>
         );
 
@@ -227,7 +227,7 @@ export default function AdminCMS() {
 
         return (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div><label className="mb-1.5 block text-sm font-medium">Company Name</label>
                 <input value={data.company_name || ""} onChange={e => updateField(section, "company_name", e.target.value)} className={inputClass} /></div>
               <div><label className="mb-1.5 block text-sm font-medium">Tagline</label>
@@ -248,17 +248,17 @@ export default function AdminCMS() {
   };
 
   return (
-    <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Website content" description="Edit the public home page. Saved changes show straight away." icon={FileText}
+    <div className="space-y-3">
+      <PageHeader title="Website content" icon={FileText}
         actions={<>
-          <a href="https://garage.jmsurf.co.ke" target="_blank" rel="noopener noreferrer"><Button variant="outline" size="sm"><ExternalLink /> View site</Button></a>
+          <MoreMenu items={[{ label: "View site", icon: ExternalLink, href: "https://garage.jmsurf.co.ke", newTab: true }]} />
           <Segmented value={viewMode} onChange={(v) => switchMode(v as ViewMode)} options={[
             { value: "visual", label: <span className="inline-flex items-center gap-1.5"><Eye className="h-3.5 w-3.5" />Form</span> },
             { value: "json", label: <span className="inline-flex items-center gap-1.5"><Code className="h-3.5 w-3.5" />JSON</span> },
           ]} />
         </>} />
 
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid gap-3 xl:grid-cols-2">
         {sections
           .filter((s) => SECTION_INFO[s.section])
           .sort((a, b) => Object.keys(SECTION_INFO).indexOf(a.section) - Object.keys(SECTION_INFO).indexOf(b.section))

@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, MessageCircle, Save, Send, Wallet, Plus, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Field, Pill, SearchBox, EmptyState, Modal } from "@/components/kit";
+import { Field, Pill, SearchBox, EmptyState, Modal, Panel } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { messagingApi } from "@/lib/messaging";
 import { OrbSpinner } from "@/components/orbs";
@@ -96,58 +96,46 @@ export default function AdminMessagingPanel() {
   const waOn = !!(keys.wa_enabled && keys.apiwap_api_key);
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="space-y-4 rounded-xl border border-border bg-muted/30 p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2"><MessageSquare className="h-4 w-4 text-primary" /><h4 className="font-semibold">SMS · SendBulkSMS</h4></div>
-            {smsOn ? <Pill tone="success">On for companies</Pill> : <Pill>Off</Pill>}
-          </div>
-          <p className="text-xs text-muted-foreground">Companies that choose "JMSURF account" send through this key and use their prepaid units.</p>
-          <Field label="API key" hint="Starts with bsms_live_ (bsms_test_ accepts but doesn't deliver)">
-            <input className="fi font-mono" type="password" autoComplete="off" value={keys.sendbulksms_api_key || ""} onChange={(e) => set("sendbulksms_api_key", e.target.value.trim())} placeholder="bsms_live_…" />
+    <div className="space-y-4">
+      <div className="grid gap-3 lg:grid-cols-2">
+        <Panel title="SMS · SendBulkSMS" icon={MessageSquare} description='Companies on "JMSURF account" send through this key and use prepaid units.'
+          actions={smsOn ? <Pill tone="success">On</Pill> : <Pill>Off</Pill>} bodyClassName="space-y-3">
+          <Field label="API key" hint="bsms_live_ key; a bsms_test_ key does not deliver">
+            <input className="fi font-mono" type="password" autoComplete="off" value={keys.sendbulksms_api_key || ""} onChange={(e) => set("sendbulksms_api_key", e.target.value.trim())} placeholder="Enter API key" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Default sender ID"><input className="fi" maxLength={11} value={keys.sms_sender_id || ""} onChange={(e) => set("sms_sender_id", e.target.value)} placeholder="JMSURFPOS" /></Field>
-            <Field label="Price per SMS (KES)" hint="Shown to companies"><input className="fi" type="number" min={0} step="0.1" value={keys.price_per_sms ?? 1.5} onChange={(e) => set("price_per_sms", e.target.value)} /></Field>
+            <Field label="Sender ID"><input className="fi" maxLength={11} value={keys.sms_sender_id || ""} onChange={(e) => set("sms_sender_id", e.target.value)} placeholder="Enter sender ID" /></Field>
+            <Field label="Price per SMS (KES)"><input className="fi" type="number" min={0} step="0.1" value={keys.price_per_sms ?? 1.5} onChange={(e) => set("price_per_sms", e.target.value)} /></Field>
           </div>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-primary" checked={!!keys.sms_enabled} onChange={(e) => set("sms_enabled", e.target.checked)} /> Let companies send SMS through this account</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-primary" checked={!!keys.sms_enabled} onChange={(e) => set("sms_enabled", e.target.checked)} /> Companies can send SMS</label>
           <div className="flex flex-wrap items-center gap-3 text-xs">
             <button type="button" onClick={checkBalance} className="inline-flex items-center gap-1 font-medium text-primary hover:underline"><Wallet className="h-3.5 w-3.5" /> Check balance</button>
             {balance && <span className="text-muted-foreground">{balance}</span>}
             <a href="https://sendbulksms.co.ke" target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">sendbulksms.co.ke <ExternalLink className="h-3 w-3" /></a>
           </div>
-        </section>
+        </Panel>
 
-        <section className="space-y-4 rounded-xl border border-border bg-muted/30 p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2"><MessageCircle className="h-4 w-4 text-primary" /><h4 className="font-semibold">WhatsApp · APIWAP</h4></div>
-            {waOn ? <Pill tone="success">On for companies</Pill> : <Pill>Off</Pill>}
-          </div>
-          <p className="text-xs text-muted-foreground">Companies that choose "JMSURF account" send receipts from the WhatsApp number linked to this key.</p>
-          <Field label="API key" hint="From the APIWAP dashboard, after linking the WhatsApp number">
-            <input className="fi font-mono" type="password" autoComplete="off" value={keys.apiwap_api_key || ""} onChange={(e) => set("apiwap_api_key", e.target.value.trim())} placeholder="Paste API key" />
+        <Panel title="WhatsApp · APIWAP" icon={MessageCircle} description='Companies on "JMSURF account" send from the WhatsApp number linked to this key.'
+          actions={waOn ? <Pill tone="success">On</Pill> : <Pill>Off</Pill>} bodyClassName="space-y-3">
+          <Field label="API key" hint="From the APIWAP dashboard">
+            <input className="fi font-mono" type="password" autoComplete="off" value={keys.apiwap_api_key || ""} onChange={(e) => set("apiwap_api_key", e.target.value.trim())} placeholder="Enter API key" />
           </Field>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-primary" checked={!!keys.wa_enabled} onChange={(e) => set("wa_enabled", e.target.checked)} /> Let companies send WhatsApp through this account</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-primary" checked={!!keys.wa_enabled} onChange={(e) => set("wa_enabled", e.target.checked)} /> Companies can send WhatsApp</label>
           <a href="https://apiwap.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">apiwap.com <ExternalLink className="h-3 w-3" /></a>
-        </section>
+        </Panel>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <Button onClick={save} disabled={saving}>{saving ? <OrbSpinner /> : <Save />} Save</Button>
         <span className="mx-2 hidden h-6 w-px bg-border sm:block" />
-        <input className="fi w-56" inputMode="tel" placeholder="Test number, e.g. 0712…" value={testTo} onChange={(e) => setTestTo(e.target.value)} />
+        <input className="fi w-full sm:w-56" inputMode="tel" placeholder="Enter test number" value={testTo} onChange={(e) => setTestTo(e.target.value)} />
         <Button variant="outline" onClick={() => test("sms")} disabled={!!busy || !keys.sendbulksms_api_key}>{busy === "sms" ? <OrbSpinner /> : <Send />} Test SMS</Button>
         <Button variant="outline" onClick={() => test("whatsapp")} disabled={!!busy || !keys.apiwap_api_key}>{busy === "whatsapp" ? <OrbSpinner /> : <MessageCircle />} Test WhatsApp</Button>
       </div>
 
-      <section className="rounded-xl border border-border">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
-          <div>
-            <h4 className="font-semibold">Company SMS units</h4>
-            <p className="text-xs text-muted-foreground">Prepaid units for companies using JMSURF's SMS account. One unit = one SMS part (160 characters).</p>
-          </div>
-          <SearchBox value={q} onChange={setQ} placeholder="Find a company…" className="w-full sm:w-64" />
+      <Panel title="Company SMS units" icon={Wallet} description="One unit = one SMS part (160 characters)." flush>
+        <div className="border-b border-border/60 p-2">
+          <SearchBox value={q} onChange={setQ} placeholder="Search companies" className="w-full min-w-0 sm:w-64" />
         </div>
         {isLoading ? <p className="p-6 text-sm text-muted-foreground">Loading…</p> : filtered.length === 0 ? <EmptyState title="No companies found" className="py-10" /> : (
           <div className="max-h-[420px] overflow-auto">
@@ -166,15 +154,15 @@ export default function AdminMessagingPanel() {
             </table>
           </div>
         )}
-      </section>
+      </Panel>
 
       <Modal open={!!topup} onClose={() => setTopup(null)} icon={Wallet} title={`Add SMS units — ${topup?.business_name || ""}`}
-        description={`Currently ${Number(topup?.units || 0).toLocaleString()} units. Use a negative number to correct a mistake.`}
+        description={`Now ${Number(topup?.units || 0).toLocaleString()} units. A negative number corrects a mistake.`}
         footer={<><Button variant="outline" onClick={() => setTopup(null)}>Cancel</Button><Button onClick={addUnits} disabled={busy === "topup"}>{busy === "topup" && <OrbSpinner />} Save</Button></>}>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Units"><input className="fi" type="number" value={units} onChange={(e) => setUnits(e.target.value)} autoFocus /></Field>
-          <Field label="Amount paid (KES)"><input className="fi" type="number" min={0} value={paid} onChange={(e) => setPaid(e.target.value)} /></Field>
-          <Field label="Payment reference" className="sm:col-span-2"><input className="fi" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="e.g. M-Pesa code" /></Field>
+          <Field label="Units"><input className="fi" type="number" value={units} onChange={(e) => setUnits(e.target.value)} placeholder="Enter units" autoFocus /></Field>
+          <Field label="Amount paid (KES)"><input className="fi" type="number" min={0} value={paid} onChange={(e) => setPaid(e.target.value)} placeholder="Enter amount" /></Field>
+          <Field label="Payment reference" className="sm:col-span-2"><input className="fi" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Enter reference" /></Field>
         </div>
       </Modal>
     </div>

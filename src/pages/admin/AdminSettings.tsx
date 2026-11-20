@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Save, RefreshCw, Check, Settings as SettingsIcon, Building2, Mail, MessageSquare, CreditCard, Clock, ShieldCheck, BellRing, LineChart } from "lucide-react";
-import { PageHeader, Panel, Field } from "@/components/kit";
+import { PageHeader, Panel, Field, LineTabs } from "@/components/kit";
 import SessionSettingsTab from "@/components/SessionSettingsTab";
 import AdminMessagingPanel from "@/components/admin/AdminMessagingPanel";
 import AdminRemindersPanel from "@/components/admin/AdminRemindersPanel";
@@ -26,11 +26,11 @@ type Tab = "general" | "integrations" | "tracking" | "smtp" | "messaging" | "rem
 
 const TABS: { id: Tab; label: string; icon: any; description: string }[] = [
   { id: "general", label: "General", icon: Building2, description: "Platform name and where alerts go." },
-  { id: "integrations", label: "Integrations", icon: PlugZap, description: "Every platform key in one place: JMSURF PAY, Daraja, JMSURF SMS, JMSURF MAIL, WhatsApp, JMSURF TAX (eTIMS) and the Call Centre, each with a Test." },
-  { id: "tracking", label: "Tracking & SEO", icon: LineChart, description: "Meta Pixel and Google Analytics for garage.jmsurf.co.ke, sign-up and sign-in pages." },
-  { id: "smtp", label: "Email", icon: Mail, description: "The mail account that sends sign-up, password, receipt and alert emails." },
-  { id: "messaging", label: "SMS & WhatsApp", icon: MessageSquare, description: "Platform SMS and WhatsApp accounts, and companies' prepaid SMS units." },
-  { id: "reminders", label: "Renewal reminders", icon: BellRing, description: "Email, SMS and WhatsApp reminders before and after a company's package ends." },
+  { id: "integrations", label: "Integrations", icon: PlugZap, description: "All platform keys in one place, each with a test." },
+  { id: "tracking", label: "Tracking & SEO", icon: LineChart, description: "Meta Pixel and Google Analytics on the public pages." },
+  { id: "smtp", label: "Email", icon: Mail, description: "The account that sends sign-up, password, receipt and alert emails." },
+  { id: "messaging", label: "SMS & WhatsApp", icon: MessageSquare, description: "Platform SMS and WhatsApp accounts, and prepaid SMS units." },
+  { id: "reminders", label: "Renewal reminders", icon: BellRing, description: "Reminders before and after a package ends." },
   { id: "payment", label: "Payments", icon: CreditCard, description: "How companies pay you for packages and upgrades." },
   { id: "session", label: "Admin sign-in", icon: Clock, description: "When the admin portal signs you out." },
   { id: "security", label: "Two-step sign-in", icon: ShieldCheck, description: "Protect the admin account with an authenticator app." },
@@ -175,32 +175,41 @@ export default function AdminSettings() {
   const current = TABS.find((t) => t.id === tab)!;
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
-      <PageHeader title="Settings" description="How the platform sends email and messages, collects payments and keeps the admin safe." icon={SettingsIcon} />
+    <div className="space-y-3">
+      <PageHeader title="Settings" icon={SettingsIcon} />
 
-      <div className="grid gap-6 lg:grid-cols-[230px_minmax(0,1fr)] lg:items-start">
-        <nav className="flex gap-1 overflow-x-auto rounded-2xl border border-border bg-card p-1.5 lg:sticky lg:top-4 lg:flex-col">
+      {/* Phones and tablets: underlined tabs. Large screens: the section list on the left. */}
+      <div className="min-w-0 lg:hidden"><LineTabs<Tab> value={tab} onChange={setTab} options={TABS.map((t) => ({ value: t.id as Tab, label: t.label }))} /></div>
+
+      <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start">
+        <nav className="hidden min-w-0 flex-col gap-0.5 rounded-2xl border border-border bg-card p-1.5 lg:sticky lg:top-4 lg:flex">
           {TABS.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={cn("flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-left text-sm transition-colors",
+            <button key={t.id} type="button" onClick={() => setTab(t.id)}
+              className={cn("flex items-center gap-2.5 whitespace-nowrap rounded-xl px-3 py-2 text-left text-sm transition-colors",
                 tab === t.id ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
               <t.icon className="h-4 w-4" /> {t.label}
             </button>
           ))}
         </nav>
 
-        <Panel title={current.label} description={current.description} icon={current.icon}>
+        {(tab === "messaging" || tab === "reminders") ? (
+          <div className="min-w-0">
+            {tab === "messaging" && <AdminMessagingPanel />}
+            {tab === "reminders" && <AdminRemindersPanel />}
+          </div>
+        ) : (
+        <Panel title={current.label} description={current.description} icon={current.icon} className="min-w-0">
           {tab === "general" && (
             <div className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Platform name" hint="Shown in the admin portal">
-                  <input className="fi" value={settings.general?.business_name || ""} onChange={(e) => updateField("general", "business_name", e.target.value)} placeholder="JMSURF Garage" />
+                  <input className="fi" value={settings.general?.business_name || ""} onChange={(e) => updateField("general", "business_name", e.target.value)} placeholder="Enter platform name" />
                 </Field>
-                <Field label="Alert email" hint="Uptime alerts and error reports go here">
-                  <input className="fi" type="email" value={settings.general?.support_email || ""} onChange={(e) => updateField("general", "support_email", e.target.value)} placeholder="support@jmsurf.co.ke" />
+                <Field label="Alert email" hint="Uptime alerts and error reports">
+                  <input className="fi" type="email" value={settings.general?.support_email || ""} onChange={(e) => updateField("general", "support_email", e.target.value)} placeholder="Enter alert email" />
                 </Field>
               </div>
-              <p className="text-xs text-muted-foreground">Trial length and prices are set per package under Packages. Support contacts shown to companies come from Website content.</p>
+              <p className="text-xs text-muted-foreground">Trials and prices: Packages. Support contacts: Website content.</p>
               <Button onClick={() => save("general")} disabled={loading}><Save /> {loading ? "Saving…" : "Save"}</Button>
             </div>
           )}
@@ -209,10 +218,10 @@ export default function AdminSettings() {
             <div className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Meta Pixel ID" hint="Events Manager → Data sources → your pixel. Numbers only.">
-                  <input className="fi" inputMode="numeric" value={settings.tracking?.meta_pixel_id || ""} onChange={(e) => updateField("tracking", "meta_pixel_id", e.target.value.replace(/D/g, ""))} placeholder="123456789012345" />
+                  <input className="fi" inputMode="numeric" value={settings.tracking?.meta_pixel_id || ""} onChange={(e) => updateField("tracking", "meta_pixel_id", e.target.value.replace(/D/g, ""))} placeholder="Enter pixel ID" />
                 </Field>
                 <Field label="Google Analytics 4 ID" hint="Admin → Data streams → Measurement ID.">
-                  <input className="fi" value={settings.tracking?.ga4_id || ""} onChange={(e) => updateField("tracking", "ga4_id", e.target.value.trim().toUpperCase())} placeholder="G-XXXXXXXXXX" />
+                  <input className="fi" value={settings.tracking?.ga4_id || ""} onChange={(e) => updateField("tracking", "ga4_id", e.target.value.trim().toUpperCase())} placeholder="Enter measurement ID" />
                 </Field>
               </div>
               <p className="text-xs text-muted-foreground">Changes go live within 5 minutes.</p>
@@ -235,9 +244,9 @@ export default function AdminSettings() {
               </Field>
               {provider === "resend" ? (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Resend API key" className="sm:col-span-2"><input className="fi font-mono" type="password" autoComplete="off" value={settings.smtp?.resend_api_key || ""} onChange={(e) => updateField("smtp", "resend_api_key", e.target.value)} placeholder="re_…" /></Field>
-                  <Field label="From email" hint="Must be on a domain verified in Resend"><input className="fi" value={settings.smtp?.from_email || ""} onChange={(e) => updateField("smtp", "from_email", e.target.value)} placeholder="noreply@jmsurf.co.ke" /></Field>
-                  <Field label="From name"><input className="fi" value={settings.smtp?.from_name || ""} onChange={(e) => updateField("smtp", "from_name", e.target.value)} placeholder="JMSURF Garage" /></Field>
+                  <Field label="Resend API key" className="sm:col-span-2"><input className="fi font-mono" type="password" autoComplete="off" value={settings.smtp?.resend_api_key || ""} onChange={(e) => updateField("smtp", "resend_api_key", e.target.value)} placeholder="Enter API key" /></Field>
+                  <Field label="From email" hint="On a domain verified in Resend"><input className="fi" value={settings.smtp?.from_email || ""} onChange={(e) => updateField("smtp", "from_email", e.target.value)} placeholder="Enter from email" /></Field>
+                  <Field label="From name"><input className="fi" value={settings.smtp?.from_name || ""} onChange={(e) => updateField("smtp", "from_name", e.target.value)} placeholder="Enter from name" /></Field>
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -250,24 +259,22 @@ export default function AdminSettings() {
                       </select>
                     </Field>
                   </div>
-                  <Field label="Username"><input className="fi" autoComplete="off" value={settings.smtp?.username || ""} onChange={(e) => updateField("smtp", "username", e.target.value)} /></Field>
-                  <Field label="Password"><input className="fi" type="password" autoComplete="new-password" value={settings.smtp?.password || ""} onChange={(e) => updateField("smtp", "password", e.target.value)} /></Field>
-                  <Field label="From email"><input className="fi" value={settings.smtp?.from_email || ""} onChange={(e) => updateField("smtp", "from_email", e.target.value)} placeholder="Enter email address" /></Field>
-                  <Field label="From name"><input className="fi" value={settings.smtp?.from_name || ""} onChange={(e) => updateField("smtp", "from_name", e.target.value)} placeholder="JMSURF Garage" /></Field>
+                  <Field label="Username"><input className="fi" autoComplete="off" value={settings.smtp?.username || ""} onChange={(e) => updateField("smtp", "username", e.target.value)} placeholder="Enter username" /></Field>
+                  <Field label="Password"><input className="fi" type="password" autoComplete="new-password" value={settings.smtp?.password || ""} onChange={(e) => updateField("smtp", "password", e.target.value)} placeholder="Enter password" /></Field>
+                  <Field label="From email"><input className="fi" value={settings.smtp?.from_email || ""} onChange={(e) => updateField("smtp", "from_email", e.target.value)} placeholder="Enter from email" /></Field>
+                  <Field label="From name"><input className="fi" value={settings.smtp?.from_name || ""} onChange={(e) => updateField("smtp", "from_name", e.target.value)} placeholder="Enter from name" /></Field>
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => save("smtp")} disabled={loading}><Save /> {loading ? "Saving…" : "Save"}</Button>
                 <Button variant="outline" onClick={testSmtp} disabled={testingSmtp}>
-                  <RefreshCw className={testingSmtp ? "animate-spin" : ""} /> {testingSmtp ? "Sending test…" : "Send a test email"}
+                  <RefreshCw className={testingSmtp ? "animate-spin" : ""} /> {testingSmtp ? "Sending…" : "Send test"}
                 </Button>
               </div>
             </div>
           )}
 
           {tab === "integrations" && <Suspense fallback={null}><PlatformIntegrations /></Suspense>}
-          {tab === "messaging" && <AdminMessagingPanel />}
-          {tab === "reminders" && <AdminRemindersPanel />}
 
           {tab === "payment" && (() => {
             const rawProvider = String(settings.subscription_billing?.provider || "daraja");
@@ -293,8 +300,8 @@ export default function AdminSettings() {
                 <button
                   type="button"
                   onClick={() => setProvider(id)}
-                  className={`text-left rounded-xl border p-4 transition ${
-                    active ? "bg-orange-500/10 border-orange-500" : "bg-muted/40 border-border hover:border-border"
+                  className={`text-left rounded-xl border p-3 transition ${
+                    active ? "bg-primary/10 border-primary" : "bg-card border-border hover:bg-muted/50"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -302,15 +309,15 @@ export default function AdminSettings() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm text-foreground">{name}</span>
                         {configured && savedProvider === id && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-300">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-success/15 text-success">
                             <Check className="w-3 h-3" /> In use
                           </span>
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground mt-0.5">{subtitle}</div>
                     </div>
-                    <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${active ? "border-orange-500 bg-orange-500" : "border-border"}`}>
-                      {active && <div className="w-full h-full rounded-full bg-white scale-50" />}
+                    <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${active ? "border-primary bg-primary" : "border-border"}`}>
+                      {active && <div className="w-full h-full rounded-full bg-primary-foreground scale-50" />}
                     </div>
                   </div>
                 </button>
@@ -318,14 +325,14 @@ export default function AdminSettings() {
             };
   
             const sectionHeader = (title: string, subtitle: string, configured: boolean, onRemove?: () => void) => (
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border mb-4">
-                <div>
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border mb-3">
+                <div className="min-w-0">
                   <h2 className="font-semibold text-foreground">{title}</h2>
                   <p className="text-[11px] text-muted-foreground">{subtitle}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {configured && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-green-500/15 text-green-300">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-success/15 text-success">
                       <Check className="w-3 h-3" /> Active
                     </span>
                   )}
@@ -341,15 +348,13 @@ export default function AdminSettings() {
             return (
               <div className="space-y-5">
                 {/* Provider selector — mirrors POS Payment Mode */}
-                <section className="bg-muted/30 border border-border rounded-2xl p-5 space-y-4">
+                <section className="bg-muted/30 border border-border rounded-2xl p-3 sm:p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
-                    <div>
+                    <div className="min-w-0">
                       <h2 className="font-semibold flex items-center gap-2 text-base">Collect with</h2>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Choose how shops pay you for packages, domains and upgrades. Only one gateway is active at a time.
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">One gateway is active at a time.</p>
                     </div>
-                    <span className="text-[11px] px-2 py-1 rounded-md bg-muted/40 text-muted-foreground font-medium">
+                    <span className="text-[11px] px-2 py-1 rounded-md bg-muted text-muted-foreground font-medium">
                       Active: <span className="text-foreground capitalize">{provider}</span>
                     </span>
                   </div>
@@ -360,7 +365,7 @@ export default function AdminSettings() {
                     <ProviderTile id="daraja" name="Daraja" subtitle="Your Safaricom Daraja app" configured={darajaConfigured} />
                   </div>
                   {(provider === "paystack" || provider === "daraja") && (
-                    <p className="text-[11px] text-muted-foreground">Fill in the keys below, then press <strong className="text-foreground">Save</strong> at the bottom to make this gateway active.</p>
+                    <p className="text-[11px] text-muted-foreground">Fill in the keys below, then press <strong className="text-foreground">Save</strong> at the bottom.</p>
                   )}
                 </section>
   
@@ -378,12 +383,12 @@ export default function AdminSettings() {
   
                 {/* Direct Daraja STK */}
                 {provider === "daraja" && (
-                  <section className="bg-muted/30 border border-border rounded-2xl p-5">
-                    {sectionHeader("Direct Daraja STK", "Tenant subscription payments via your own Safaricom Daraja app credentials.", darajaConfigured, () => updateField("payment", "daraja", {}))}
+                  <section className="bg-muted/30 border border-border rounded-2xl p-3 sm:p-4">
+                    {sectionHeader("Direct Daraja STK", "Package payments through your own Daraja app.", darajaConfigured, () => updateField("payment", "daraja", {}))}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
                       <div>
                         <label className="text-xs text-muted-foreground block mb-1">Shortcode (Paybill / Till)</label>
-                        <input className="fi font-mono" placeholder="e.g. 174379" maxLength={10}
+                        <input className="fi font-mono" placeholder="Enter shortcode" maxLength={10}
                           value={daraja.shortcode || ""}
                           onChange={e => updateField("payment", "daraja.shortcode", e.target.value.replace(/\D/g, "").slice(0, 10))} />
                       </div>
@@ -398,25 +403,25 @@ export default function AdminSettings() {
                       </div>
                       <div className="sm:col-span-2">
                         <label className="text-xs text-muted-foreground block mb-1">Passkey</label>
-                        <input type="password" className="fi font-mono" placeholder="Lipa Na M-Pesa Online Passkey"
+                        <input type="password" className="fi font-mono" placeholder="Enter passkey"
                           value={daraja.passkey || ""}
                           onChange={e => updateField("payment", "daraja.passkey", e.target.value)} />
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground block mb-1">Consumer Key</label>
-                        <input className="fi font-mono" placeholder="Daraja App Consumer Key"
+                        <input className="fi font-mono" placeholder="Enter consumer key"
                           value={daraja.consumer_key || ""}
                           onChange={e => updateField("payment", "daraja.consumer_key", e.target.value)} />
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground block mb-1">Consumer Secret</label>
-                        <input type="password" className="fi font-mono" placeholder="Daraja App Consumer Secret"
+                        <input type="password" className="fi font-mono" placeholder="Enter consumer secret"
                           value={daraja.consumer_secret || ""}
                           onChange={e => updateField("payment", "daraja.consumer_secret", e.target.value)} />
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground block mb-1">Account Reference</label>
-                        <input className="fi" maxLength={20} placeholder="e.g. JMSURF-SUB"
+                        <input className="fi" maxLength={20} placeholder="Enter account reference"
                           value={daraja.account_reference || ""}
                           onChange={e => updateField("payment", "daraja.account_reference", e.target.value.slice(0, 20))} />
                       </div>
@@ -435,17 +440,17 @@ export default function AdminSettings() {
   
                 {/* Paystack */}
                 {provider === "paystack" && (
-                  <section className="bg-muted/30 border border-border rounded-2xl p-5">
-                    {sectionHeader("Paystack Credentials", "Cards & mobile money via Paystack hosted checkout.", paystackConfigured, () => updateField("payment", "paystack", {}))}
+                  <section className="bg-muted/30 border border-border rounded-2xl p-3 sm:p-4">
+                    {sectionHeader("Paystack keys", "Cards and mobile money.", paystackConfigured, () => updateField("payment", "paystack", {}))}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
                       <div>
                         <label className="text-xs text-muted-foreground block mb-1">Public Key</label>
-                        <input className="fi" placeholder="pk_live_…" value={paystack.public_key || ""}
+                        <input className="fi" placeholder="Enter public key" value={paystack.public_key || ""}
                           onChange={e => updateField("payment", "paystack.public_key", e.target.value)} />
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground block mb-1">Secret Key</label>
-                        <input type="password" className="fi" placeholder="sk_live_…" value={paystack.secret_key || ""}
+                        <input type="password" className="fi" placeholder="Enter secret key" value={paystack.secret_key || ""}
                           onChange={e => updateField("payment", "paystack.secret_key", e.target.value)} />
                       </div>
                     </div>
@@ -453,34 +458,34 @@ export default function AdminSettings() {
                 )}
   
                 {/* PayHero platform credentials — shared by shop M-Pesa prompts and payouts */}
-                <section className="bg-muted/30 border border-border rounded-2xl p-5">
+                <section className="bg-muted/30 border border-border rounded-2xl p-3 sm:p-4">
                   {sectionHeader(
-                    "PayHero Platform Credentials",
-                    "Used for company M-Pesa prompts, payout channels and the bank list. Kept separate from the provider above.",
+                    "PayHero platform keys",
+                    "For company M-Pesa prompts, payouts and the bank list.",
                     !!(settings.payment?.payhero?.api_username && settings.payment?.payhero?.api_password),
                   )}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl">
                     <div>
                       <label className="text-xs text-muted-foreground block mb-1">API Username</label>
-                      <input className="fi" placeholder="PayHero API username"
+                      <input className="fi" placeholder="Enter API username"
                         value={settings.payment?.payhero?.api_username || ""}
                         onChange={e => updateField("payment", "payhero.api_username", e.target.value.trim())} />
                     </div>
                     <div>
                       <label className="text-xs text-muted-foreground block mb-1">API Password</label>
-                      <input type="password" className="fi" placeholder="PayHero API password"
+                      <input type="password" className="fi" placeholder="Enter API password"
                         value={settings.payment?.payhero?.api_password || ""}
                         onChange={e => updateField("payment", "payhero.api_password", e.target.value.trim())} />
                     </div>
                     <div>
                       <label className="text-xs text-muted-foreground block mb-1">Account ID</label>
-                      <input className="fi" placeholder="e.g. 1234"
+                      <input className="fi" placeholder="Enter account ID"
                         value={settings.payment?.payhero?.account_id || ""}
                         onChange={e => updateField("payment", "payhero.account_id", e.target.value.replace(/\D/g, ""))} />
                     </div>
                     <div className="sm:col-span-3">
                       <label className="text-xs text-muted-foreground block mb-1">Basic Auth Token (optional)</label>
-                      <input className="fi" placeholder="Paste only if PayHero gave you a single token instead of a username and password"
+                      <input className="fi" placeholder="Enter token (only if given instead of username and password)"
                         value={settings.payment?.payhero?.basic_auth_token || ""}
                         onChange={e => updateField("payment", "payhero.basic_auth_token", e.target.value.trim())} />
                     </div>
@@ -490,16 +495,16 @@ export default function AdminSettings() {
   
   
   
-                <section className="bg-muted/30 border border-border rounded-2xl p-5 space-y-4">
+                <section className="bg-muted/30 border border-border rounded-2xl p-3 sm:p-4 space-y-3">
                 <div>
-                  <h2 className="font-semibold text-foreground">More ways for companies to pay</h2>
-                  <p className="text-[11px] text-muted-foreground">Shown on the Billing page next to M-Pesa, for companies in other countries or paying by card. Each gateway saves on its own.</p>
+                  <h2 className="font-semibold text-foreground">More ways to pay</h2>
+                  <p className="text-[11px] text-muted-foreground">Shown on Billing next to M-Pesa. Each gateway saves on its own.</p>
                 </div>
                 <GatewaysPanel scope="platform" baseCurrency="KES" />
               </section>
 
               <div className="rounded-xl border border-border bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
-                  Only one provider can be active. Saving will clear credentials for the other providers so they can't be used by mistake.
+                  Saving clears the keys of the other providers.
                 </div>
   
                 <Button
@@ -514,7 +519,7 @@ export default function AdminSettings() {
                   }}
                   disabled={loading}
                 >
-                  <Save /> {loading ? "Saving…" : "Save payment settings"}
+                  <Save /> {loading ? "Saving…" : "Save payments"}
                 </Button>
               </div>
             );
@@ -524,6 +529,7 @@ export default function AdminSettings() {
           {tab === "session" && <SessionSettingsTab scope="admin" canManage={true} />}
           {tab === "security" && <AdminMfaPanel />}
         </Panel>
+        )}
       </div>
     </div>
   );

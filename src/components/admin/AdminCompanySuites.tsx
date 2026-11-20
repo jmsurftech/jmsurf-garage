@@ -54,11 +54,11 @@ export default function AdminCompanySuites({ tenantId }: { tenantId: string }) {
               ) : <p className="text-xs text-muted-foreground">{kes(price(m.key))} / month</p>}
             </div>
             {r ? (r.status === "comped" ? <Pill tone="success"><Gift className="h-3 w-3" /> Free</Pill> : r.status === "trial" ? <Pill tone="warning"><Clock className="h-3 w-3" /> Trial</Pill> : r.status === "cancelled" ? <Pill>Off</Pill> : <Pill tone="success"><CheckCircle2 className="h-3 w-3" /> {r.status}</Pill>) : <Pill>Off</Pill>}
-            <div className="flex gap-1">
-              {r?.status !== "comped" && <button onClick={() => void set(m.key, "comped")} className="rounded-lg border border-border px-2 py-1 text-xs font-medium hover:bg-muted" title="Free of charge"><Gift className="h-3.5 w-3.5" /></button>}
+            <div className="ml-auto flex gap-1">
+              {r?.status !== "comped" && <button onClick={() => void set(m.key, "comped")} className="rounded-lg border border-border px-2 py-1 text-xs font-medium hover:bg-muted" title="Free of charge" aria-label="Free of charge"><Gift className="h-3.5 w-3.5" /></button>}
               {!live && <button onClick={() => void set(m.key, "trial")} className="rounded-lg border border-border px-2 py-1 text-xs font-medium hover:bg-muted">Trial</button>}
               {r?.status !== "active" && <button onClick={() => void set(m.key, "active")} className="rounded-lg border border-border px-2 py-1 text-xs font-medium hover:bg-muted">Paid</button>}
-              {live && <button onClick={() => void set(m.key, "cancelled")} className="rounded-lg px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10" title="Switch off"><Power className="h-3.5 w-3.5" /></button>}
+              {live && <button onClick={() => void set(m.key, "cancelled")} className="rounded-lg px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10" title="Switch off" aria-label="Switch off"><Power className="h-3.5 w-3.5" /></button>}
             </div>
           </li>
         );

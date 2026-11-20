@@ -9,7 +9,7 @@ import { deleteStaffAccount, listStaffAccounts, verifyUserAccount } from "@/lib/
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { KeyRound, LogIn, X, Building2, Mail, MailCheck, Phone, MapPin, Calendar, CreditCard, Users, Link2, Copy, CheckCircle, XCircle, Pencil, Save, Plus, Archive, RotateCcw, ChevronRight, Download, ArrowLeft, Wallet, Receipt } from "lucide-react";
-import { PageHeader, Toolbar, SearchBox, Segmented, Panel, TableWrap, EmptyState, Field, Modal, Pill, StatusPill, StatGrid, StatTile } from "@/components/kit";
+import { PageHeader, Toolbar, SearchBox, Segmented, Panel, TableWrap, EmptyState, Field, Modal, Pill, StatusPill, StatGrid, StatTile, MoreMenu, ExportMenu, LineTabs } from "@/components/kit";
 import { format } from "date-fns";
 import AdminTenantFeaturesPanel from "@/components/admin/AdminTenantFeaturesPanel";
 import AdminCompanySuites from "@/components/admin/AdminCompanySuites";
@@ -518,28 +518,23 @@ export default function AdminCustomers() {
   const isLive = (s?: string) => s === "active" || s === "trial" || s === "trialing";
 
   return (
-    <div className="space-y-5 p-4 sm:p-6">
+    <div className="space-y-3">
       {!selected && (<>
       <PageHeader
         title={showDeleted ? "Archived companies" : "Companies"}
-        description={showDeleted ? "Access is stopped; every record is kept and can be restored." : "Every business on the platform, its package and its owner."}
         icon={Building2}
         actions={
           <>
-            <Button variant="outline" size="sm" disabled={!visible.length} onClick={() => downloadCsv(`dash-companies-${new Date().toISOString().slice(0, 10)}.csv`,
+            <ExportMenu items={[{ label: "Download CSV", icon: Download, disabled: !visible.length, onSelect: () => downloadCsv(`dash-companies-${new Date().toISOString().slice(0, 10)}.csv`,
               ["Company", "Address", "Owner", "Email", "Phone", "Industry", "Package", "Status", "Cycle", "Renews / trial ends", "Joined", "Archived"],
-              visible.map((t) => { const s = subs[t.id] || {}; return [getDisplayName(t), t.slug, t.contact_name, t.contact_email, t.contact_phone, t.industry, s.plan_name, s.status || "none", s.billing_cycle, (s.current_period_end || s.trial_ends_at || "").slice(0, 10), (t.created_at || "").slice(0, 10), t.deleted_at ? t.deleted_at.slice(0, 10) : ""]; }))}>
-              <Download /> Export
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => { setShowDeleted(!showDeleted); closeCompany(); setStatusFilter("all"); }}>
-              <Archive /> {showDeleted ? "Show active" : "Archived"}
-            </Button>
+              visible.map((t) => { const s = subs[t.id] || {}; return [getDisplayName(t), t.slug, t.contact_name, t.contact_email, t.contact_phone, t.industry, s.plan_name, s.status || "none", s.billing_cycle, (s.current_period_end || s.trial_ends_at || "").slice(0, 10), (t.created_at || "").slice(0, 10), t.deleted_at ? t.deleted_at.slice(0, 10) : ""]; })) }]} />
+            <MoreMenu items={[{ label: showDeleted ? "Show active" : "Archived companies", icon: Archive, onSelect: () => { setShowDeleted(!showDeleted); closeCompany(); setStatusFilter("all"); } }]} />
             {!showDeleted && (
               <Button size="sm" onClick={() => {
                 if (plans.length > 0 && !newTenant.plan_id) setNewTenant((prev) => ({ ...prev, plan_id: plans[0].id }));
                 setShowAddTenant(true);
               }}>
-                <Plus /> Add company
+                <Plus /> Add
               </Button>
             )}
           </>
@@ -547,10 +542,10 @@ export default function AdminCustomers() {
       />
 
       <Toolbar>
-        <SearchBox value={search} onChange={setSearch} placeholder="Search name, email or address…" />
+        <SearchBox value={search} onChange={setSearch} placeholder="Search companies" />
         {ownerFilter && (() => { const o = tenants.find((x: any) => x.owner_user_id === ownerFilter); return (
-          <button onClick={() => setOwnerFilter(null)} className="inline-flex items-center gap-1.5 rounded-full bg-info/10 px-3 py-1.5 text-xs font-semibold text-info ring-1 ring-info/20" title="Show all companies">
-            Owner: {o?.contact_name || o?.contact_email || "this owner"} <X className="h-3.5 w-3.5" />
+          <button onClick={() => setOwnerFilter(null)} className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-info/10 px-3 py-1.5 text-xs font-semibold text-info ring-1 ring-info/20" title="Show all companies">
+            <span className="truncate">Owner: {o?.contact_name || o?.contact_email || "this owner"}</span> <X className="h-3.5 w-3.5 shrink-0" />
           </button>); })()}
         {!showDeleted && (
           <Segmented value={statusFilter} onChange={setStatusFilter} options={[
@@ -588,8 +583,8 @@ export default function AdminCustomers() {
                             <p className="max-w-[220px] truncate font-semibold">{getDisplayName(t)}</p>
                             {t.slug ? (
                               <button onClick={(e) => { e.stopPropagation(); copyLoginUrl(t.slug); }}
-                                className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground hover:text-primary" title="Copy login link">
-                                {t.slug}.{ROOT_HOST} <Copy className="h-3 w-3" />
+                                className="inline-flex min-w-0 max-w-full items-center gap-1 font-mono text-[11px] text-muted-foreground hover:text-primary" title="Copy login link">
+                                <span className="truncate">{t.slug}.{ROOT_HOST}</span> <Copy className="h-3 w-3 shrink-0" />
                               </button>
                             ) : <span className="text-[11px] text-muted-foreground">No address</span>}
                           </div>
@@ -607,14 +602,14 @@ export default function AdminCustomers() {
                       <td><StatusPill status={t.deleted_at ? "archived" : sub?.status || "none"} /></td>
                       <td className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">{end ? format(new Date(end), "d MMM yyyy") : "—"}</td>
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-end gap-0.5">
+                        <div className="flex flex-wrap items-center justify-end gap-1">
                           {t.deleted_at ? (
                             <Button size="sm" variant="outline" onClick={() => restoreTenant(t)} disabled={loading}><RotateCcw /> Restore</Button>
                           ) : (
                             <>
-                              <button className="icon-btn" title="Send password reset" onClick={() => resetPassword(t.contact_email)}><KeyRound className="h-4 w-4" /></button>
+                              <button className="icon-btn" title="Send password reset" aria-label="Send password reset" onClick={() => resetPassword(t.contact_email)}><KeyRound className="h-4 w-4" /></button>
                               <Button size="sm" variant="outline" title="Open this company (works even when its package has ended)" disabled={opening === t.id} onClick={() => loginAs(t)}><LogIn /> {opening === t.id ? "Opening…" : "Open"}</Button>
-                              <button className="icon-btn" title="Manage" onClick={() => loadTenantDetails(t)}><ChevronRight className="h-4 w-4" /></button>
+                              <button className="icon-btn hidden sm:inline-flex" title="Manage" aria-label="Manage" onClick={() => loadTenantDetails(t)}><ChevronRight className="h-4 w-4" /></button>
                             </>
                           )}
                         </div>
@@ -637,27 +632,27 @@ export default function AdminCustomers() {
         return (
           <>
             <PageHeader title={getDisplayName(selected)} icon={Building2}
-              description={<span className="inline-flex flex-wrap items-center gap-2">
-                <StatusPill status={selected.deleted_at ? "archived" : selectedSub?.status || "none"} />
-                <span>Joined {format(new Date(selected.created_at), "d MMM yyyy")}</span>
-                {selected.slug && <span className="font-mono text-xs">{selected.slug}.{ROOT_HOST}</span>}
-              </span>}
               actions={<>
-                <Button variant="outline" size="sm" onClick={closeCompany}><ArrowLeft /> Companies</Button>
-                {selected.slug && <Button variant="outline" size="sm" onClick={() => copyLoginUrl(selected.slug)}><Copy /> Login link</Button>}
-                {!selected.deleted_at && <Button size="sm" disabled={opening === selected.id} onClick={() => loginAs(selected)}><LogIn /> {opening === selected.id ? "Opening…" : "Open company"}</Button>}
-                {!editing && <Button size="sm" variant="outline" onClick={startEditing}><Pencil /> Edit</Button>}
+                <StatusPill status={selected.deleted_at ? "archived" : selectedSub?.status || "none"} />
+                <Button variant="outline" size="sm" onClick={closeCompany} aria-label="Back to companies"><ArrowLeft /> <span className="hidden sm:inline">Companies</span></Button>
+                {!selected.deleted_at && <Button size="sm" disabled={opening === selected.id} onClick={() => loginAs(selected)}><LogIn /> {opening === selected.id ? "Opening…" : "Open"}</Button>}
+                <MoreMenu items={[
+                  { label: "Send password reset", icon: KeyRound, onSelect: () => resetPassword(selected.contact_email) },
+                  { label: "Mark email verified", icon: MailCheck, onSelect: () => verifyTenant(selected), hidden: isVerified(selected) !== false, disabled: verifying === selected.id },
+                  { label: "Restore company", icon: RotateCcw, onSelect: () => restoreTenant(selected), hidden: !selected.deleted_at, disabled: loading, separator: true },
+                  { label: "Archive company", icon: Archive, onSelect: () => setDeleteConfirm(selected), hidden: !!selected.deleted_at, danger: true, separator: true },
+                ]} />
               </>} />
 
             <StatGrid className="lg:grid-cols-4">
-              <StatTile label="Package" value={selectedSub?.plan_name || "None"} hint={selectedSub ? `KSh ${Number(selectedSub.price || 0).toLocaleString()} · ${selectedSub.billing_cycle || "monthly"}` : "No package yet"} icon={CreditCard} tone="primary" />
+              <StatTile label="Package" value={selectedSub?.plan_name || "None"} hint={selectedSub ? `KSh ${Number(selectedSub.price || 0).toLocaleString()} · ${selectedSub.billing_cycle || "monthly"}` : undefined} icon={CreditCard} tone="primary" />
               <StatTile label={onTrial ? "Trial ends" : "Paid until"} value={end ? format(new Date(end), "d MMM yyyy") : "—"} icon={Calendar} tone={end && new Date(end) < new Date() ? "danger" : "info"} />
               <StatTile label="Paid to JMSURF" value={`KSh ${paid.toLocaleString()}`} hint={`${companyPays.length} payment${companyPays.length === 1 ? "" : "s"}`} icon={Wallet} tone="success" />
               <StatTile label="Staff" value={profiles.length} hint={selectedSub ? `up to ${selectedSub.max_users ?? "—"} users · ${selectedSub.max_locations ?? "—"} branches` : undefined} icon={Users} tone="muted" />
             </StatGrid>
 
-            <div className="grid gap-5 lg:grid-cols-3">
-              <div className="space-y-5 lg:col-span-1">
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="min-w-0 space-y-4 lg:col-span-1">
                 <Panel title="Business details" icon={Building2} actions={editing ? (
                   <div className="flex gap-2">
                     <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
@@ -686,6 +681,7 @@ export default function AdminCustomers() {
                         { icon: Mail, label: "Business email", value: selected.business_email },
                         { icon: MapPin, label: "Address", value: selected.business_address },
                         { icon: Building2, label: "Industry", value: selected.industry },
+                        { icon: Calendar, label: "Joined", value: selected.created_at ? format(new Date(selected.created_at), "d MMM yyyy") : "" },
                       ].map((row) => (
                         <div key={row.label} className="flex gap-3">
                           <row.icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
@@ -699,51 +695,28 @@ export default function AdminCustomers() {
                 {selected.slug && (
                   <div className="flex items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3">
                     <div className="flex min-w-0 items-center gap-2"><Link2 className="h-4 w-4 shrink-0 text-primary" /><span className="truncate font-mono text-sm text-primary">{selected.slug}.{ROOT_HOST}/login</span></div>
-                    <Button size="sm" variant="ghost" onClick={() => copyLoginUrl(selected.slug)}><Copy /> Copy</Button>
+                    <Button size="sm" variant="ghost" className="shrink-0" onClick={() => copyLoginUrl(selected.slug)}><Copy /> Copy</Button>
                   </div>
                 )}
 
                 <OwnerCompaniesPanel tenant={selected} group={ownerGroup(selected)} subs={subs}
                   onSelect={(t) => void loadTenantDetails(t)} onAdd={() => setAddForOwner(true)} onPay={() => setGroupPay(ownerGroup(selected).map((t: any) => t.id))} />
 
-                <Panel title="Account actions">
-                  <div className="grid gap-2">
-                    <Button variant="outline" className="justify-start" onClick={() => resetPassword(selected.contact_email)}><KeyRound /> Send password reset</Button>
-                    {isVerified(selected) === false && (
-                      <Button variant="outline" className="justify-start" onClick={() => verifyTenant(selected)} disabled={verifying === selected.id}><MailCheck /> Mark email verified</Button>
-                    )}
-                    {selected.deleted_at ? (
-                      <Button variant="outline" className="justify-start" onClick={() => restoreTenant(selected)} disabled={loading}><RotateCcw /> Restore company</Button>
-                    ) : (
-                      <Button variant="outline" className="justify-start text-warning hover:text-warning" onClick={() => setDeleteConfirm(selected)}><Archive /> Archive company</Button>
-                    )}
-                  </div>
-                </Panel>
-
                 <CustomDomainPanel tenantId={selected.id} />
               </div>
 
-              <div className="space-y-5 lg:col-span-2">
-                <div className="-mx-1 overflow-x-auto px-1 pb-1">
-                  <Segmented value={drawerTab} onChange={(v) => setDrawerTab(v as typeof drawerTab)} options={[
-                    { value: "package", label: "Package" },
-                    { value: "features", label: "Custom deal" },
-                    { value: "staff", label: "People", count: people.length || profiles.length },
-                    { value: "payments", label: "Payments", count: companyPays.length },
-                  ]} />
-                </div>
+              <div className="min-w-0 space-y-4 lg:col-span-2">
+                <LineTabs value={drawerTab} onChange={(v) => setDrawerTab(v)} options={[
+                  { value: "package", label: "Package" },
+                  { value: "features", label: "Custom deal" },
+                  { value: "staff", label: "People", count: people.length || profiles.length },
+                  { value: "payments", label: "Payments", count: companyPays.length },
+                ]} />
 
             {drawerTab === "package" && (
               selectedSub ? (
                 <>
-                  <StatGridSmall items={[
-                    { label: "Package", value: selectedSub.plan_name || "—" },
-                    { label: "Price", value: `KSh ${Number(selectedSub.price || 0).toLocaleString()}`, hint: selectedSub.billing_cycle },
-                    { label: selectedSub.status === "trial" || selectedSub.status === "trialing" ? "Trial ends" : "Paid until", value: (selectedSub.current_period_end || selectedSub.trial_ends_at) ? format(new Date(selectedSub.current_period_end || selectedSub.trial_ends_at), "d MMM yyyy") : "—" },
-                    { label: "Users / branches", value: `${selectedSub.max_users ?? "—"} / ${selectedSub.max_locations ?? "—"}` },
-                  ]} />
-
-                  <Panel title="Change package" description="Set the package, billing cycle, status and expiry. Keeping the same package keeps this company's own price and limits (Custom deal tab).">
+                  <Panel title="Change package" description="Same package keeps this company's own price and limits (Custom deal).">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Field label="Package">
                         <select value={pkgPlanId} onChange={(e) => setPkgPlanId(e.target.value)} className="fi">
@@ -765,7 +738,7 @@ export default function AdminCustomers() {
                       </Field>
                     </div>
                     <div className="mt-4 flex justify-end">
-                      <Button onClick={savePackage} disabled={loading}><Save /> {loading ? "Saving…" : "Save package"}</Button>
+                      <Button onClick={savePackage} disabled={loading}><Save /> {loading ? "Saving…" : "Save"}</Button>
                     </div>
                   </Panel>
 
@@ -773,8 +746,7 @@ export default function AdminCustomers() {
                     <div className="flex flex-wrap gap-2">
                       <Button variant="outline" size="sm" onClick={() => extendTrial(selected.id, 7)}><Calendar /> +7 day trial</Button>
                       <Button variant="outline" size="sm" onClick={() => extendTrial(selected.id, 30)}><Calendar /> +30 day trial</Button>
-                      <Button variant="outline" size="sm" onClick={() => { setManualRef(""); setManualPayFor(selected); }}><CheckCircle /> Record manual payment</Button>
-                      {ownerGroup(selected).length > 1 && <Button variant="outline" size="sm" onClick={() => setGroupPay(ownerGroup(selected).map((t: any) => t.id))}><Wallet /> One payment for several companies</Button>}
+                      <Button variant="outline" size="sm" onClick={() => { setManualRef(""); setManualPayFor(selected); }}><CheckCircle /> Record payment</Button>
                       {isLive(selectedSub.status) ? (
                         <Button variant="outline" size="sm" className="text-warning hover:text-warning" onClick={() => openSubModal(selected, "deactivate")}><XCircle /> Pause company</Button>
                       ) : (
@@ -784,15 +756,14 @@ export default function AdminCustomers() {
                   </Panel>
                 </>
               ) : (
-                <EmptyState icon={CreditCard} title="No subscription yet"
-                  description="Give this company a package to switch it on."
-                  action={<Button onClick={() => openSubModal(selected, "activate")}><CheckCircle /> Create and activate</Button>} />
+                <Panel><EmptyState icon={CreditCard} title="No package yet"
+                  action={<Button onClick={() => openSubModal(selected, "activate")}><CheckCircle /> Add package</Button>} /></Panel>
               )
             )}
 
             {drawerTab === "features" && (
               selectedSub ? (
-                <div className="space-y-5">
+                <div className="space-y-4">
                   <AdminTenantFeaturesPanel
                     tenantId={selected.id}
                     subscriptionId={selectedSub.id}
@@ -802,21 +773,21 @@ export default function AdminCustomers() {
                     initialMaxUsers={selectedSub.max_users}
                     initialMaxLocations={selectedSub.max_locations}
                   />
-                  <Panel title="Modules" description="Switch modules on for this company without changing its package: free, on trial, or paid at a price you set.">
+                  <Panel title="Modules" description="On for this company only: free, trial or paid at your price.">
                     <AdminCompanySuites tenantId={selected.id} />
                   </Panel>
                 </div>
-              ) : <EmptyState icon={CreditCard} title="Add a package first" description="Features are set per package." />
+              ) : <Panel><EmptyState icon={CreditCard} title="Add a package first" /></Panel>
             )}
 
             {drawerTab === "staff" && <CompanyPeoplePanel tenant={selected} people={people} loading={peopleLoading} reload={reloadPeople} />}
             {drawerTab === "staff" && (
-              <Panel flush title="Staff working here now" icon={Users}>
+              <Panel flush title="Staff" icon={Users}>
                 {profiles.length === 0 ? <EmptyState icon={Users} title="No staff yet" /> : (
                   <ul className="divide-y divide-border">
                     {profiles.map((p: any) => (
                       <li key={p.id} className="flex items-center gap-3 px-4 py-3">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-semibold">{String(p.display_name || "?").charAt(0).toUpperCase()}</span>
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">{String(p.display_name || "?").charAt(0).toUpperCase()}</span>
                         <div className="min-w-0">
                           <p className="truncate font-medium">{p.display_name || "Unnamed"}</p>
                           <p className="truncate text-xs text-muted-foreground">{p.phone || "No phone"} · {p.store_location || "No branch"}</p>
@@ -856,11 +827,11 @@ export default function AdminCustomers() {
       })()}
 
       {/* ---------------- Archive ---------------- */}
-      <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} size="sm" icon={Archive}
-        title="Archive this company?" description="Access stops straight away. Every record is kept and the company can be restored at any time."
+      <Modal center open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} size="sm" icon={Archive}
+        title="Archive this company?" description="Access stops now. Records are kept and it can be restored."
         footer={<>
           <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-          <Button className="bg-warning text-black hover:bg-warning/90" onClick={() => deleteTenant(deleteConfirm)} disabled={loading}>{loading ? "Archiving…" : "Archive company"}</Button>
+          <Button className="bg-warning text-warning-foreground hover:bg-warning/90" onClick={() => deleteTenant(deleteConfirm)} disabled={loading}>{loading ? "Archiving…" : "Archive"}</Button>
         </>}>
         {deleteConfirm && (
           <div className="rounded-xl bg-muted/60 p-3 text-sm">
@@ -873,11 +844,11 @@ export default function AdminCustomers() {
       {/* ---------------- Activate / pause ---------------- */}
       <Modal open={!!subModal} onClose={() => setSubModal(null)} size="md"
         icon={subAction === "activate" ? CheckCircle : XCircle}
-        title={subAction === "activate" ? "Activate package" : "Pause this company"}
+        title={subAction === "activate" ? "Activate package" : "Pause company"}
         description={subModal ? getDisplayName(subModal) : ""}
         footer={<>
           <Button variant="outline" onClick={() => setSubModal(null)}>Cancel</Button>
-          <Button onClick={handleSubAction} disabled={loading} className={subAction === "activate" ? "" : "bg-warning text-black hover:bg-warning/90"}>
+          <Button onClick={handleSubAction} disabled={loading} className={subAction === "activate" ? "" : "bg-warning text-warning-foreground hover:bg-warning/90"}>
             {loading ? "Working…" : subAction === "activate" ? "Activate" : "Pause company"}
           </Button>
         </>}>
@@ -907,21 +878,21 @@ export default function AdminCustomers() {
           </div>
         ) : (
           <p className="rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm">
-            The package is paused and staff can't sign in until you activate it again. No data is removed.
+            Staff can't sign in until you activate it again. No data is removed.
           </p>
         )}
       </Modal>
 
       {/* ---------------- Manual payment ---------------- */}
       <Modal open={!!manualPayFor} onClose={() => setManualPayFor(null)} size="sm" icon={CheckCircle}
-        title="Record a manual payment"
+        title="Record payment"
         description={manualPayFor ? `Extends ${getDisplayName(manualPayFor)} by one ${subs[manualPayFor.id]?.billing_cycle || "monthly"} period.` : ""}
         footer={<>
           <Button variant="outline" onClick={() => setManualPayFor(null)}>Cancel</Button>
           <Button disabled={!manualRef.trim() || loading} onClick={async () => { await recordManualPayment(manualPayFor.id, manualRef.trim()); setManualPayFor(null); }}>Record payment</Button>
         </>}>
         <Field label="M-Pesa code or reference" required>
-          <input className="fi uppercase" value={manualRef} onChange={(e) => setManualRef(e.target.value)} placeholder="e.g. UIQN384BWJ" autoFocus />
+          <input className="fi uppercase" value={manualRef} onChange={(e) => setManualRef(e.target.value)} placeholder="Enter code" autoFocus />
         </Field>
         {manualPayFor && subs[manualPayFor.id] && (
           <p className="mt-3 text-sm text-muted-foreground">Amount: <strong className="text-foreground">KSh {Number(subs[manualPayFor.id].price || 0).toLocaleString()}</strong></p>
@@ -936,7 +907,7 @@ export default function AdminCustomers() {
 
       {/* ---------------- Add company ---------------- */}
       <Modal open={showAddTenant} onClose={() => setShowAddTenant(false)} size="lg" icon={Building2}
-        title="Add a company" description={ownerMode === "new" ? "Creates the owner's login and the company in one step." : "One more company for an owner who already has a login. It shows in their company menu."}
+        title="Add company" description={ownerMode === "new" ? "Creates the owner's login and the company." : "Adds a company to an existing login."}
         footer={<>
           <Button variant="outline" onClick={() => setShowAddTenant(false)}>Cancel</Button>
           <Button onClick={createTenant} disabled={loading || !newTenant.email || (ownerMode === "new" && !newTenant.password) || !newTenant.business_name}>
@@ -948,25 +919,25 @@ export default function AdminCustomers() {
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">Owner login</p>
             <Segmented value={ownerMode} onChange={(v) => setOwnerMode(v as "new" | "existing")} options={[
               { value: "new", label: "New owner" },
-              { value: "existing", label: "Owner already has a login" },
+              { value: "existing", label: "Existing login" },
             ]} />
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label={ownerMode === "new" ? "Email" : "Their login email"} required><input className="fi" type="email" value={newTenant.email} onChange={(e) => setNewTenant({ ...newTenant, email: e.target.value })} /></Field>
-              {ownerMode === "new" && <Field label="Password" required hint="At least 8 characters"><input className="fi" type="password" value={newTenant.password} onChange={(e) => setNewTenant({ ...newTenant, password: e.target.value })} /></Field>}
+              <Field label={ownerMode === "new" ? "Email" : "Login email"} required><input className="fi" type="email" placeholder="Enter email" value={newTenant.email} onChange={(e) => setNewTenant({ ...newTenant, email: e.target.value })} /></Field>
+              {ownerMode === "new" && <Field label="Password" required hint="At least 8 characters"><input className="fi" type="password" placeholder="Enter password" value={newTenant.password} onChange={(e) => setNewTenant({ ...newTenant, password: e.target.value })} /></Field>}
             </div>
           </section>
           <section className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">Business</p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Business name" required><input className="fi" value={newTenant.business_name} onChange={(e) => setNewTenant({ ...newTenant, business_name: e.target.value })} /></Field>
+              <Field label="Business name" required><input className="fi" placeholder="Enter business name" value={newTenant.business_name} onChange={(e) => setNewTenant({ ...newTenant, business_name: e.target.value })} /></Field>
               <Field label="Company address" hint={newTenant.store_slug ? `${newTenant.store_slug}.${ROOT_HOST}` : "Letters, numbers and dashes"}>
-                <input className="fi" value={newTenant.store_slug} onChange={(e) => setNewTenant({ ...newTenant, store_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} />
+                <input className="fi" placeholder="Enter address" value={newTenant.store_slug} onChange={(e) => setNewTenant({ ...newTenant, store_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} />
               </Field>
-              <Field label="Contact person"><input className="fi" value={newTenant.contact_name} onChange={(e) => setNewTenant({ ...newTenant, contact_name: e.target.value })} /></Field>
-              <Field label="Contact phone"><input className="fi" value={newTenant.contact_phone} onChange={(e) => setNewTenant({ ...newTenant, contact_phone: e.target.value })} /></Field>
-              <Field label="Business email"><input className="fi" value={newTenant.business_email} onChange={(e) => setNewTenant({ ...newTenant, business_email: e.target.value })} /></Field>
-              <Field label="Business phone"><input className="fi" value={newTenant.business_phone} onChange={(e) => setNewTenant({ ...newTenant, business_phone: e.target.value })} /></Field>
-              <Field label="Address" className="sm:col-span-2"><input className="fi" value={newTenant.business_address} onChange={(e) => setNewTenant({ ...newTenant, business_address: e.target.value })} /></Field>
+              <Field label="Contact person"><input className="fi" placeholder="Enter name" value={newTenant.contact_name} onChange={(e) => setNewTenant({ ...newTenant, contact_name: e.target.value })} /></Field>
+              <Field label="Contact phone"><input className="fi" placeholder="Enter phone" value={newTenant.contact_phone} onChange={(e) => setNewTenant({ ...newTenant, contact_phone: e.target.value })} /></Field>
+              <Field label="Business email"><input className="fi" placeholder="Enter email" value={newTenant.business_email} onChange={(e) => setNewTenant({ ...newTenant, business_email: e.target.value })} /></Field>
+              <Field label="Business phone"><input className="fi" placeholder="Enter phone" value={newTenant.business_phone} onChange={(e) => setNewTenant({ ...newTenant, business_phone: e.target.value })} /></Field>
+              <Field label="Address" className="sm:col-span-2"><input className="fi" placeholder="Enter address" value={newTenant.business_address} onChange={(e) => setNewTenant({ ...newTenant, business_address: e.target.value })} /></Field>
               <Field label="Industry">
                 <select className="fi" value={newTenant.industry} onChange={(e) => setNewTenant({ ...newTenant, industry: e.target.value })}>
                   <option value="">Choose…</option>
@@ -992,20 +963,6 @@ export default function AdminCustomers() {
           </section>
         </div>
       </Modal>
-    </div>
-  );
-}
-
-function StatGridSmall({ items }: { items: { label: string; value: string; hint?: string }[] }) {
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      {items.map((i) => (
-        <div key={i.label} className="rounded-2xl border border-border bg-card p-3">
-          <p className="text-xs text-muted-foreground">{i.label}</p>
-          <p className="mt-0.5 truncate font-display text-base font-bold">{i.value}</p>
-          {i.hint && <p className="text-xs capitalize text-muted-foreground">{i.hint}</p>}
-        </div>
-      ))}
     </div>
   );
 }

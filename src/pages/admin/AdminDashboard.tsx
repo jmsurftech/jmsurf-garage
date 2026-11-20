@@ -8,8 +8,7 @@ import {
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid, AreaChart, Area } from "recharts";
 import { format, subDays, startOfMonth, subMonths, formatDistanceToNowStrict } from "date-fns";
-import { Panel, StatTile, TableWrap, EmptyState, StatusPill, PageLoader } from "@/components/kit";
-import { Button } from "@/components/ui/button";
+import { PageHeader, StatGrid, Panel, StatTile, TableWrap, EmptyState, StatusPill, PageLoader, btnCls } from "@/components/kit";
 
 const COLORS = ["#f97316", "#eab308", "#22c55e", "#3b82f6", "#a855f7", "#ef4444"];
 const tooltipStyle = { background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--popover-foreground))" };
@@ -82,56 +81,69 @@ async function loadDashboard() {
 export default function AdminDashboard() {
   const { data, isLoading, isFetching, refetch } = useQuery({ queryKey: ["admin-dashboard"], queryFn: loadDashboard, staleTime: 30_000 });
 
-  if (isLoading || !data) return <div className="p-4 sm:p-6"><PageLoader label="Loading dashboard…" /></div>;
+  if (isLoading || !data) return <div><PageLoader label="Loading dashboard…" /></div>;
   const { stats } = data;
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
-      {/* Same look as the website: hairline eyebrow, serif accent, soft glow. */}
-      <section className="relative overflow-hidden rounded-[28px] border border-border/70 bg-card/80 p-5 shadow-sm backdrop-blur-xl sm:p-7"
-        style={{ background: "radial-gradient(700px 300px at 100% 0%, hsl(var(--primary) / .16), transparent 60%), radial-gradient(500px 260px at 0% 100%, hsl(210 90% 60% / .10), transparent 60%), hsl(var(--card) / .85)" }}>
-        <div className="lx-grain" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">{format(new Date(), "EEEE, d MMMM yyyy")}</p>
-            <h1 className="mt-2 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-              The platform, <span className="font-accent font-normal text-primary">at a glance.</span>
-            </h1>
-            <p className="mt-2 max-w-xl text-sm text-muted-foreground">{stats.shops} companies · {stats.paying} paying · {stats.trials} on trial · {ksh(stats.monthRevenue)} this month</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Orb state={isFetching ? "working" : "connecting"} size={20} theme="dark" label={isFetching ? "Refreshing" : "Live"} className="mr-1" />
-            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-              <RefreshCw className={isFetching ? "animate-spin" : ""} /> Refresh
-            </Button>
-          </div>
-        </div>
-        <div className="relative mt-5 grid grid-cols-3 gap-2 sm:grid-cols-6">
-          {[
-            { to: "/admin/customers", label: "Companies", icon: Building2 },
-            { to: "/admin/users", label: "Users", icon: Users },
-            { to: "/admin/payments", label: "Payments", icon: Wallet },
-            { to: "/admin/subscriptions", label: "Packages", icon: Package },
-            { to: "/admin/leads", label: "Leads", icon: Target },
-            { to: "/admin/audit", label: "Audit log", icon: ScrollText },
-          ].map((q) => (
-            <Link key={q.to} to={q.to} className="group flex items-center gap-2 rounded-2xl border border-border/70 bg-background/60 px-3 py-2.5 text-xs font-semibold backdrop-blur transition hover:-translate-y-0.5 hover:border-primary/40 hover:text-primary sm:text-sm">
-              <q.icon className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">{q.label}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
+    <div className="space-y-3">
+      <PageHeader title="Dashboard" icon={BarChart3} actions={<>
+        <Orb state={isFetching ? "working" : "connecting"} size={20} theme="dark" label={isFetching ? "Refreshing" : "Live"} className="mr-1 hidden sm:block" />
+        <button type="button" className={btnCls} onClick={() => refetch()} disabled={isFetching} aria-label="Refresh">
+          <RefreshCw className={isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} /><span className="hidden sm:inline">Refresh</span>
+        </button>
+      </>} />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <StatTile label="Active companies" value={stats.shops} icon={Building2} tone="info" hint={`+${stats.newThisWeek} this week · ${stats.archived} archived`} />
-        <StatTile label="Paying" value={stats.paying} icon={CreditCard} tone="success" hint={`${Math.round((stats.paying / Math.max(1, stats.shops)) * 100)}% of active companies`} />
+      <StatGrid className="md:grid-cols-3 xl:grid-cols-6">
+        <StatTile label="Active companies" value={stats.shops} icon={Building2} tone="info" hint={`${stats.archived} archived`} to="/admin/customers" />
+        <StatTile label="Paying" value={stats.paying} icon={CreditCard} tone="success" hint={`${Math.round((stats.paying / Math.max(1, stats.shops)) * 100)}% of active`} />
         <StatTile label="On trial" value={stats.trials} icon={Users} tone="primary" hint={`${stats.endingSoon} ending in 7 days`} />
-        <StatTile label="Revenue this month" value={ksh(stats.monthRevenue)} icon={TrendingUp} tone="success" />
+        <StatTile label="Revenue this month" value={ksh(stats.monthRevenue)} icon={TrendingUp} tone="success" to="/admin/payments" />
         <StatTile label="Needs attention" value={stats.attention} icon={AlertTriangle} tone={stats.attention ? "danger" : "muted"} hint="Expired, paused or unpaid" />
         <StatTile label="New this week" value={stats.newThisWeek} icon={Clock} tone="info" />
+      </StatGrid>
+
+      {/* What needs attention first, then the charts. */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel title="Trials ending soon" description="Next 7 days" icon={Hourglass} flush
+          actions={<Link to="/admin/customers" className="text-xs font-semibold text-primary hover:underline">All companies</Link>}>
+          {data.endingTrials.length === 0 ? <EmptyState title="No trials ending this week" className="py-10" /> : (
+            <ul className="divide-y divide-border">
+              {data.endingTrials.map((s: any) => (
+                <li key={s.tenant_id} className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{s.name}</p>
+                    <p className="text-xs text-muted-foreground">{s.plan_name || "No plan"}</p>
+                  </div>
+                  <span className="shrink-0 text-xs font-semibold text-warning">in {formatDistanceToNowStrict(new Date(s.trial_ends_at))}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+
+        <Panel title="Recent payments" icon={CreditCard} flush
+          actions={<Link to="/admin/payments" className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>}>
+          {data.recentPayments.length === 0 ? <EmptyState title="No payments yet" className="py-10" /> : (
+            <TableWrap>
+              <table className="dt">
+                <thead><tr><th>Company</th><th>When</th><th className="num">Amount</th><th>Status</th></tr></thead>
+                <tbody>
+                  {data.recentPayments.map((p: any) => (
+                    <tr key={p.id}>
+                      <td className="max-w-[180px] truncate font-medium">{p.name}</td>
+                      <td className="whitespace-nowrap text-muted-foreground">{format(new Date(p.created_at), "d MMM, HH:mm")}</td>
+                      <td className="num font-semibold">{ksh(Number(p.amount))}</td>
+                      <td><StatusPill status={p.status} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableWrap>
+          )}
+        </Panel>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         <Panel title="Revenue" description="Completed payments, last 6 months" icon={BarChart3} className="lg:col-span-2">
           <ResponsiveContainer debounce={120} width="100%" height={240}>
             <BarChart data={data.revenueByMonth}>
@@ -155,11 +167,11 @@ export default function AdminDashboard() {
                   <Tooltip contentStyle={tooltipStyle} />
                 </PieChart>
               </ResponsiveContainer>
-              <ul className="space-y-2 text-sm">
+              <ul className="min-w-0 flex-1 space-y-2 text-sm">
                 {data.planDist.map((p, i) => (
-                  <li key={p.name} className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    <span className="text-muted-foreground">{p.name}</span>
+                  <li key={p.name} className="flex min-w-0 items-center gap-2">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                    <span className="min-w-0 truncate text-muted-foreground">{p.name}</span>
                     <span className="font-semibold tabular-nums">{p.value}</span>
                   </li>
                 ))}
@@ -169,8 +181,8 @@ export default function AdminDashboard() {
         </Panel>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Panel title="Sign-ups" description="New companies, last 30 days" icon={Activity} className="lg:col-span-2">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel title="Sign-ups" description="New companies, last 30 days" icon={Activity}>
           <ResponsiveContainer debounce={120} width="100%" height={200}>
             <AreaChart data={data.signupTrend}>
               <defs>
@@ -188,46 +200,6 @@ export default function AdminDashboard() {
           </ResponsiveContainer>
         </Panel>
 
-        <Panel title="Trials ending soon" description="Next 7 days" icon={Hourglass} flush
-          actions={<Link to="/admin/customers" className="text-xs font-semibold text-primary hover:underline">All companies</Link>}>
-          {data.endingTrials.length === 0 ? <EmptyState title="No trials ending this week" className="py-10" /> : (
-            <ul className="divide-y divide-border">
-              {data.endingTrials.map((s: any) => (
-                <li key={s.tenant_id} className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{s.name}</p>
-                    <p className="text-xs text-muted-foreground">{s.plan_name || "No plan"}</p>
-                  </div>
-                  <span className="shrink-0 text-xs font-semibold text-warning">in {formatDistanceToNowStrict(new Date(s.trial_ends_at))}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Panel title="Recent payments" icon={CreditCard} flush
-          actions={<Link to="/admin/payments" className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>}>
-          {data.recentPayments.length === 0 ? <EmptyState title="No payments yet" className="py-10" /> : (
-            <TableWrap>
-              <table className="dt">
-                <thead><tr><th>Company</th><th>When</th><th className="num">Amount</th><th>Status</th></tr></thead>
-                <tbody>
-                  {data.recentPayments.map((p: any) => (
-                    <tr key={p.id}>
-                      <td className="max-w-[180px] truncate font-medium">{p.name}</td>
-                      <td className="whitespace-nowrap text-muted-foreground">{format(new Date(p.created_at), "d MMM, HH:mm")}</td>
-                      <td className="num font-semibold">{ksh(Number(p.amount))}</td>
-                      <td><StatusPill status={p.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableWrap>
-          )}
-        </Panel>
-
         <Panel title="Newest companies" icon={Building2} flush
           actions={<Link to="/admin/customers" className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>}>
           {data.recentShops.length === 0 ? <EmptyState title="No companies yet" className="py-10" /> : (
@@ -239,7 +211,7 @@ export default function AdminDashboard() {
                     <tr key={t.id}>
                       <td>
                         <p className="max-w-[180px] truncate font-medium">{t.business_name || "—"}</p>
-                        <p className="font-mono text-[11px] text-muted-foreground">{t.slug ? `${t.slug}.garage.jmsurf.co.ke` : "—"}</p>
+                        <p className="max-w-[220px] truncate font-mono text-[11px] text-muted-foreground">{t.slug ? `${t.slug}.garage.jmsurf.co.ke` : "—"}</p>
                       </td>
                       <td className="max-w-[180px] truncate text-muted-foreground">{t.contact_email || "—"}</td>
                       <td className="whitespace-nowrap text-muted-foreground">{format(new Date(t.created_at), "d MMM yyyy")}</td>
