@@ -1,12 +1,16 @@
 /**
  * The dashboard: three views under one greeting. Overview fits one screen; Sales and Money hold the detail,
- * so nothing is repeated and nothing has to be scrolled past.
+ * so nothing is repeated and nothing has to be scrolled past. The title row is one line: greeting, the
+ * view switch and the one "Check in" button.
  */
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import GetStarted from "@/components/GetStarted";
-import GarageDashboardPanel from "@/garage/workshop/components/DashboardPanel";
+import { btnPrimaryCls } from "@/components/kit";
+import { useGarageToday } from "@/garage/workshop/components/DashboardPanel";
+import { tenantPath } from "@/lib/host";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantId } from "@/hooks/useTenantId";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,6 +40,8 @@ export default function ErpDashboard() {
   const tenantId = useTenantId();
   const { role, profile } = useAuth() as any;
   const firstName = String(profile?.display_name || "").trim().split(/\s+/)[0] || "";
+  const { slug } = useParams<{ slug: string }>();
+  const { data: garage } = useGarageToday();
   const [params, setParams] = useSearchParams();
   const view: View = VIEWS.some(([k]) => k === params.get("view")) ? (params.get("view") as View) : "overview";
   const setView = (v: View) => setParams(v === "overview" ? {} : { view: v }, { replace: true });
@@ -82,27 +88,26 @@ export default function ErpDashboard() {
   const books = booksData?.receivables ? booksData : null;
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-end gap-x-6 gap-y-3 border-b border-border/70">
-        <div className="mr-auto min-w-0 pb-3">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
-          <h1 className="mt-1 truncate font-display text-2xl font-bold tracking-tight">{greeting()}{firstName && `, ${firstName}`}</h1>
-        </div>
-        <div className="-mb-px flex gap-1 text-sm font-medium" role="tablist" aria-label="Dashboard view">
+    <div className="space-y-4">
+      <header className="page-head flex items-center gap-3 border-b border-border/70">
+        <h1 className="mr-auto min-w-0 truncate py-1 font-display text-xl font-bold tracking-tight" title={new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}>
+          {greeting()}{firstName && `, ${firstName}`}
+        </h1>
+        <div className="-mb-[7px] flex shrink-0 gap-0.5 text-sm font-medium" role="tablist" aria-label="Dashboard view">
           {VIEWS.map(([k, l]) => (
             <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)}
-              className={cn("border-b-2 px-3 pb-3 pt-1 transition-colors", view === k ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>{l}</button>
+              className={cn("border-b-2 px-2.5 pb-2 pt-1 transition-colors", view === k ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>{l}</button>
           ))}
         </div>
-      </div>
+        {garage?.ok && <Link to={tenantPath(slug, "/garage/jobs/new")} className={cn(btnPrimaryCls, "max-sm:w-9 max-sm:px-0")} aria-label="Check in a car"><Plus className="h-4 w-4" /><span className="hidden sm:inline">Check in</span></Link>}
+      </header>
 
       {view === "overview" && (
         <>
           <GetStarted data={home?.get_started ?? undefined} />
-          {/* Garage: today's money, cars in / ready / waiting, owed to and by the garage, alerts */}
-          <GarageDashboardPanel />
           <Overview lines={lines} loading={isLoading} fetching={isFetching} from={from} to={to} preset={preset} onPreset={onPreset}
-            prevRevenue={home ? Number(home.prev_revenue) : null} home={home} books={books} year={year} onSales={() => setView("sales")} onMoney={() => setView("money")} />
+            prevRevenue={home ? Number(home.prev_revenue) : null} home={home} books={books} year={year} onSales={() => setView("sales")} onMoney={() => setView("money")}
+            garage={garage} />
         </>
       )}
       {view === "sales" && (
