@@ -4,7 +4,7 @@ import { Building2, CheckCircle, LogIn, Plus, UserPlus, Users, Wallet, X } from 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { EmptyState, Field, Modal, Panel, Pill, StatusPill } from "@/components/kit";
+import { EmptyState, Field, Modal, MoreMenu, Panel, Pill, StatusPill } from "@/components/kit";
 import { ROOT_HOST } from "@/lib/host";
 
 const ROLES = [
@@ -88,11 +88,11 @@ export function CompanyPeoplePanel({ tenant, people, loading, reload }: { tenant
 
   return (
     <Panel flush title="People with access" icon={Users}
-      description="Anyone listed here can switch to this company from their company menu with the same login."
+      description="They switch to this company from their company menu."
       actions={!tenant.deleted_at && <Button size="sm" variant="outline" onClick={() => setAdding((v) => !v)}><UserPlus /> Give access</Button>}>
       {adding && (
         <div className="grid gap-3 border-b border-border px-4 py-3 sm:grid-cols-[1fr_180px_auto] sm:items-end">
-          <Field label="Their login email" hint="They must already have a JMSURF Garage login."><input className="fi" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" autoFocus /></Field>
+          <Field label="Login email" hint="Must already have a login."><input className="fi" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter login email" autoFocus /></Field>
           <Field label="Role"><select className="fi" value={role} onChange={(e) => setRole(e.target.value)}>{ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Field>
           <Button onClick={add} disabled={busy === "add" || !email.includes("@")}>{busy === "add" ? "Adding…" : "Give access"}</Button>
         </div>
@@ -102,7 +102,7 @@ export function CompanyPeoplePanel({ tenant, people, loading, reload }: { tenant
       ) : (
         <ul className="divide-y divide-border">
           {people.map((p) => (
-            <li key={p.user_id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+            <li key={p.user_id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">{String(p.display_name || p.email || "?").charAt(0).toUpperCase()}</span>
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-1.5 font-medium">
@@ -132,11 +132,11 @@ export function OwnerCompaniesPanel({ tenant, group, subs, onSelect, onAdd, onPa
   tenant: any; group: any[]; subs: Record<string, any>; onSelect: (t: any) => void; onAdd: () => void; onPay: () => void;
 }) {
   return (
-    <Panel flush title="This owner's companies" icon={Building2}
-      description="Each company has its own package and expiry. One payment can cover several of them."
-      actions={!tenant.deleted_at && <div className="flex gap-2">
-        {group.length > 1 && <Button size="sm" variant="outline" onClick={onPay}><Wallet /> Pay for several</Button>}
-        <Button size="sm" onClick={onAdd}><Plus /> Add company</Button>
+    <Panel flush title="Owner's companies" icon={Building2}
+      description="Each has its own package and expiry; one payment can cover several."
+      actions={!tenant.deleted_at && <div className="flex gap-1.5">
+        <Button size="sm" onClick={onAdd}><Plus /> Add</Button>
+        <MoreMenu iconOnly items={[{ label: "Pay for several", icon: Wallet, onSelect: onPay, hidden: group.length <= 1 }]} />
       </div>}>
       <ul className="divide-y divide-border">
         {group.map((t) => {
@@ -212,18 +212,18 @@ export function AddOwnerCompanyModal({ open, onClose, source, ownerEmail, plans,
   };
 
   return (
-    <Modal open={open} onClose={onClose} size="md" icon={Plus} title="Add a company for this owner"
-      description={ownerEmail ? `Owned by ${ownerEmail}. They open it from their company menu with the same login.` : "This company's owner has no login email."}
+    <Modal open={open} onClose={onClose} size="md" icon={Plus} title="Add company"
+      description={ownerEmail ? `Owner: ${ownerEmail}` : "This company's owner has no login email."}
       footer={<>
         <Button variant="outline" onClick={onClose}>Cancel</Button>
         <Button onClick={create} disabled={busy || !ownerEmail || !f.name.trim() || f.slug.length < 3 || (f.start === "active" && !f.until)}>{busy ? "Adding…" : "Add company"}</Button>
       </>}>
       <div className="space-y-4">
         <Field label="Business name" required>
-          <input className="fi" value={f.name} autoFocus onChange={(e) => setF({ ...f, name: e.target.value, slug: slugTouched ? f.slug : slugify(e.target.value) })} />
+          <input className="fi" placeholder="Enter business name" value={f.name} autoFocus onChange={(e) => setF({ ...f, name: e.target.value, slug: slugTouched ? f.slug : slugify(e.target.value) })} />
         </Field>
         <Field label="Company address" required hint={f.slug ? `${f.slug}.${ROOT_HOST}` : "Letters, numbers and dashes"}>
-          <input className="fi" value={f.slug} onChange={(e) => { setSlugTouched(true); setF({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }); }} />
+          <input className="fi" placeholder="Enter address" value={f.slug} onChange={(e) => { setSlugTouched(true); setF({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }); }} />
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Package">
@@ -289,8 +289,8 @@ export function GroupPaymentModal({ open, onClose, group, subs, initial, onDone 
   };
 
   return (
-    <Modal open={open} onClose={onClose} size="md" icon={Wallet} title="One payment for several companies"
-      description="Each ticked company runs one more billing period: from its current end date if it is still paid up, otherwise from today."
+    <Modal open={open} onClose={onClose} size="md" icon={Wallet} title="Pay for several"
+      description="Each ticked company gets one more period, from its end date or today."
       footer={<>
         <Button variant="outline" onClick={onClose}>Cancel</Button>
         <Button onClick={save} disabled={busy || !picked.length || !ref.trim()}><CheckCircle /> {busy ? "Recording…" : "Record payment"}</Button>
@@ -319,8 +319,8 @@ export function GroupPaymentModal({ open, onClose, group, subs, initial, onDone 
           <span className="font-bold text-primary">{ksh(due)}</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="M-Pesa code or reference" required><input className="fi uppercase" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="e.g. UIQN384BWJ" /></Field>
-          <Field label="Amount received" hint="Leave empty for the full amount. A different amount is shared out by what each company owes.">
+          <Field label="M-Pesa code or reference" required><input className="fi uppercase" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Enter code" /></Field>
+          <Field label="Amount received" hint="Empty = full amount; otherwise shared by what each owes.">
             <input className="fi" inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value.replace(/[^0-9.]/g, ""))} placeholder={String(Math.round(due))} />
           </Field>
         </div>

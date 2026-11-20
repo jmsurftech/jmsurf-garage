@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { allRows, downloadCsv } from "@/lib/fetchAll";
 import { useToast } from "@/hooks/use-toast";
-import { PageHeader, Toolbar, SearchBox, Segmented, Panel, StatTile, StatGrid, TableWrap, EmptyState, StatusPill, PageLoader } from "@/components/kit";
+import { PageHeader, Toolbar, SearchBox, Segmented, Panel, StatTile, StatGrid, TableWrap, EmptyState, StatusPill, PageLoader, ExportMenu } from "@/components/kit";
 import { PagedRows } from "@/components/Pager";
 import { Button } from "@/components/ui/button";
 import { OrbSpinner } from "@/components/orbs";
@@ -92,11 +92,11 @@ export default function AdminDomains() {
   };
 
   return (
-    <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Domains" icon={Globe} description="Companies' own web addresses. They switch on automatically once DNS points to the server."
-        actions={<Button variant="outline" size="sm" disabled={!filtered.length} onClick={() => downloadCsv(`dash-domains-${new Date().toISOString().slice(0, 10)}.csv`,
+    <div className="space-y-3">
+      <PageHeader title="Domains" icon={Globe}
+        actions={<ExportMenu items={[{ label: "Download CSV", icon: Download, disabled: !filtered.length, onSelect: () => downloadCsv(`dash-domains-${new Date().toISOString().slice(0, 10)}.csv`,
           ["Domain", "Company", "Status", "Added", "Approved", "Notes"],
-          filtered.map((d: any) => [d.host, d.shop?.business_name, d.status, (d.created_at || "").slice(0, 10), (d.approved_at || "").slice(0, 10), d.notes]))}><Download /> Export</Button>} />
+          filtered.map((d: any) => [d.host, d.shop?.business_name, d.status, (d.created_at || "").slice(0, 10), (d.approved_at || "").slice(0, 10), d.notes])) }]} />} />
 
       <StatGrid>
         <StatTile label="Live" value={counts.on} icon={CheckCircle2} tone="success" />
@@ -106,7 +106,7 @@ export default function AdminDomains() {
       </StatGrid>
 
       <Toolbar>
-        <SearchBox value={search} onChange={setSearch} placeholder="Search domain or company…" />
+        <SearchBox value={search} onChange={setSearch} placeholder="Search domains" />
         <Segmented<Filter> value={filter} onChange={setFilter} options={[
           { value: "all", label: "All", count: rows.length },
           { value: "on", label: "Live", count: counts.on },
@@ -127,18 +127,18 @@ export default function AdminDomains() {
                   {(page) => page.map((d) => (
                     <tr key={d.id}>
                       <td className="font-medium">
-                        <a href={`https://${d.host}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-primary">
+                        <a href={`https://${d.host}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 items-center gap-1 break-all hover:text-primary">
                           {d.host} <ExternalLink className="h-3 w-3 opacity-60" />
                         </a>
                       </td>
                       <td>
                         <div className="font-medium">{d.shop?.business_name || "—"}</div>
-                        {d.shop?.slug && <div className="text-xs text-muted-foreground">{d.shop.slug}.garage.jmsurf.co.ke</div>}
+                        {d.shop?.slug && <div className="break-all text-xs text-muted-foreground">{d.shop.slug}.garage.jmsurf.co.ke</div>}
                       </td>
                       <td><StatusPill status={d.status} /></td>
                       <td className="whitespace-nowrap text-muted-foreground">{format(new Date(d.created_at), "d MMM yyyy")}</td>
                       <td>
-                        <div className="flex justify-end gap-1.5">
+                        <div className="flex flex-wrap justify-end gap-1.5">
                           {busy === d.id && <OrbSpinner className="h-4 w-4 self-center text-muted-foreground" />}
                           {!isOn(d.status) && <Button size="sm" variant="outline" disabled={!!busy} onClick={() => setStatus(d, "approved")}>Approve</Button>}
                           {d.status !== "rejected" && <Button size="sm" variant="outline" disabled={!!busy} onClick={() => setStatus(d, "rejected")}>Reject</Button>}

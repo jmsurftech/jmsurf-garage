@@ -105,30 +105,30 @@ export default function AdminMfaPanel() {
   const inputClass = "w-full px-4 py-2.5 rounded-xl bg-muted/40 border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary";
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold">Two-Step Sign-In</h3>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="font-semibold">Two-step sign-in</h3>
         {active.length > 0 ? (
-          <span className="flex items-center gap-1 text-xs text-green-400"><ShieldCheck className="w-3 h-3" />On</span>
+          <span className="flex items-center gap-1 text-xs font-medium text-success"><ShieldCheck className="w-3 h-3" />On</span>
         ) : (
           <span className="flex items-center gap-1 text-xs text-muted-foreground"><ShieldAlert className="w-3 h-3" />Off</span>
         )}
       </div>
-      <p className="text-xs text-muted-foreground -mt-2">
-        Adds a 6-digit code from an authenticator app (Google Authenticator, Authy, 1Password) on top of your admin password.
+      <p className="text-xs text-muted-foreground -mt-1">
+        A 6-digit code from an authenticator app after your password.
       </p>
 
       {loading ? (
         <p className="text-sm text-muted-foreground flex items-center gap-2"><OrbSpinner className="w-4 h-4" />Loading...</p>
       ) : enrolling ? (
-        <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-4">
-          <p className="text-sm text-muted-foreground">Scan this with your authenticator app, then type the 6-digit code it shows.</p>
+        <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-3">
+          <p className="text-sm text-muted-foreground">Scan with your authenticator app, then enter the code.</p>
           {enrolling.qr && (
             <img src={enrolling.qr} alt="Authenticator setup code" className="w-44 h-44 bg-white rounded-xl p-2" />
           )}
           {enrolling.secret && (
             <p className="text-xs text-muted-foreground">
-              Cannot scan? Enter this key by hand: <span className="font-mono text-muted-foreground break-all">{enrolling.secret}</span>
+              Can't scan? Key: <span className="font-mono text-foreground break-all">{enrolling.secret}</span>
             </p>
           )}
           <div className="max-w-xs">
@@ -136,12 +136,12 @@ export default function AdminMfaPanel() {
               value={code}
               onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
               inputMode="numeric"
-              placeholder="123456"
+              placeholder="Enter 6-digit code"
               className={inputClass}
             />
           </div>
-          <div className="flex gap-2">
-            <Button className="bg-orange-500 hover:bg-orange-600 rounded-xl" disabled={busy || code.length < 6} onClick={confirmEnroll}>
+          <div className="flex flex-wrap gap-2">
+            <Button className="rounded-xl" disabled={busy || code.length < 6} onClick={confirmEnroll}>
               {busy ? "Checking..." : "Turn on"}
             </Button>
             <Button variant="outline" className="rounded-xl border-border text-foreground" onClick={cancelEnroll} disabled={busy}>
@@ -152,20 +152,20 @@ export default function AdminMfaPanel() {
       ) : active.length > 0 ? (
         <div className="space-y-2">
           {active.map(f => (
-            <div key={f.id} className="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-3 text-sm">
-              <div>
-                <div className="font-medium">{f.friendly_name || "Authenticator app"}</div>
-                <div className="text-xs text-muted-foreground">Code required at every admin sign-in</div>
+            <div key={f.id} className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/40 p-3 text-sm">
+              <div className="min-w-0">
+                <div className="truncate font-medium">{f.friendly_name || "Authenticator app"}</div>
+                <div className="text-xs text-muted-foreground">Asked at every sign-in</div>
               </div>
-              <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => remove(f.id)} disabled={busy}>
+              <Button size="sm" variant="ghost" className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => remove(f.id)} disabled={busy}>
                 <Trash2 className="w-4 h-4 mr-1" />Remove
               </Button>
             </div>
           ))}
         </div>
       ) : (
-        <Button className="bg-orange-500 hover:bg-orange-600 rounded-xl" onClick={startEnroll} disabled={busy}>
-          <ShieldCheck className="w-4 h-4 mr-2" />{busy ? "Preparing..." : "Set up two-step sign-in"}
+        <Button className="rounded-xl" onClick={startEnroll} disabled={busy}>
+          <ShieldCheck className="w-4 h-4 mr-2" />{busy ? "Preparing..." : "Set up"}
         </Button>
       )}
     </div>
