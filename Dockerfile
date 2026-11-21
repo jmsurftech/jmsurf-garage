@@ -85,6 +85,7 @@ COPY --from=build /app/crmPublic.js ./crmPublic.js
 COPY --from=build /app/demo.js ./demo.js
 COPY --from=build /app/ccbilling.js ./ccbilling.js
 COPY --from=build /app/smscredit.js ./smscredit.js
+COPY --from=build /app/platformadmin.js ./platformadmin.js
 COPY --from=build /app/devapi.js ./devapi.js
 COPY --from=build /app/shopBrand.js ./shopBrand.js
 COPY --from=build /app/companySeo.js ./companySeo.js
