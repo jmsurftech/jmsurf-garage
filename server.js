@@ -19,6 +19,7 @@ import { startEventAlerts } from "./events.js";
 import { startWorkflows } from "./workflows.js";
 import { archiveAssets, archivedAsset } from "./assetArchive.js";
 import { isPlatformCrmRoute, handlePlatformCrm, startOwnerAlerts, handleLeadIntake } from "./platformcrm.js";
+import { isPlatformAdminRoute, handlePlatformAdmin } from "./platformadmin.js";
 import { isCrmPublicRoute, handleCrmPublic } from "./crmPublic.js";
 import { isCcBillingRoute, handleCcBilling, startCcBilling } from "./ccbilling.js";
 import { startSmsCredit } from "./smscredit.js";
@@ -1463,7 +1464,8 @@ function isAdminApi(pathname) {
   return pathname.startsWith("/api/payments/platform/")
     || pathname === "/api/payments/diagnostics"
     || pathname.startsWith("/api/reminders/")
-    || pathname === "/api/messages/admin";
+    || pathname === "/api/messages/admin"
+    || pathname.startsWith("/api/admin/");
 }
 async function mfaSatisfied(req) {
   const auth = String(req.headers.authorization || "");
@@ -1674,6 +1676,11 @@ createServer(async (req, res) => {
   if (isPlatformCrmRoute(pathname) && req.method === "POST") {
     const body = await readJsonBody(req).catch(() => ({}));
     return await handlePlatformCrm(req, res, pathname, body, { sendJson, requireSuperAdmin, deliverEmail: deliverSavedSmtp });
+  }
+  // Admin → Companies and Users (platform owner only).
+  if (isPlatformAdminRoute(pathname)) {
+    const body = req.method === "POST" ? await readJsonBody(req).catch(() => ({})) : {};
+    return await handlePlatformAdmin(req, res, pathname, body, { sendJson, requireSuperAdmin, deliverEmail: deliverSavedSmtp, emailShell });
   }
   if (pathname === "/api/migrate/oauth/callback" && req.method === "GET") return await handleMigrateCallback(req, res, search);
   if (pathname === "/api/migrate/qbo/callback" && req.method === "GET") return await handleQboCallback(req, res, search);
