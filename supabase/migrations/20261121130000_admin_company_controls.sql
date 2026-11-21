@@ -107,3 +107,5 @@ begin
     end if;
   end loop;
 end $$;
+
+notify pgrst, 'reload schema';

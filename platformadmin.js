@@ -208,7 +208,7 @@ async function companyAction(action, who, body, ctx) {
 
   if (action === "subscription") {
     const sub = await latestSub(tid);
-    if (sub?.status === "suspended") refuse("This company is suspended. Reactivate it first.");
+    if (sub?.status === "suspended" || sub?.status === "paused") refuse("This company is suspended. Reactivate it first.");
     const plan = await one(`plans?id=eq.${encodeURIComponent(str(body.plan_id))}&select=id,name,price_monthly,max_users,max_locations`);
     if (!plan) refuse("Choose a plan");
     const cycle = ["monthly", "quarterly", "annually"].includes(str(body.billing_cycle)) ? str(body.billing_cycle) : "monthly";
@@ -237,7 +237,7 @@ async function companyAction(action, who, body, ctx) {
   if (action === "trial") {
     const sub = await latestSub(tid);
     if (!sub) refuse("Give the company a plan first");
-    if (sub.status === "suspended") refuse("This company is suspended. Reactivate it first.");
+    if (sub.status === "suspended" || sub.status === "paused") refuse("This company is suspended. Reactivate it first.");
     if (body.end === true) {
       await db(`subscriptions?id=eq.${sub.id}`, { method: "PATCH", prefer: "return=minimal", body: { status: "expired", trial_ends_at: now, current_period_end: now, updated_at: now } });
       await audit(who, tid, "trial_ended", "subscription", sub.id, { was: sub.trial_ends_at });
@@ -253,7 +253,7 @@ async function companyAction(action, who, body, ctx) {
   if (action === "comp") {
     const sub = await latestSub(tid);
     if (!sub) refuse("Give the company a plan first");
-    if (sub.status === "suspended") refuse("This company is suspended. Reactivate it first.");
+    if (sub.status === "suspended" || sub.status === "paused") refuse("This company is suspended. Reactivate it first.");
     const note = str(body.note).slice(0, 300);
     if (body.until === null) {
       await db(`subscriptions?id=eq.${sub.id}`, { method: "PATCH", prefer: "return=minimal", body: { comped_until: null, comp_note: null, status: "expired", current_period_end: now, updated_at: now } });
@@ -317,7 +317,8 @@ async function companyAction(action, who, body, ctx) {
 
   if (action === "reactivate") {
     const sub = await latestSub(tid);
-    if (!sub || sub.status !== "suspended") refuse("This company is not suspended");
+    // "paused" is the older word for the same thing.
+    if (!sub || (sub.status !== "suspended" && sub.status !== "paused")) refuse("This company is not suspended");
     const nowMs = Date.now();
     const status = sub.trial_ends_at && Date.parse(sub.trial_ends_at) > nowMs ? "trial"
       : sub.current_period_end && Date.parse(sub.current_period_end) > nowMs ? "active" : "expired";
@@ -576,6 +577,34 @@ async function userAction(action, who, body, ctx) {
     if (!removed) refuse("Two-step sign-in is not switched on for this login");
     await endSessions(who, uid);
     if (tid) await audit(who, tid, "mfa_reset", "user", uid, { factors_removed: removed });
+    return { ok: true };
+  }
+  if (action === "verify") {
+    const r = await auth(`admin/users/${uid}`, { method: "PUT", body: { email_confirm: true } });
+    if (!r.ok) refuse("Could not confirm that email");
+    await audit(who, tid, "email_confirmed", "user", uid, { email: r.data?.email || "" });
+    return { ok: true };
+  }
+  if (action === "password") {
+    // A one-time password the platform owner hands over; they choose their own at the next sign-in.
+    const given = str(body.password);
+    if (given && given.length < 8) refuse("The one-time password needs at least 8 characters");
+    const password = given || strongPassword();
+    const r = await auth(`admin/users/${uid}`, { method: "PUT", body: { password } });
+    if (!r.ok) refuse(str(r.data?.msg || r.data?.message) || "Could not set that password");
+    await db(`profiles?user_id=eq.${uid}`, { method: "PATCH", prefer: "return=minimal", body: { must_change_password: true } });
+    await endSessions(who, uid);
+    await audit(who, tid, "one_time_password_set", "user", uid, {});
+    return { ok: true, password };
+  }
+  if (action === "delete") {
+    // For good: only a login that owns no company (transfer ownership or archive the company first).
+    const owns = await rows(`tenants?owner_user_id=eq.${uid}&deleted_at=is.null&select=business_name&limit=3`);
+    if (owns.length) refuse(`They own ${owns.map((x) => x.business_name).join(", ")}. Transfer ownership first.`);
+    const login = await getLogin(uid);
+    const r = await auth(`admin/users/${uid}`, { method: "DELETE" });
+    if (!r.ok) refuse("Could not delete that login. Block its sign-in instead.");
+    await audit(who, tid, "login_deleted", "user", null, { email: login?.email || "", name: login?.user_metadata?.full_name || "" });
     return { ok: true };
   }
   if (action === "signout") {
