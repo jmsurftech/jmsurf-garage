@@ -1,7 +1,7 @@
 /**
  * Active shop branding for the browser chrome.
  *
- * Each tenant browses on its own subdomain, so the tab title and the installable
+ * The tab title and the installable
  * app name read as that shop. The icon is always the JMSURF Garage mark (owner's
  * rule, 2026-10-16); a shop's own logo shows only on its public website.
  */

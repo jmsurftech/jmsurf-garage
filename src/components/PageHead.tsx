@@ -9,7 +9,7 @@ interface PageHeadProps {
   noindex?: boolean;
 }
 
-const SITE = "https://garage.jmsurf.co.ke";
+const SITE = "https://jmsurfgarage.co.ke";
 
 function useBrandName() {
   return useSyncExternalStore(subscribeBrand, getBrandName, () => null);

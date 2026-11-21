@@ -120,7 +120,7 @@ export const MODULES: ModuleDef[] = [
     features: ["Works offline and catches up later", "M-Pesa STK, card and cash", "Shifts, cash-up and Z-reports", "Wholesale price lists", "Credit limits for trade buyers", "Points and vouchers", "One stock for the counter and the workshop"] },
 
   { key: "website", name: "Online Parts Shop & Website", category: "Parts & sales", price: 1000, icon: Globe, color: "#2563eb", home: "/settings?tab=website",
-    tagline: "Your garage website and an online parts shop on your own address.",
+    tagline: "Your garage website and an online parts shop for your customers.",
     description: "Put your garage online. A fast website on your own domain shows your services, opening hours and location, lets customers book a service, and sells parts with live stock and M-Pesa checkout.",
     apps: [
       a("website", "Website", "/settings?tab=website", Globe, "Pages, services and booking on your own domain."),

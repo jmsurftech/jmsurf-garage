@@ -201,7 +201,7 @@ export function AdminTickets() {
               <tr key={t.id} className="cursor-pointer" onClick={() => setOpen(t.id)}>
                 <td className="whitespace-nowrap text-muted-foreground">#{t.number}</td>
                 <td><b className="text-sm">{t.subject}</b>{(t.priority === "urgent" || t.priority === "high") && <Pill tone="danger" className="ml-2">{t.priority}</Pill>}</td>
-                <td className="text-sm">{t.company || "—"}{t.slug && <a href={`https://${t.slug}.garage.jmsurf.co.ke`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="ml-1 inline-flex text-muted-foreground hover:text-primary" aria-label="Open company"><ExternalLink className="h-3 w-3" /></a>}</td>
+                <td className="text-sm">{t.company || "—"}{t.slug && <a href={`https://app.jmsurfgarage.co.ke/${t.slug}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="ml-1 inline-flex text-muted-foreground hover:text-primary" aria-label="Open the company's customer pages"><ExternalLink className="h-3 w-3" /></a>}</td>
                 <td className="hidden text-sm text-muted-foreground md:table-cell">{catLabel(t.category)}</td>
                 <td><TicketStatus t={t} admin /></td>
                 <td className="whitespace-nowrap text-xs text-muted-foreground">{when(t.updated_at)}</td>

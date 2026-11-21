@@ -22,11 +22,12 @@
 // ---------------------------------------------------------------------------
 import { createHash, randomBytes } from "node:crypto";
 import { sendForShop } from "./messaging.js";
+import { APP_ORIGIN, publicBase } from "./hosts.js";
 import { pushInvoiceForShop } from "./sendmoney.js";
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY = process.env.JMSURF_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const ROOT_HOST = process.env.ROOT_HOST || "garage.jmsurf.co.ke";
+
 
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 const str = (v) => (v === null || v === undefined ? "" : String(v)).trim();
@@ -65,7 +66,8 @@ async function engageSettings(tenantId) {
 async function secret(tenantId, name) {
   return (await one(`integration_secrets?tenant_id=eq.${tenantId}&name=eq.${enc(name)}&select=value`))?.value || "";
 }
-const origin = (slug) => `https://${slug}.${ROOT_HOST}`;
+/** Where the company's widgets, tracking pixels and unsubscribe links call the API (any company: ?c=<slug>). */
+const origin = (_slug) => APP_ORIGIN;
 
 async function notify(tenantId, title, body, link, kind = "engage") {
   await db("shop_notifications", { method: "POST", prefer: "return=minimal", body: { tenant_id: tenantId, kind, title: title.slice(0, 200), body: str(body).slice(0, 1000), link, sent_at: new Date().toISOString() } }).catch(() => {});
@@ -729,7 +731,7 @@ export const engageRoutes = {
     const d = await recordFor(who, b.id, "iot", "device");
     const key = `dk_${randomBytes(24).toString("hex")}`;
     await patch(`app_records?id=eq.${d.id}`, { data: { ...d.data, key_hash: sha(key), key_hint: `${key.slice(0, 7)}…${key.slice(-4)}` } });
-    return { key, endpoint: `https://app.${ROOT_HOST}/api/iot/ingest` };
+    return { key, endpoint: `${APP_ORIGIN}/api/iot/ingest` };
   },
   "/api/erp/engage/iot-readings": async (who, b) => {
     const d = await recordFor(who, b.id, "iot", "device");
@@ -739,8 +741,7 @@ export const engageRoutes = {
     const en = await recordFor(who, b.id, "elearning", "enrollment");
     const k = randomBytes(20).toString("hex");
     await patch(`app_records?id=eq.${en.id}`, { data: { ...en.data, link_hash: sha(k) } });
-    const t = await one(`tenants?id=eq.${who.tenantId}&select=slug`);
-    const url = `${origin(t.slug)}/learn?k=${k}`;
+    const url = `${await publicBase(who.tenantId)}/learn?k=${k}`;
     if (b.sms && en.data?.phone) await sendForShop({ tenantId: who.tenantId, channel: "sms", to: en.data.phone, text: `Your course is ready: ${url}` }).catch(() => {});
     return { url };
   },
@@ -846,7 +847,7 @@ async function workshopTick() {
   }
 }
 
-export function startEngageJobs(deliver, base = `https://app.${ROOT_HOST}`) {
+export function startEngageJobs(deliver, base = APP_ORIGIN) {
   if (deliver) deliverEmail = deliver;
   if (!SUPABASE_URL || !SERVICE_KEY) return;
   const every = (ms, name, fn) => { setTimeout(() => void fn().catch((e) => console.error(`[${name}]`, e.message)), 30_000 + Math.random() * 30_000); setInterval(() => void fn().catch((e) => console.error(`[${name}]`, e.message)), ms); };

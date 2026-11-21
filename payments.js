@@ -1,4 +1,5 @@
 import { startSendMoneyPrompt } from "./sendmoney.js";
+import { PUBLIC_ORIGIN, APP_ORIGIN, SHOP_ORIGIN } from "./hosts.js";
 import { shopCyclePrice, planPrice } from "./planPricing.js";
 import { isPlatformAdmin } from "./platform.js";
 import { credential } from "./integrations-core.js";
@@ -80,7 +81,7 @@ const SERVICE_KEY =
 
 // The bare domain redirects to www at Cloudflare, and payment providers do not
 // follow redirects, so callbacks must point straight at the www address.
-const PUBLIC_ORIGIN = (process.env.PUBLIC_ORIGIN || "https://garage.jmsurf.co.ke").replace(/\/+$/, "");
+
 const CALLBACK_TOKEN = process.env.PAYMENT_CALLBACK_TOKEN || "";
 
 const str = (v) => (v === null || v === undefined ? "" : String(v).trim());
@@ -1019,7 +1020,7 @@ async function startPlatformCollection(provider, billing, { tenant, phone, amoun
       body: JSON.stringify({
         email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(str(email)) ? email : "billing@jmsurf.co.ke",
         amount: Math.round((usd ? usd.amount : amount) * 100), currency: usd ? "USD" : "KES", reference: ref,
-        callback_url: `${process.env.SHOP_ORIGIN || `https://${tenant.slug}.garage.jmsurf.co.ke`}/billing`,
+        callback_url: `${SHOP_ORIGIN || APP_ORIGIN}/billing`,
         metadata: { tenant_id: tenant.id, plan_id: plan.id, cycle },
       }),
       signal: AbortSignal.timeout(15000),
@@ -1480,7 +1481,7 @@ async function issueSubscriptionInvoice(tenant, payment, plan, cycle, mods) {
   const number = (await dbRequired("rpc/next_doc_number", { method: "POST", body: { p_kind: "invoice", p_tenant: issuer } }).catch(() => null)) || `SUB-${Date.now().toString(36).toUpperCase()}`;
   const total = Math.round(lines.reduce((a, l) => a + Number(l.amount), 0) * 100) / 100;
   const subtotal = Math.round((total / 1.16) * 100) / 100;
-  const items = lines.map((l) => ({ name: l.name, description: l.kind === "plan" ? `${tenant.slug}.garage.jmsurf.co.ke` : "", quantity: Number(l.quantity) || 1, rate: Number(l.rate), price: Number(l.rate), amount: Number(l.amount), tax_rate: 16 }));
+  const items = lines.map((l) => ({ name: l.name, description: l.kind === "plan" ? `JMSURF Garage${tenant.business_name ? ` · ${tenant.business_name}` : ""}` : "", quantity: Number(l.quantity) || 1, rate: Number(l.rate), price: Number(l.rate), amount: Number(l.amount), tax_rate: 16 }));
   const [inv] = await dbRequired("invoices", { method: "POST", prefer: "return=representation", body: {
     tenant_id: issuer, invoice_number: number, customer_id: cust?.id || null, customer_name: name, customer_email: str(bs?.business_email) || null,
     items, subtotal, tax: Math.round((total - subtotal) * 100) / 100, discount: 0, total, prices_include_tax: true, status: "sent", source: "subscription",

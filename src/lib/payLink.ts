@@ -1,7 +1,8 @@
+import { customerUrl } from "@/lib/host";
 import { supabase } from "@/integrations/supabase/client";
 
 /** Public "Pay now" page for an invoice (no login). */
-export const payLinkUrl = (token: string) => `${window.location.origin}/pay/${token}`;
+export const payLinkUrl = (token: string) => customerUrl(`/pay/${token}`);
 
 /** The invoice's payment link: the live one, or a new one (not for void invoices). */
 export async function getPayLink(invoiceId: string): Promise<string> {

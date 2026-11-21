@@ -1,3 +1,4 @@
+import { publicBase } from "./hosts.js";
 // ---------------------------------------------------------------------------
 // Invoice payment links (public, no login): /pay/<token> in the app calls
 //
@@ -21,7 +22,7 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL 
 const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY ||
   process.env.SUPABASE_SECRET_KEY || process.env.JMSURF_SUPABASE_SERVICE_KEY || "";
-const PUBLIC_ORIGIN = (process.env.PUBLIC_ORIGIN || "https://garage.jmsurf.co.ke").replace(/\/+$/, "");
+
 const str = (v) => (v === null || v === undefined ? "" : String(v)).trim();
 const enc = encodeURIComponent;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -56,17 +57,8 @@ function limit(req, key, max, windowMs = 60_000) {
   if (hits.size > 20000) hits.clear();
 }
 
-/** The company's own address (custom domain when live, else <slug>.garage.jmsurf.co.ke). */
-const originCache = new Map();
-export async function companyOrigin(tenantId) {
-  const hit = originCache.get(tenantId);
-  if (hit && hit.until > Date.now()) return hit.origin;
-  const t = await one(`tenants?id=eq.${tenantId}&select=slug`).catch(() => null);
-  const d = await one(`tenant_domains?tenant_id=eq.${tenantId}&kind=eq.custom&status=in.(approved,active)&select=host&order=created_at.asc&limit=1`).catch(() => null);
-  const origin = d?.host ? `https://${d.host}` : t?.slug ? `https://${t.slug}.garage.jmsurf.co.ke` : PUBLIC_ORIGIN;
-  originCache.set(tenantId, { origin, until: Date.now() + 10 * 60_000 });
-  return origin;
-}
+/** The company's customer pages (custom domain when live, else app.jmsurfgarage.co.ke/<slug>). */
+export const companyOrigin = (tenantId) => publicBase(tenantId);
 
 /** Server use (payment reminders): the invoice's live payment link, made if missing. Null for draft / void. */
 export async function payLinkUrl(tenantId, invoiceId) {

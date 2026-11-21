@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // A shop's own identity on its own address (custom domain or
-// <slug>.garage.jmsurf.co.ke): the page title, description, tab icon, install
+// app.jmsurfgarage.co.ke/<slug>/…): the page title, description, tab icon, install
 // icon and the link preview WhatsApp/Facebook/X show. Link previews never run
 // the app, so all of this is written into the HTML by the server.
 // ---------------------------------------------------------------------------
@@ -41,18 +41,6 @@ const ACCENTS = {
 };
 const SHOP_DEFAULT = { from: "#16a34a", to: "#14532d", solid: "#15803d" };
 
-const RESERVED = new Set([
-  "www", "admin", "app", "dash", "api", "pay", "mail", "webmail", "cpanel", "mx", "smtp", "imap", "pop", "ftp", "cdn", "static", "assets", "portal", "my",
-  "img", "images", "files", "blog", "docs", "help", "support", "status", "dev", "staging", "preview", "notify",
-  "email", "mailer", "auth", "login", "register", "aggregator", "webhook", "webhooks", "ns", "ns1", "ns2", "db",
-]);
-
-/** Slug of <slug>.garage.jmsurf.co.ke, else null. */
-export function subdomainSlug(rawHost) {
-  const host = String(rawHost || "").split(":")[0].trim().toLowerCase();
-  const m = host.match(/^([a-z0-9-]+)\.garage\.jmsurf\.co\.ke$/);
-  return m && !RESERVED.has(m[1]) ? m[1] : null;
-}
 
 const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 const clip = (v, n) => { const s = String(v || "").replace(/\s+/g, " ").trim(); return s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s; };
@@ -214,8 +202,9 @@ function png(key, svg, width) {
 // --- HTML ----------------------------------------------------------------------
 
 /** Replace the platform's head tags with the shop's own. */
-export function brandHtml(html, b, host, { stampSlug }) {
-  const origin = `https://${host}`;
+export function brandHtml(html, b, host, { stampSlug, base = "" }) {
+  // base: "/<slug>" for a company's pages on app.jmsurfgarage.co.ke, "" on its own domain.
+  const origin = `https://${host}${base}`;
   const v = b.version;
   const title = b.tagline ? `${b.name} · ${b.tagline}` : b.name;
   let out = html
@@ -226,14 +215,15 @@ export function brandHtml(html, b, host, { stampSlug }) {
   const data = JSON.stringify({ slug: b.slug, name: b.name, title, color: b.colors.solid, v });
   const head = [
     stampSlug ? `<meta name="jmsurf-shop" content="${esc(b.slug)}">` : "",
+    base ? `<meta name="jmsurf-base" content="${esc(base)}">` : "",
     `<meta name="jmsurf-brand" content="${esc(data)}">`,
     `<title>${esc(title)}</title>`,
     `<meta name="description" content="${esc(b.description)}">`,
     `<meta name="theme-color" content="${b.colors.solid}">`,
     `<meta name="apple-mobile-web-app-title" content="${esc(clip(b.name, 30))}">`,
-    `<link rel="icon" type="image/png" sizes="64x64" href="/shop-brand/icon-64.png?v=${v}-s3">`,
-    `<link rel="apple-touch-icon" href="/shop-brand/icon-192.png?v=${v}-s3">`,
-    `<link rel="manifest" href="/shop-brand/manifest.webmanifest?v=${v}">`,
+    `<link rel="icon" type="image/png" sizes="64x64" href="${base}/shop-brand/icon-64.png?v=${v}-s3">`,
+    `<link rel="apple-touch-icon" href="${base}/shop-brand/icon-192.png?v=${v}-s3">`,
+    `<link rel="manifest" href="${base}/shop-brand/manifest.webmanifest?v=${v}">`,
     `<meta property="og:site_name" content="${esc(b.name)}">`,
     `<meta property="og:type" content="website">`,
     `<meta property="og:url" content="${origin}/">`,
@@ -253,7 +243,7 @@ export function brandHtml(html, b, host, { stampSlug }) {
   // Loading screen (index.html #boot): the shop's own logo and colour, never the DASH mark.
   out = out
     .replace(/<div id="boot"([^>]*?) style="--boot-c:[^"]*"/, `<div id="boot"$1 style="--boot-c:${b.colors.solid}"`)
-    .replace(/<img id="boot-logo"[^>]*>/, `<img id="boot-logo" src="/shop-brand/icon-192.png?v=${v}-s3" alt="${esc(b.name)}" width="48" height="48" />`);
+    .replace(/<img id="boot-logo"[^>]*>/, `<img id="boot-logo" src="${base}/shop-brand/icon-192.png?v=${v}-s3" alt="${esc(b.name)}" width="48" height="48" />`);
   return out;
 }
 
@@ -261,7 +251,8 @@ export function brandHtml(html, b, host, { stampSlug }) {
  * Serves /shop-brand/* and /favicon.ico for a shop's address.
  * Returns true when it answered.
  */
-export function serveBrandAsset(pathname, b, host, res) {
+export function serveBrandAsset(fullPath, b, host, res, base = "") {
+  const pathname = base && fullPath.startsWith(`${base}/`) ? fullPath.slice(base.length) : fullPath;
   const send = (type, body) => {
     res.writeHead(200, { "Content-Type": type, "Cache-Control": "public, max-age=3600", "X-Content-Type-Options": "nosniff" });
     res.end(body);
@@ -275,15 +266,15 @@ export function serveBrandAsset(pathname, b, host, res) {
     const sys = systemIcon(Number(icon[1]));
     if (sys) return send("image/png", sys);
   }
-  if (pathname === "/shop-brand/og.png") return send("image/png", png(`${b.slug}:${b.version}:og:${host}`, ogSvg(b, host), 1200));
+  if (pathname === "/shop-brand/og.png") return send("image/png", png(`${b.slug}:${b.version}:og:${host}${base}`, ogSvg(b, `${host}${base}`), 1200));
   if (pathname === "/shop-brand/manifest.webmanifest") {
     return send("application/manifest+json; charset=utf-8", JSON.stringify({
       name: b.name, short_name: clip(b.name, 24), description: b.description,
-      theme_color: b.colors.solid, background_color: "#ffffff", display: "standalone", scope: "/", start_url: "/",
+      theme_color: b.colors.solid, background_color: "#ffffff", display: "standalone", scope: `${base}/`, start_url: `${base}/`,
       icons: [
-        { src: `/shop-brand/icon-192.png?v=${b.version}-s3`, sizes: "192x192", type: "image/png" },
-        { src: `/shop-brand/icon-512.png?v=${b.version}-s3`, sizes: "512x512", type: "image/png" },
-        { src: `/shop-brand/icon-512.png?v=${b.version}-s3`, sizes: "512x512", type: "image/png", purpose: "any maskable" },
+        { src: `${base}/shop-brand/icon-192.png?v=${b.version}-s3`, sizes: "192x192", type: "image/png" },
+        { src: `${base}/shop-brand/icon-512.png?v=${b.version}-s3`, sizes: "512x512", type: "image/png" },
+        { src: `${base}/shop-brand/icon-512.png?v=${b.version}-s3`, sizes: "512x512", type: "image/png", purpose: "any maskable" },
       ],
     }));
   }

@@ -17,6 +17,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   // Offline mode: reads from the device, changes kept and sent when back online (lib/offlineOutbox).
   global: { headers: PLATFORM ? { "x-dash-context": "platform" } : {}, fetch: offlineFetch },
   auth: {
+    // Pinned: the default key comes from the database address ("sb-garage-auth-token" for
+    // garage.jmsurf.co.ke). The address moved to jmsurfgarage.co.ke; a new key would sign everyone
+    // out (custom domains keep their origin, so their saved sessions stay under this name).
+    storageKey: 'sb-garage-auth-token',
     storage: typeof window === 'undefined' ? undefined : localStorage,
     persistSession: true,
     autoRefreshToken: true,

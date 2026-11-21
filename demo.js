@@ -1,15 +1,16 @@
 // ---------------------------------------------------------------------------
 // The public demo (link on the website): GET /api/demo/start opens the shared
-// demo company at demo.garage.jmsurf.co.ke, signed in with a one-time code, no
+// demo company on app.jmsurfgarage.co.ke, signed in with a one-time code, no
 // account needed. Its data is put back every night (demo_reset in the
 // database). Nothing leaves the demo: SMS, WhatsApp and email are switched off
 // for it (isDemoTenant), and its login cannot be changed.
 // ---------------------------------------------------------------------------
 import { randomBytes } from "node:crypto";
+import { APP_ORIGIN } from "./hosts.js";
 
 const URL_ = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
 const KEY = process.env.JMSURF_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY || "";
-const ROOT = process.env.ROOT_HOST || "garage.jmsurf.co.ke";
+
 export const DEMO_EMAIL = "demo@jmsurf.co.ke";
 const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" };
 
@@ -67,7 +68,7 @@ export async function handleDemoStart(req, res) {
     const j = await r.json().catch(() => ({}));
     const th = j.hashed_token || j.properties?.hashed_token;
     if (!r.ok || !th) throw new Error("no sign-in code");
-    const url = `https://demo.${ROOT}/auth/handoff#th=${encodeURIComponent(th)}&next=${encodeURIComponent("/dashboard")}`;
+    const url = `${APP_ORIGIN}/auth/handoff#th=${encodeURIComponent(th)}&co=demo&next=${encodeURIComponent("/dashboard")}`;
     // ?json=1: the website asks with fetch (a service worker cannot turn that into the app page).
     if (/[?&]json=1/.test(req.url || "")) { res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" }); return res.end(JSON.stringify({ url })); }
     res.writeHead(302, { Location: url, "Cache-Control": "no-store" });

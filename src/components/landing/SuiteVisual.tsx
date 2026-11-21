@@ -14,7 +14,7 @@ function Frame({ m, children, className }: { m: ModuleDef; children: ReactNode; 
       <div className="flex items-center gap-2 border-b border-black/5 bg-white/70 px-4 py-2.5 dark:border-white/5 dark:bg-white/[0.03]">
         <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" /><span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" /><span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
         <span className="ml-2 flex min-w-0 flex-1 items-center gap-2 truncate rounded-md bg-black/[0.04] px-2.5 py-1 text-[10px] text-zinc-500 dark:bg-white/5 dark:text-zinc-400">
-          <span className="h-3 w-3 shrink-0 rounded-[4px]" style={{ background: m.color }} />app.garage.jmsurf.co.ke{(m.home || "/dashboard").split("?")[0]}
+          <span className="h-3 w-3 shrink-0 rounded-[4px]" style={{ background: m.color }} />app.jmsurfgarage.co.ke{(m.home || "/dashboard").split("?")[0]}
         </span>
       </div>
       <div className="p-4 text-left text-zinc-800 dark:text-zinc-100 sm:p-5">{children}</div>

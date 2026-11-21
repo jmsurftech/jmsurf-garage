@@ -1,3 +1,4 @@
+import { customerUrl } from "@/lib/host";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,7 +24,7 @@ type Reg = {
 type RegLink = { id: string; token: string; label: string | null; department_id: string | null; expires_at: string | null; max_uses: number; uses: number; active: boolean; created_at: string };
 
 const regName = (r: Pick<Reg, "first_name" | "other_names" | "last_name">) => [r.first_name, r.other_names, r.last_name].filter(Boolean).join(" ");
-const joinUrl = (token: string) => `${window.location.origin}/join/${token}`;
+const joinUrl = (token: string) => customerUrl(`/join/${token}`);
 const linkState = (l: RegLink): [string, "success" | "muted" | "warning"] =>
   !l.active ? ["Off", "muted"] : l.expires_at && Date.parse(l.expires_at) <= Date.now() ? ["Expired", "muted"] : l.uses >= l.max_uses ? ["Used up", "warning"] : ["Open", "success"];
 

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { OrbSpinner } from "@/components/orbs";
 
-/** Shop subdomains can't POST to /api, so always use the main address there. */
+/** Same-origin call to the app server. */
 const API = "/api/email/unsubscribe";
 const post = (body: Record<string, unknown>) =>
   fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());

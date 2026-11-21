@@ -23,11 +23,11 @@ export default defineConfig(({ mode }) => ({
       ["/api", "/auth/v1", "/rest/v1", "/storage/v1", "/functions/v1", "/realtime/v1"].map((p) => [
         p,
         {
-          target: process.env.DEV_UPSTREAM || "https://garage.jmsurf.co.ke",
+          target: process.env.DEV_UPSTREAM || "https://jmsurfgarage.co.ke",
           changeOrigin: false,
           secure: false,
           ws: p === "/realtime/v1",
-          headers: { Host: "garage.jmsurf.co.ke" },
+          headers: { Host: "jmsurfgarage.co.ke" },
         },
       ]),
     ),
@@ -74,7 +74,7 @@ export default defineConfig(({ mode }) => ({
           },
           {
             // Company data (read requests only) so the app opens offline. Any host: every company address
-            // reads the database through garage.jmsurf.co.ke.
+            // reads the database through jmsurfgarage.co.ke.
             urlPattern: ({ url, request }) => request.method === "GET" && /\/rest\/v1\//.test(url.pathname),
             handler: "NetworkFirst",
             options: {

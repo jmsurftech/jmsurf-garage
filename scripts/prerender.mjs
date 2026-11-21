@@ -1,5 +1,5 @@
 // Writes the public website snapshots after `vite build` (see src/seo/pages.ts):
-//   seo-pages/<name>.html + seo-pages/routes.json   served by server.js on garage.jmsurf.co.ke
+//   seo-pages/<name>.html + seo-pages/routes.json   served by server.js on jmsurfgarage.co.ke
 //   dist/sitemap.xml, dist/llms.txt, dist/llms-full.txt
 // Each snapshot is dist/index.html with the page's own head tags and structured data,
 // and the page's text inside <div id="root"> (the app replaces it when it starts).

@@ -23,7 +23,7 @@ const STEPS = ["new", "accepted", "assigned", "on_the_way", "delivered", "paid"]
 
 type Tab = "order" | "orders" | "payments" | "help" | "profile";
 
-/** Customer ordering page of a water refill shop: <shop>.garage.jmsurf.co.ke/order */
+/** Customer ordering page of a water refill shop: app.jmsurfgarage.co.ke/<shop>/order (or its own domain). */
 export default function OrderPortal({ slug: hostSlug }: { slug?: string }) {
   const params = useParams<{ slug: string }>();
   const slug = (hostSlug || params.slug || "").toLowerCase();

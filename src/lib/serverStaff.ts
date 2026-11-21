@@ -12,12 +12,9 @@ async function accessToken(): Promise<string | null> {
   return data.session?.access_token ?? null;
 }
 
-/** Shop addresses cannot carry a POST body, so calls go to the main address. */
+/** The app server's own routes (same origin on every address). */
 function serverUrl(path: string): string {
-  if (typeof window === "undefined") return path;
-  const host = window.location.hostname;
-  if (host === "garage.jmsurf.co.ke" || host === "garage.jmsurf.co.ke") return path;
-  // Company subdomains are served by the same server: same-origin calls.
+  // Every JMSURF Garage address (app., a company's own domain) is served by the same server: same-origin calls.
   return path;
 }
 

@@ -41,8 +41,7 @@ export function reportError(error: unknown, extra?: { componentStack?: string })
       path: window.location.pathname,
       tenant_slug: shopSlug(),
     });
-    // Shop addresses (afterhours.garage.jmsurf.co.ke…) cannot take a POST, so
-    // reports go to the main address, as plain text (no cross-site preflight).
+    // Sent as plain text (no preflight), and still sent while the page unloads.
     const url = reportUrl();
     const sentOk = navigator.sendBeacon?.(url, new Blob([body], { type: "text/plain;charset=UTF-8" }));
     if (!sentOk) void fetch(url, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=UTF-8" }, body, keepalive: true }).catch(() => {});

@@ -16,16 +16,10 @@ export type PlatformEmailResult = {
   unavailable?: boolean;
 };
 
-/**
- * Shop addresses (delight.garage.jmsurf.co.ke and friends) cannot carry a POST
- * body to the app server, so their requests go to the www address instead.
- */
+/** The app server's email routes (same origin on every address). */
 function emailApiUrl(route: string): string {
   const path = `/api/email/${route}`;
-  if (typeof window === "undefined") return path;
-  const host = window.location.hostname;
-  if (host === "garage.jmsurf.co.ke" || host === "garage.jmsurf.co.ke") return path;
-  // Company subdomains are served by the same server: same-origin calls.
+  // Every JMSURF Garage address (app., a company's own domain) is served by the same server: same-origin calls.
   return path;
 }
 

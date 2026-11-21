@@ -1,3 +1,4 @@
+import { customerUrl } from "@/lib/host";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantId } from "@/hooks/useTenantId";
@@ -30,7 +31,7 @@ export const STATUS: Record<Contract["status"], { label: string; tone: "muted" |
 export const PARTY_LABEL: Record<PartyKind, string> = { customer: "Customer", supplier: "Vendor", employee: "Employee", other: "Other party" };
 
 export const daysLeft = (d: string | null) => (d ? Math.ceil((Date.parse(`${d}T23:59:59`) - Date.now()) / 86400000) : null);
-export const shareUrl = (token: string) => `${window.location.origin}/contract/${token}`;
+export const shareUrl = (token: string) => customerUrl(`/contract/${token}`);
 
 export function useContracts() {
   const tenantId = useTenantId();

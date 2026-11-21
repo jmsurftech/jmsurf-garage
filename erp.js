@@ -1,3 +1,4 @@
+import { APP_ORIGIN, publicBase } from "./hosts.js";
 // ---------------------------------------------------------------------------
 // ERP server jobs and staff actions:
 //
@@ -28,7 +29,7 @@ const ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBL
 const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY ||
   process.env.SUPABASE_SECRET_KEY || process.env.JMSURF_SUPABASE_SERVICE_KEY || "";
-const PORTAL_ORIGIN = (process.env.PUBLIC_ORIGIN || "https://garage.jmsurf.co.ke").replace(/\/+$/, "");
+const PORTAL_ORIGIN = APP_ORIGIN;
 const BUCKET = "tenant-backups";
 const str = (v) => (v === null || v === undefined ? "" : String(v)).trim();
 const enc = encodeURIComponent;
@@ -62,17 +63,8 @@ function nairobiNow() {
 }
 const niceDate = (d) => new Date(`${String(d).slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
-/** The company's own address (custom domain when live, else <slug>.garage.jmsurf.co.ke): links in SMS and emails. */
-const portalCache = new Map();
-async function portalOrigin(tenantId) {
-  const hit = portalCache.get(tenantId);
-  if (hit && hit.until > Date.now()) return hit.origin;
-  const t = await one(`tenants?id=eq.${tenantId}&select=slug`).catch(() => null);
-  const d = await one(`tenant_domains?tenant_id=eq.${tenantId}&kind=eq.custom&status=in.(approved,active)&select=host&order=created_at.asc&limit=1`).catch(() => null);
-  const origin = d?.host ? `https://${d.host}` : t?.slug ? `https://${t.slug}.garage.jmsurf.co.ke` : PORTAL_ORIGIN;
-  portalCache.set(tenantId, { origin, until: Date.now() + 10 * 60_000 });
-  return origin;
-}
+/** The company's customer pages (custom domain when live, else app.jmsurfgarage.co.ke/<slug>): links in SMS and emails. */
+const portalOrigin = (tenantId) => publicBase(tenantId);
 async function erpSettings(tenantId) {
   const s = await one(`business_settings?tenant_id=eq.${tenantId}&select=id,erp_settings,business_name,business_phone,business_email,business_address,currency,mpesa_till_number,mpesa_shortcode,mpesa_account_reference,bank_details`);
   if (s) s.portal_origin = await portalOrigin(tenantId);

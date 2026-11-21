@@ -22,7 +22,7 @@ export default function PhotoCredits() {
       <Helmet>
         <title>Photo credits · JMSURF Garage</title>
         <meta name="description" content="The photographers behind the pictures on the JMSURF Garage website, and the licences they shared them under." />
-        <link rel="canonical" href="https://garage.jmsurf.co.ke/photo-credits" />
+        <link rel="canonical" href="https://jmsurfgarage.co.ke/photo-credits" />
       </Helmet>
       <Nav />
       <main className="mx-auto max-w-5xl px-4 pb-20 pt-28 sm:px-6 sm:pt-36">

@@ -16,7 +16,7 @@ import { lazyPage, registerRoutes } from "@/lib/lazyPage";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
-import { getHostSlug, isApexHost, isReservedSubdomain, tenantUrl, isDevHost, isPlatformHost, isAppHost, PLATFORM_ORIGIN, SITE_ORIGIN, ROOT_HOST, APP_ORIGIN } from "@/lib/host";
+import { getHostSlug, isDevHost, isPlatformHost, isAppHost, pathBase, PLATFORM_ORIGIN, ROOT_HOST, APP_ORIGIN } from "@/lib/host";
 import RequireModule from "@/components/RequireModule";
 import { portal, getToken } from "@/lib/portalApi";
 import { mergeSite } from "@/lib/shopSite";
@@ -41,19 +41,12 @@ function RouteTracker() {
   return null;
 }
 
-const RESERVED_FIRST_SEGMENTS = new Set([
-  "admin","login","register","reset-password","whats-new","subscription-expired","billing","dashboard","pos",
-  "inventory","customers","sales","purchases","payments","email-logs","reports","ai-analysis","staff","settings",
-  "delivery-confirm","stock-transfer","purchase-orders","suppliers","invoices","quotes","expenses",
-  "bills","services","mpesa-history","credit-balances","unsubscribe","audit-log","aggregator","pay","404",
-  "order","rider","water","tickets"
-]);
-
 /**
  * Which JMSURF Garage address this is (see lib/host.ts): the website, the super
  * admin (admin.), the staff workspace (app.: sign in, then the company comes from
- * the membership), a company (subdomain / own domain: workspace + its website and
- * customer portal) or local development (everything, /<slug>/… paths).
+ * the membership), a company's pages (app.jmsurfgarage.co.ke/<slug>/… or its own
+ * domain: its website and customer portal; staff can sign in there too) or local
+ * development (everything, /<slug>/… paths).
  */
 // The old dash.<root> super admin address moves to admin.<root>.
 if (typeof window !== "undefined" && window.location.hostname === `dash.${ROOT_HOST}`) {
@@ -64,8 +57,10 @@ const PLATFORM_MODE = isPlatformHost();
 const APP_MODE = isAppHost();
 const DEV_MODE = isDevHost();
 const COMPANY_MODE = !!getHostSlug();
-/** Company screens on clean paths: a company address, or app. (the signed-in company). */
-const WORKSPACE_MODE = COMPANY_MODE || APP_MODE;
+/** A company's customer pages on app.jmsurfgarage.co.ke/<slug>/…: staff screens and sign-in live on app.'s root. */
+const PATH_MODE = !!pathBase();
+/** Company screens on clean paths: a company's own domain, or app. (the signed-in company). */
+const WORKSPACE_MODE = (COMPANY_MODE && !PATH_MODE) || APP_MODE;
 
 /** app.<root>: signed in → the company's dashboard; otherwise sign in. */
 function AppRoot() {
@@ -74,28 +69,37 @@ function AppRoot() {
   return user ? <Navigate to="/dashboard" replace /> : <Login />;
 }
 
+/** From a company's pages on app.…/<slug>/ to the same staff screen on app.'s root (the one sign-in). */
+function ToAppRoot() {
+  const loc = useLocation();
+  useEffect(() => { window.location.replace(APP_ORIGIN + loc.pathname + loc.search + loc.hash); }, [loc.pathname, loc.search, loc.hash]);
+  return <PageLoader />;
+}
+
 /** Sends the browser to the same path on the other address (website ↔ ERP). */
 function GoTo({ origin }: { origin: string }) {
   useEffect(() => { window.location.replace(origin + window.location.pathname + window.location.search + window.location.hash); }, [origin]);
   return <PageLoader />;
 }
-/** A company's own website pages (shop, about, contact, portal): only on a company address. */
+/** A company's own website pages (shop, about, contact, portal): only on a company's pages. */
 const Site = ({ children }: { children: React.ReactNode }) => (COMPANY_MODE || DEV_MODE ? <>{children}</> : <Navigate to="/" replace />);
 
 /**
- * A company's address: staff go to their dashboard; visitors see the company's
- * website when it has one switched on, otherwise the sign-in page.
+ * A company's home: on its own domain staff go to their dashboard; visitors (and anyone on
+ * app.jmsurfgarage.co.ke/<slug>/) see the company's website when it has one switched on,
+ * otherwise the sign-in page.
  */
 function CompanyRoot() {
   const { user, loading } = useAuth();
+  const staffHome = !!user && !PATH_MODE;
   const [site, setSite] = useState<boolean | null>(null);
   useEffect(() => {
-    if (user) return;
+    if (staffHome) return;
     fetch("/api/shop/info", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
       .then((r) => (r.ok ? r.json() : null)).then((d) => setSite(!!d?.shop?.site_enabled)).catch(() => setSite(false));
-  }, [user]);
-  if (loading || (!user && site === null)) return <PageLoader />;
-  if (user) return <Navigate to="/dashboard" replace />;
+  }, [staffHome]);
+  if (loading || (!staffHome && site === null)) return <PageLoader />;
+  if (staffHome) return <Navigate to="/dashboard" replace />;
   return site ? <Suspense fallback={<PageLoader />}><ShopHome /></Suspense> : <Navigate to="/login" replace />;
 }
 
@@ -103,82 +107,8 @@ function CompanyRoot() {
 const PlatformOnly = ({ children }: { children: React.ReactNode }) =>
   (PLATFORM_MODE || DEV_MODE ? <>{children}</> : <GoTo origin={PLATFORM_ORIGIN} />);
 
-/** Slug taken from <slug>.garage.jmsurf.co.ke — stable for the whole session. */
-const HOST_SLUG = getHostSlug();
-
-const CURRENT_HOST = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
-
 /**
- * Slug-in-the-path URLs (garage.jmsurf.co.ke/azil/...) are retired on the live
- * domain: every shop is reached at its own address. They stay mounted on
- * preview and local hosts, which have no subdomains to use.
- */
-const SLUG_PATHS_ENABLED = !HOST_SLUG && !isApexHost(CURRENT_HOST);
-
-/**
- * Host handling on boot:
- *  - tenant subdomain  → nothing to do, bare tenant routes are mounted
- *  - apex /<slug>/...  → 301-style redirect to the shop's own subdomain
- *  - custom domain     → rewrite the URL with the resolved slug prefix
- */
-function HostRedirector() {
-  useEffect(() => {
-    const host = window.location.hostname.toLowerCase();
-    const path = window.location.pathname;
-
-    // Skip on bare localhost/IP
-    if (host === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(host)) return;
-
-    // Already on a tenant subdomain — routes render as-is.
-    if (HOST_SLUG) return;
-
-    // www and the bare domain both serve the app; no in-app redirect here.
-
-
-    if (isApexHost(host)) {
-      // Legacy path form: garage.jmsurf.co.ke/<slug>/... → <slug>.garage.jmsurf.co.ke/...
-      const parts = path.split("/").filter(Boolean);
-      const first = (parts[0] || "").toLowerCase();
-      if (!first || RESERVED_FIRST_SEGMENTS.has(first) || isReservedSubdomain(first)) return;
-      if (!/^[a-z0-9][a-z0-9-]{1,62}$/.test(first)) return;
-      (async () => {
-        try {
-          const { data } = await (supabase as any)
-            .from("tenants_public").select("slug").ilike("slug", first).maybeSingle();
-          if (!data?.slug) return;
-          const rest = "/" + parts.slice(1).join("/");
-          window.location.replace(
-            tenantUrl(data.slug, rest === "/" ? "/dashboard" : rest) + window.location.search + window.location.hash
-          );
-        } catch { /* stay on the path-based URL */ }
-      })();
-      return;
-    }
-
-    // Custom domain → look up and rewrite with the slug prefix
-    (async () => {
-      try {
-        const { data } = await (supabase as any)
-          .from("tenant_domains_public")
-          .select("slug")
-          .eq("host", host)
-          .maybeSingle();
-        const slug = data?.slug;
-        if (!slug) return;
-        const first = path.split("/").filter(Boolean)[0];
-        if (first === slug) return;
-        if (first && RESERVED_FIRST_SEGMENTS.has(first)) return;
-        const newPath = path === "/" ? `/${slug}/dashboard` : `/${slug}${path}`;
-        window.history.replaceState({}, "", newPath + window.location.search + window.location.hash);
-        window.dispatchEvent(new PopStateEvent("popstate"));
-      } catch { /* ignore */ }
-    })();
-  }, []);
-  return null;
-}
-
-/**
- * The shop's own address ("/" on <slug>.garage.jmsurf.co.ke or its custom domain).
+ * The shop's own address ("/" of its pages on app.jmsurfgarage.co.ke/<slug> or its custom domain).
  * A water shop shows its website to everyone (signed-in staff get a link to
  * their dashboard on it), or the ordering page when the website is off.
  * Any other shop sends staff to their work screen and visitors to sign in.
@@ -238,36 +168,6 @@ function TenantSlugRedirect() {
   if (state === "missing") return <Navigate to="/404" replace />;
   return <Navigate to={`/${lower}/login`} replace />;
 }
-
-/** Live domain only: send any leftover /<slug>/... link to the shop's address. */
-function SlugToSubdomain() {
-  const { slug } = useParams<{ slug: string }>();
-  const location = useLocation();
-  const lower = (slug || "").toLowerCase();
-
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    if (!lower) { setFailed(true); return; }
-    let cancelled = false;
-    const rest = location.pathname.replace(new RegExp(`^/${lower}`), "") || "/dashboard";
-    const timer = setTimeout(() => { if (!cancelled) setFailed(true); }, 8000);
-    (async () => {
-      try {
-        const { data } = await (supabase as any)
-          .from("tenants_public").select("slug").ilike("slug", lower).maybeSingle();
-        if (cancelled) return;
-        if (!data?.slug) { setFailed(true); return; }
-        window.location.replace(tenantUrl(data.slug, rest) + location.search + location.hash);
-      } catch { if (!cancelled) setFailed(true); }
-    })();
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [lower, location.pathname, location.search, location.hash]);
-
-  if (failed) return <Navigate to="/404" replace />;
-  return <PageLoader />;
-}
-
 
 /**
  * Pass-through wrapper. Data is always scoped to the signed-in account's own
@@ -906,7 +806,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter basename={pathBase() || undefined}>
         <RouteTracker />
         <AuthProvider>
           <TenantProvider>
@@ -938,9 +838,9 @@ const App = () => (
             <Route path="/customer-login" element={<Site><CustomerLogin /></Site>} />
             <Route path="/signin" element={<Site><CustomerLogin /></Site>} />
 
-            {/* Sign-in: staff on a company address, "find my company" elsewhere */}
-            <Route path="/login" element={COMPANY_MODE ? <TenantLogin /> : <Login />} />
-            <Route path="/staff-login" element={COMPANY_MODE ? <TenantLogin /> : <Login />} />
+            {/* Sign-in: staff of this company on its pages, the one sign-in elsewhere */}
+            <Route path="/login" element={PATH_MODE ? <ToAppRoot /> : COMPANY_MODE ? <TenantLogin /> : <Login />} />
+            <Route path="/staff-login" element={PATH_MODE ? <ToAppRoot /> : COMPANY_MODE ? <TenantLogin /> : <Login />} />
             <Route path="/auth/handoff" element={<Handoff />} />
             <Route path="/register" element={<Register />} />
             <Route path="/signup" element={<Navigate to="/register" replace />} />
@@ -971,14 +871,17 @@ const App = () => (
             <Route path="/pay/:token" element={<PayInvoice />} />
             <Route path="/oauth/consent" element={<OAuthConsent />} />
 
-            {/* Company address or app.: clean, slug-free routes */}
+            {/* A company's pages or app.: clean, slug-free routes */}
             {WORKSPACE_MODE && <Route path="/pos/display/:sessionId" element={<CustomerDisplay />} />}
             {WORKSPACE_MODE && tenantRoutes.map(r => (
               <Route key={`host-${r.path}`} path={`/${r.path}`} element={r.element} />
             ))}
+            {PATH_MODE && tenantRoutes.map(r => (
+              <Route key={`to-app-${r.path}`} path={`/${r.path}`} element={<ToAppRoot />} />
+            ))}
             <Route path="/pos/display/local/:sessionId" element={<CustomerDisplay />} />
 
-            {/* Platform super admin (admin.garage.jmsurf.co.ke) */}
+            {/* Platform super admin (admin.jmsurfgarage.co.ke) */}
             <Route path="/admin" element={<PlatformOnly><AdminLayout /></PlatformOnly>}>
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<AdminUsers />} />

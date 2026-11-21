@@ -68,7 +68,7 @@ test('JMSURF uses the saved sale amount and tenant destination, then settles onl
     assert.equal(push.body.amount, 250);
     assert.equal(push.body.tenantCode, 'tnnt_test');
     assert.equal(push.body.phoneNumber, '254712345678');
-    assert.equal(push.options.headers['User-Agent'], 'JMSURF-GARAGE/1.0 (+https://garage.jmsurf.co.ke)');
+    assert.equal(push.options.headers['User-Agent'], 'JMSURF-GARAGE/1.0 (+https://jmsurfgarage.co.ke)');
 
     const completed = await route('/api/payments/jmsurf/status', {
       tenant_id: tenantId, pos_transaction_id: transactionId,

@@ -1,3 +1,4 @@
+import { customerUrl } from "@/lib/host";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -463,7 +464,7 @@ function RecordSheet({ app, def, kind, record, preset, onClose, onOpenOther }: {
     {
       label: "Copy signing link", icon: Copy, show: !!rec && app === "sign" && kind.key === "request",
       run: async () => {
-        const url = `${window.location.origin}/sign/${rec!.id}`;
+        const url = customerUrl(`/sign/${rec!.id}`);
         await navigator.clipboard.writeText(url);
         if (rec!.stage === "draft") { await setStage(rec!, "sent", "Sent"); setRec({ ...rec!, stage: "sent" }); refresh(); }
         toast.success("Signing link copied", { description: "Send it to the signer by SMS, WhatsApp or email." });
