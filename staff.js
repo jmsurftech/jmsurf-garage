@@ -14,8 +14,8 @@ const SUPABASE_URL = (
 ).replace(/\/+$/, "");
 const SUPABASE_ANON_KEY =
   process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
-import { randomInt, createHmac, randomBytes } from "node:crypto";
-import { Resolver } from "node:dns/promises";
+import { randomInt } from "node:crypto";
+import { APP_ORIGIN, SHOP_ORIGIN, publicBaseFor, publicBase, activeCustomHost, forgetPublicBase } from "./hosts.js";
 
 // Accept every common spelling so a key saved under any of these names works.
 const SERVICE_KEY =
@@ -32,9 +32,9 @@ const SHOP_ASSIGNABLE_ROLES = new Set([
   "cashier", "stock_manager", "rider", "sales_person", "packaging",
 ]);
 
-/** Login address for staff: the workspace on app.garage.jmsurf.co.ke (one login, the company comes from the membership). */
+/** Login address for staff: the workspace on app.jmsurfgarage.co.ke (one login, the company comes from the membership). */
 async function loginUrlFor(_tenantId) {
-  return `${process.env.SHOP_ORIGIN || process.env.APP_ORIGIN || "https://app.garage.jmsurf.co.ke"}/login`;
+  return `${SHOP_ORIGIN || APP_ORIGIN}/login`;
 }
 
 /** Emails a temporary password; the person chooses their own at first sign-in. */
@@ -719,59 +719,92 @@ async function deleteStaff(req, res, body) {
   return sendJson(res, 200, { success: true });
 }
 
-// --- Shops' own domains ------------------------------------------------------
-// The owner adds a domain, points its A record at this server and presses
-// Check. Once public DNS shows the domain on our IP (which proves they control
-// it) it is approved; pos-custom-domains-sync on the VPS then routes it to the
-// app with its own certificate within a minute.
+// --- Company's own domain (paid add-on, the JMSURF ISP way) --------------------
+// A company that does not want app.jmsurfgarage.co.ke/<slug> for its customers pays KES 300 once
+// (platform_settings 'custom_domain'.price_kes) by M-Pesa through JMSURF PAY to the platform
+// settlement account, or the platform owner unlocks it free. Then the owner connects ONE domain
+// (its www alias comes with a main domain), points an A record at this server and presses Check.
+// When public DNS (Cloudflare and Google over HTTPS) shows only that A record and no AAAA, the row
+// goes pending -> active; the custom-domain sync job on the server routes it and gets its
+// certificate. Removing or replacing the domain never needs a new payment.
 
-const SERVER_IP = process.env.POS_PUBLIC_IP || "37.60.255.35";
-const MAX_DOMAINS = 4;
+const SERVER_IP = process.env.CUSTOM_DOMAIN_IP || process.env.POS_PUBLIC_IP || "37.60.255.35";
 const HOST_RE = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/;
 const cleanHost = (v) => str(v).toLowerCase().replace(/^https?:\/\//, "").replace(/[/?#].*$/, "").replace(/:\d+$/, "").replace(/\.$/, "");
-const publicDns = new Resolver({ timeout: 4000, tries: 2 });
-publicDns.setServers(["1.1.1.1", "8.8.8.8"]);
-const lookup = (fn, host) => fn.call(publicDns, host).catch(() => []);
+/** Second-level suffixes under which a name is still a main domain (acme.co.ke). */
+const TWO_LEVEL = new Set(["co.ke", "or.ke", "ac.ke", "go.ke", "ne.ke", "me.ke", "sc.ke", "info.ke", "mobi.ke",
+  "co.ug", "or.ug", "ac.ug", "co.tz", "or.tz", "ac.tz", "co.rw", "co.za", "org.za", "com.ng", "com.gh", "co.uk", "org.uk"]);
+const isMainDomain = (host) => {
+  const p = host.split(".");
+  return p.length === 2 || (p.length === 3 && TWO_LEVEL.has(p.slice(1).join(".")));
+};
+/** "www.acme.co.ke" or "acme.co.ke" -> { host: acme.co.ke, alias: www.acme.co.ke }; a subdomain has no alias. */
+function splitDomain(input) {
+  const h = cleanHost(input);
+  if (h.startsWith("www.") && isMainDomain(h.slice(4))) return { host: h.slice(4), alias: h };
+  if (isMainDomain(h)) return { host: h, alias: `www.${h}` };
+  return { host: h, alias: null };
+}
 
 async function domainOwner(req, body) {
   const ctx = await callerContext(req);
   if (ctx.error) return ctx;
   if (!SERVICE_KEY) return { error: "Domains cannot be connected right now. Contact support.", status: 503 };
   const tenantId = ctx.isSuperAdmin ? str(body?.tenant_id) || ctx.tenantId : ctx.tenantId;
-  if (!ctx.isSuperAdmin && !ctx.roles.includes("admin")) return { error: "Only the shop owner can connect a domain", status: 403 };
-  if (!tenantId) return { error: "This account is not linked to a shop", status: 400 };
+  if (!ctx.isSuperAdmin && !ctx.roles.includes("admin")) return { error: "Only the company owner can set up a domain", status: 403 };
+  if (!tenantId) return { error: "This account is not linked to a company", status: 400 };
   return { ...ctx, tenantId };
 }
 
+async function domainPrice() {
+  const row = (await db("platform_settings?key=eq.custom_domain&select=value&limit=1")).data?.[0];
+  const price = Math.round(Number(row?.value?.price_kes));
+  return price > 0 ? price : 300;
+}
+
+/** A, AAAA answers for a name from Cloudflare and Google DNS over HTTPS (both, so a stale resolver shows up). */
+async function doh(host, type) {
+  const code = type === "A" ? 1 : 28;
+  const ask = async (url) => {
+    const r = await fetch(url, { headers: { accept: "application/dns-json" }, signal: AbortSignal.timeout(5000) });
+    if (!r.ok) throw new Error(`DNS ${r.status}`);
+    const j = await r.json();
+    return (j.Answer || []).filter((a) => a.type === code).map((a) => String(a.data).trim());
+  };
+  const name = encodeURIComponent(host);
+  const results = await Promise.allSettled([
+    ask(`https://cloudflare-dns.com/dns-query?name=${name}&type=${type}`),
+    ask(`https://dns.google/resolve?name=${name}&type=${type}`),
+  ]);
+  const ok = results.filter((x) => x.status === "fulfilled");
+  if (!ok.length) return null;
+  return [...new Set(ok.flatMap((x) => x.value))];
+}
+
 async function dnsState(host) {
-  const [a, aaaa] = await Promise.all([lookup(publicDns.resolve4, host), lookup(publicDns.resolve6, host)]);
+  const [a, aaaa] = await Promise.all([doh(host, "A"), doh(host, "AAAA")]);
+  if (a === null || aaaa === null) return { a: a || [], aaaa: aaaa || [], pointed: false, ok: false, error: "DNS could not be checked. Try again." };
   const pointed = a.length > 0 && a.every((ip) => ip === SERVER_IP);
-  // A leftover IPv6 record sends certificate checks elsewhere, so it must go.
-  return { a, aaaa, pointed, ok: pointed && aaaa.length === 0 };
+  // A leftover IPv6 record sends visitors and certificate checks elsewhere, so it must go.
+  return { a, aaaa, pointed, ok: pointed && aaaa.length === 0, proxied: a.some((ip) => /^(104\.(1[6-9]|2\d|3[01])|172\.(6[4-9]|7[01])|188\.114)\./.test(ip)) };
 }
 
-// Domains behind Cloudflare's proxy show Cloudflare's IPs, so DNS can't prove
-// they reach us. Instead we fetch a one-off path through the domain; only this
-// server can answer it (HMAC with a server secret).
+// The sync job (and anyone checking) can fetch /.well-known/jmsurfgarage-verify/<token> on the
+// domain: this server answers with the domain the token belongs to, which proves the domain reaches us.
 const VERIFY_PREFIX = "/.well-known/jmsurfgarage-verify/";
-const verifyAnswer = (nonce) => createHmac("sha256", SERVICE_KEY || "jmsurf").update(`domain-verify:${nonce}`).digest("hex");
-
-/** server.js answers GET /.well-known/jmsurfgarage-verify/<nonce> with this. */
-export function domainVerifyResponse(pathname) {
+const verifyCache = new Map();
+/** server.js answers GET /.well-known/jmsurfgarage-verify/<token> with this (null: not this path). */
+export async function domainVerifyResponse(pathname) {
   if (!pathname.startsWith(VERIFY_PREFIX)) return null;
-  const nonce = pathname.slice(VERIFY_PREFIX.length);
-  return /^[a-f0-9]{32}$/.test(nonce) ? verifyAnswer(nonce) : "";
-}
-
-async function reachesUs(host) {
-  const nonce = randomBytes(16).toString("hex");
-  for (const scheme of ["https", "http"]) {
-    try {
-      const r = await fetch(`${scheme}://${host}${VERIFY_PREFIX}${nonce}`, { signal: AbortSignal.timeout(8000) });
-      if (r.ok && (await r.text()).trim() === verifyAnswer(nonce)) return true;
-    } catch { /* try the next scheme */ }
-  }
-  return false;
+  const token = pathname.slice(VERIFY_PREFIX.length);
+  if (!/^[a-f0-9]{64}$/.test(token) || !SERVICE_KEY) return "";
+  const hit = verifyCache.get(token);
+  if (hit && hit.until > Date.now()) return hit.answer;
+  const row = (await db(`tenant_domains?verify_token=eq.${token}&kind=eq.custom&select=host&limit=1`).catch(() => ({ data: [] }))).data?.[0];
+  const answer = row?.host ? `${row.host}\n` : "";
+  verifyCache.set(token, { answer, until: Date.now() + 60_000 });
+  if (verifyCache.size > 2000) verifyCache.clear();
+  return answer;
 }
 
 async function isLive(host) {
@@ -781,64 +814,100 @@ async function isLive(host) {
   } catch { return false; }
 }
 
+const DOMAIN_FIELDS = "id,host,alias_host,alias_ok,status,created_at,activated_at,checked_at,verify_token";
 const domainRows = async (tenantId) =>
-  (await db(`tenant_domains?tenant_id=eq.${tenantId}&kind=eq.custom&select=id,host,status,created_at,activated_at&order=created_at`)).data || [];
+  (await db(`tenant_domains?tenant_id=eq.${tenantId}&kind=eq.custom&select=${DOMAIN_FIELDS}&order=created_at`)).data || [];
 
-async function listDomains(req, res) {
-  const ctx = await domainOwner(req, {});
-  if (ctx.error) return sendJson(res, ctx.status, { error: ctx.error });
-  return sendJson(res, 200, { server_ip: SERVER_IP, domains: await domainRows(ctx.tenantId) });
-}
+const isOnStatus = (s) => s === "approved" || s === "active";
 
 async function approveIfReady(row) {
-  const dns = await dnsState(row.host);
+  const [dns, aliasDns] = await Promise.all([dnsState(row.host), row.alias_host ? dnsState(row.alias_host) : null]);
+  const now = new Date().toISOString();
+  const patch = { checked_at: now, check_detail: dns.ok ? null : (dns.error || (dns.a.length ? `A: ${dns.a.join(", ")}${dns.aaaa.length ? `; AAAA: ${dns.aaaa.join(", ")}` : ""}` : "No A record")).slice(0, 200) };
   let status = row.status;
-  if (!dns.ok && dns.a.length > 0 && (await reachesUs(row.host))) {
-    dns.ok = true; dns.proxied = true;
-  }
   if (dns.ok && status === "pending") {
-    const now = new Date().toISOString();
-    await db(`tenant_domains?id=eq.${row.id}`, { method: "PATCH", body: { status: "approved", approved_at: now, activated_at: now } });
-    status = "approved";
+    Object.assign(patch, { status: "active", approved_at: now, activated_at: now });
+    status = "active";
   }
-  const live = status === "approved" || status === "active" ? await isLive(row.host) : false;
-  return { ...row, status, dns, live };
+  const aliasOk = Boolean(aliasDns?.ok);
+  if (row.alias_host && aliasOk !== Boolean(row.alias_ok)) patch.alias_ok = aliasOk;
+  await db(`tenant_domains?id=eq.${row.id}`, { method: "PATCH", body: patch });
+  const live = isOnStatus(status) ? await isLive(row.host) : false;
+  const { verify_token: _t, ...rest } = row;
+  return { ...rest, status, alias_ok: row.alias_host ? aliasOk : false, dns, alias_dns: aliasDns, live };
+}
+
+/** The Domain page: price, paid or not, the open payment, and the company's domain with its DNS state. */
+async function domainState(tenantId, { check = false } = {}) {
+  const [tenant, price, rows, pending] = await Promise.all([
+    db(`tenants?id=eq.${tenantId}&select=slug,custom_domain_paid_at,custom_domain_paid_via&limit=1`).then((r) => r.data?.[0] || null),
+    domainPrice(),
+    domainRows(tenantId),
+    db(`garage_domain_payments?tenant_id=eq.${tenantId}&status=eq.pending&select=id,created_at&order=created_at.desc&limit=1`).then((r) => r.data?.[0] || null),
+  ]);
+  const row = rows[0] || null;
+  let domain = null;
+  if (row) {
+    if (check) domain = await approveIfReady(row);
+    else { const { verify_token: _t, ...rest } = row; domain = rest; }
+  }
+  return {
+    server_ip: SERVER_IP,
+    price_kes: price,
+    paid: Boolean(tenant?.custom_domain_paid_at),
+    paid_at: tenant?.custom_domain_paid_at || null,
+    paid_via: tenant?.custom_domain_paid_via || null,
+    pending_payment: pending,
+    domain,
+    public_base: publicBaseFor(tenant?.slug, domain && isOnStatus(domain.status) ? domain.host : ""),
+  };
+}
+
+async function listDomains(req, res, body) {
+  const ctx = await domainOwner(req, body);
+  if (ctx.error) return sendJson(res, ctx.status, { error: ctx.error });
+  return sendJson(res, 200, await domainState(ctx.tenantId, { check: body?.check === true }));
 }
 
 async function connectDomain(req, res, body) {
   const ctx = await domainOwner(req, body);
   if (ctx.error) return sendJson(res, ctx.status, { error: ctx.error });
-  const host = cleanHost(body.host);
-  if (!HOST_RE.test(host) || host.length > 253) return sendJson(res, 400, { error: "Enter a domain like myshop.co.ke or order.myshop.co.ke" });
-  // Only the platform's own addresses are refused. Any other domain (jmsurf.co.ke
-  // included) is approved once its DNS points here, which only its owner can do.
-  if (/(^|\.)garage\.jmsurf\.co\.ke$|\.sslip\.io$|\.nip\.io$/.test(host)) {
-    return sendJson(res, 400, { error: "That is a JMSURF Garage address. Use your own domain, e.g. erp.yourcompany.co.ke" });
+  const paid = (await db(`tenants?id=eq.${ctx.tenantId}&select=custom_domain_paid_at&limit=1`)).data?.[0]?.custom_domain_paid_at;
+  if (!paid) return sendJson(res, 402, { error: "Pay for the custom domain first" });
+  const { host, alias } = splitDomain(body.host);
+  if (!HOST_RE.test(host) || host.length > 253) return sendJson(res, 400, { error: "Enter a domain like mygarage.co.ke or www.mygarage.co.ke" });
+  // Only the platform's own addresses are refused. Any other domain is connected once its DNS
+  // points here, which only its owner can do.
+  if (/(^|\.)jmsurfgarage\.co\.ke$|(^|\.)garage\.jmsurf\.co\.ke$|\.sslip\.io$|\.nip\.io$/.test(host)) {
+    return sendJson(res, 400, { error: "That is a JMSURF Garage address. Use your own domain, e.g. mygarage.co.ke" });
   }
-  const existing = (await db(`tenant_domains?host=ilike.${encodeURIComponent(host)}&select=id,tenant_id,host,status&limit=1`)).data?.[0];
-  if (existing && existing.tenant_id !== ctx.tenantId) {
-    return sendJson(res, 409, { error: "That domain is already connected to another shop" });
-  }
-  let row = existing;
+  const mine = await domainRows(ctx.tenantId);
+  if (mine.some((d) => d.host !== host)) return sendJson(res, 400, { error: "Your company already has a domain. Remove it first to connect another one." });
+  const hosts = [host, alias].filter(Boolean).map(encodeURIComponent);
+  const clash = (await db(`tenant_domains?or=(host.in.(${hosts.join(",")}),alias_host.in.(${hosts.join(",")}))&tenant_id=neq.${ctx.tenantId}&select=id&limit=1`)).data?.[0];
+  if (clash) return sendJson(res, 409, { error: "That domain is already connected to another company" });
+  let row = mine[0];
   if (!row) {
-    const mine = await domainRows(ctx.tenantId);
-    if (mine.length >= MAX_DOMAINS) return sendJson(res, 400, { error: `A shop can have up to ${MAX_DOMAINS} domains. Remove one first.` });
     const ins = await db("tenant_domains", {
       method: "POST", prefer: "return=representation",
-      body: { tenant_id: ctx.tenantId, host, kind: "custom", status: "pending", requested_by: ctx.user.id, payment_status: "waived", dns_target: SERVER_IP },
+      body: { tenant_id: ctx.tenantId, host, alias_host: alias, kind: "custom", status: "pending", requested_by: ctx.user.id, payment_status: "paid", paid_at: paid, payment_amount: await domainPrice(), dns_target: SERVER_IP },
     });
     if (!ins.ok) return sendJson(res, 400, { error: /duplicate|unique/i.test(ins.raw) ? "That domain is already connected" : "Could not save the domain" });
-    row = ins.data[0];
+    row = (await domainRows(ctx.tenantId))[0];
   }
-  return sendJson(res, 200, { server_ip: SERVER_IP, domain: await approveIfReady(row) });
+  const domain = await approveIfReady(row);
+  forgetPublicBase(ctx.tenantId);
+  return sendJson(res, 200, { ...(await domainState(ctx.tenantId)), domain });
 }
 
 async function checkDomain(req, res, body) {
   const ctx = await domainOwner(req, body);
   if (ctx.error) return sendJson(res, ctx.status, { error: ctx.error });
-  const row = (await db(`tenant_domains?id=eq.${encodeURIComponent(str(body.id))}&tenant_id=eq.${ctx.tenantId}&kind=eq.custom&select=id,host,status,created_at,activated_at&limit=1`)).data?.[0];
+  const row = (await domainRows(ctx.tenantId)).find((d) => d.id === str(body.id)) || null;
   if (!row) return sendJson(res, 404, { error: "Domain not found" });
-  return sendJson(res, 200, { server_ip: SERVER_IP, domain: await approveIfReady(row) });
+  const domain = await approveIfReady(row);
+  if (isOnStatus(domain.status)) forgetPublicBase(ctx.tenantId);
+  return sendJson(res, 200, { ...(await domainState(ctx.tenantId)), domain });
 }
 
 async function removeDomain(req, res, body) {
@@ -846,7 +915,89 @@ async function removeDomain(req, res, body) {
   if (ctx.error) return sendJson(res, ctx.status, { error: ctx.error });
   const del = await db(`tenant_domains?id=eq.${encodeURIComponent(str(body.id))}&tenant_id=eq.${ctx.tenantId}&kind=eq.custom`, { method: "DELETE", prefer: "return=representation" });
   if (!del.ok || !(del.data || []).length) return sendJson(res, 404, { error: "Domain not found" });
-  return sendJson(res, 200, { success: true });
+  forgetPublicBase(ctx.tenantId);
+  return sendJson(res, 200, { success: true, ...(await domainState(ctx.tenantId)) });
+}
+
+/** Any member: where the company's customer pages are (custom domain first, else app.…/<slug>). */
+async function companyAddressInfo(req, res) {
+  const ctx = await callerContext(req);
+  if (ctx.error) return sendJson(res, ctx.status, { error: ctx.error });
+  if (!ctx.tenantId) return sendJson(res, 200, { public_base: null, custom_domain: null });
+  const [base, host] = await Promise.all([publicBase(ctx.tenantId), activeCustomHost(ctx.tenantId).catch(() => "")]);
+  return sendJson(res, 200, { public_base: base, custom_domain: host || null });
+}
+
+// --- Paying for the custom domain (same pattern as SMS top-ups, smscredit.js) ---
+
+const phone254 = (p) => { const d = str(p).replace(/\D/g, ""); return d.startsWith("0") ? `254${d.slice(1)}` : d.startsWith("254") ? d : /^[17]\d{8}$/.test(d) ? `254${d}` : d; };
+
+async function startDomainPayment(req, res, body) {
+  const ctx = await domainOwner(req, body);
+  if (ctx.error) return sendJson(res, ctx.status, { error: ctx.error });
+  const tenant = (await db(`tenants?id=eq.${ctx.tenantId}&select=slug,custom_domain_paid_at&limit=1`)).data?.[0];
+  if (tenant?.custom_domain_paid_at) return sendJson(res, 200, { ok: true, status: "completed", already: true });
+  const msisdn = phone254(body.phone);
+  if (!/^254[17]\d{8}$/.test(msisdn)) return sendJson(res, 400, { error: "Enter the M-Pesa number to pay from (07… or 01…)" });
+  const amount = await domainPrice();
+  const billing = (await db("platform_settings?key=eq.subscription_billing&select=value&limit=1")).data?.[0];
+  const code = str(billing?.value?.jmsurf?.tenant_code);
+  if (!code) return sendJson(res, 503, { error: "M-Pesa payment is not set up yet. Contact JMSURF support." });
+  const ins = await db("garage_domain_payments", { method: "POST", prefer: "return=representation", body: { tenant_id: ctx.tenantId, amount, phone: msisdn, status: "pending", created_by: ctx.user.id } });
+  const row = ins.data?.[0];
+  if (!ins.ok || !row) return sendJson(res, 500, { error: "Could not start the payment. Try again." });
+  const { sendMoneyApi } = await import("./sendmoney.js");
+  const r = await sendMoneyApi("/api/payments/stkpush", { method: "POST", body: { phoneNumber: msisdn, amount, accountReference: `DOM-${str(tenant?.slug).slice(0, 8)}`, transactionDesc: "Garage custom domain", tenantCode: code } }).catch((e) => ({ error: e.message }));
+  const ref = str(r?.checkoutRequestId);
+  if (!ref) {
+    const why = str(r?.error || r?.message) || "M-Pesa did not accept the request. Try again.";
+    await db(`garage_domain_payments?id=eq.${row.id}`, { method: "PATCH", body: { status: "failed", detail: why.slice(0, 200) } });
+    return sendJson(res, 400, { error: why });
+  }
+  await db(`garage_domain_payments?id=eq.${row.id}`, { method: "PATCH", body: { reference: ref } });
+  return sendJson(res, 200, { ok: true, id: row.id, status: "pending" });
+}
+
+async function checkDomainPayment(p) {
+  if (p.status !== "pending" || !p.reference) return p.status;
+  const { sendMoneyApi } = await import("./sendmoney.js");
+  const r = await sendMoneyApi(`/api/payments/status/${encodeURIComponent(p.reference)}`).catch(() => null);
+  const s = str(r?.status).toLowerCase();
+  const receipt = str(r?.mpesaReceiptNumber || r?.mpesaReceipt || r?.receipt);
+  if (s === "completed" && receipt) {
+    await db("rpc/garage_domain_paid", { method: "POST", body: { p_payment: p.id, p_receipt: receipt } });
+    return "completed";
+  }
+  if (["failed", "cancelled", "canceled"].includes(s)) {
+    const status = String(r?.resultCode) === "1032" || /cancel/i.test(str(r?.resultDesc)) ? "cancelled" : "failed";
+    await db(`garage_domain_payments?id=eq.${p.id}&status=eq.pending`, { method: "PATCH", body: { status, detail: str(r?.resultDesc).slice(0, 200) } });
+    return status;
+  }
+  return "pending";
+}
+
+async function domainPaymentStatus(req, res, body) {
+  const ctx = await domainOwner(req, body);
+  if (ctx.error) return sendJson(res, ctx.status, { error: ctx.error });
+  const p = (await db(`garage_domain_payments?id=eq.${encodeURIComponent(str(body.id))}&tenant_id=eq.${ctx.tenantId}&select=*&limit=1`)).data?.[0];
+  if (!p) return sendJson(res, 404, { error: "Payment not found" });
+  const status = await checkDomainPayment(p);
+  return sendJson(res, 200, { ok: true, status });
+}
+
+/** Checks open domain payments every minute, so a payment counts even if the page was closed. */
+export function startDomainPayments() {
+  if (!SUPABASE_URL || !SERVICE_KEY) return;
+  let busy = false;
+  setInterval(async () => {
+    if (busy) return; busy = true;
+    try {
+      const since = new Date(Date.now() - 30 * 60_000).toISOString();
+      const open = (await db(`garage_domain_payments?status=eq.pending&reference=not.is.null&created_at=gte.${encodeURIComponent(since)}&select=*`).catch(() => ({ data: [] }))).data || [];
+      for (const p of open) await checkDomainPayment(p).catch(() => undefined);
+      await db(`garage_domain_payments?status=eq.pending&created_at=lt.${encodeURIComponent(since)}`, { method: "PATCH", body: { status: "failed", detail: "No answer from M-Pesa" } }).catch(() => undefined);
+    } finally { busy = false; }
+  }, 60_000).unref();
 }
 
 export async function handleStaffRequest(req, res, pathname, body) {
@@ -857,10 +1008,13 @@ export async function handleStaffRequest(req, res, pathname, body) {
     if (pathname === "/api/staff/reset-password") return await resetStaffPassword(req, res, body);
     if (pathname === "/api/staff/delete") return await deleteStaff(req, res, body);
     if (pathname === "/api/staff/verify") return await verifyStaff(req, res, body);
-    if (pathname === "/api/staff/domains") return await listDomains(req, res);
+    if (pathname === "/api/staff/domains") return await listDomains(req, res, body);
+    if (pathname === "/api/staff/domain-pay") return await startDomainPayment(req, res, body);
+    if (pathname === "/api/staff/domain-pay-status") return await domainPaymentStatus(req, res, body);
     if (pathname === "/api/staff/domain-connect") return await connectDomain(req, res, body);
     if (pathname === "/api/staff/domain-check") return await checkDomain(req, res, body);
     if (pathname === "/api/staff/domain-remove") return await removeDomain(req, res, body);
+    if (pathname === "/api/staff/address") return await companyAddressInfo(req, res);
     return sendJson(res, 404, { error: "Unknown staff route" });
   } catch (error) {
     console.error("staff route failed:", error);

@@ -63,7 +63,7 @@ export default function CompanySwitcher({ className }: { className?: string }) {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate font-medium">{c.business_name}</span>
-              <span className="block truncate text-xs text-muted-foreground">{c.slug}.garage.jmsurf.co.ke · {String(c.role).replace("_", " ")}</span>
+              <span className="block truncate text-xs text-muted-foreground"><span className="capitalize">{String(c.role).replace(/_/g, " ")}</span></span>
             </span>
             {busy === c.tenant_id ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               : c.tenant_id === tenant?.id ? <Check className="h-4 w-4 text-primary" /> : null}
