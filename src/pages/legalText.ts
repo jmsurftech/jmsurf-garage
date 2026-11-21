@@ -1,4 +1,5 @@
 /** Terms of Service and Privacy Policy text (the /terms and /privacy pages and their build-time snapshots). */
+import { CONTACT } from "@/lib/siteFacts";
 
 export const UPDATED = "17 October 2026";
 
@@ -73,7 +74,7 @@ export function termsSections(email: string): Section[] {
     { h: "16. Law, disputes and contact", p: [
       "These terms are governed by the laws of Kenya. We will first try to settle any dispute by talking in good faith; if that fails within 30 days, the courts of Nairobi have jurisdiction.",
       "These terms are the whole agreement between us about the service. If any part cannot be enforced, the rest still applies. You may not transfer your rights under them without our written consent.",
-      `Questions? Email ${email}.`,
+      `Questions? Email ${email}, call or WhatsApp ${CONTACT.phone}, or visit us at ${CONTACT.address}.`,
     ] },
   ];
 }
@@ -108,7 +109,7 @@ export function privacySections(email: string): Section[] {
     ] },
     { h: "7. Your rights", p: [
       "Under the Kenya Data Protection Act, 2019 and similar laws, you can ask to see, correct, export or delete your personal data, and object to certain uses of it. Store owners can export their data from Settings at any time.",
-      `To make a request, email ${email}. If you are a customer of a company that uses JMSURF Garage, you can also contact the business directly. You may complain to the Office of the Data Protection Commissioner.`,
+      `To make a request, email ${email} or call ${CONTACT.phone}. If you are a customer of a company that uses JMSURF Garage, you can also contact the business directly. You may complain to the Office of the Data Protection Commissioner.`,
     ] },
     { h: "8. Changes", p: [
       "We may update this policy. The date at the top shows when it last changed; significant changes will be announced in the app or by email.",

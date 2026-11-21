@@ -30,7 +30,7 @@ the platform owner in **Super admin → Settings → Integrations** (stored encr
 | `SUPABASE_URL`, `VITE_SUPABASE_URL` | garage-db API | Supabase (garage-db) |
 | `SUPABASE_ANON_KEY` / `VITE_SUPABASE_PUBLISHABLE_KEY` | checks staff sessions | Supabase (garage-db) |
 | `JMSURF_SUPABASE_SERVICE_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`) | server database access | Supabase (garage-db) |
-| `PUBLIC_ORIGIN` | address in callback URLs (default `https://garage.jmsurf.co.ke`) | you |
+| `PUBLIC_ORIGIN` | address in callback URLs (default `https://jmsurfgarage.co.ke`) | you |
 | `GARAGE_SECRETS_KEY` | 32-byte key (64 hex or base64) encrypting company and platform keys at rest. Without it a key is derived from the service key; set it before go-live and never change it afterwards (saved keys would have to be entered again) | you (generate) |
 | `JMSURFPAY_API_KEY` (also read: `SENDMONEY_API_KEY`) | JMSURF TECHNOLOGIES key: provisions every company's Till / Paybill / bank (`POST /api/saas/provision-tenant`, source `jmsurf-garage`, externalId = company id) and the platform channel (externalId `jmsurf-garage-platform`) | JMSURF PAY |
 | `JMSURFPAY_BASE_URL` | optional, staging JMSURF PAY | JMSURF PAY |
@@ -68,11 +68,11 @@ used by its Test button.
 
 | What | URL | Where |
 | --- | --- | --- |
-| JMSURF PAY webhook | `https://garage.jmsurf.co.ke/api/garage/i/pay/webhook` | JMSURF PAY account (signed with `SENDMONEY_WEBHOOK_SECRET`) |
-| Daraja C2B (per company) | `https://garage.jmsurf.co.ke/api/garage/i/c2b/<company token>/confirm` and `/validate` | registered by **System → Connections → Register with Safaricom** |
+| JMSURF PAY webhook | `https://jmsurfgarage.co.ke/api/garage/i/pay/webhook` | JMSURF PAY account (signed with `SENDMONEY_WEBHOOK_SECRET`) |
+| Daraja C2B (per company) | `https://jmsurfgarage.co.ke/api/garage/i/c2b/<company token>/confirm` and `/validate` | registered by **System → Connections → Register with Safaricom** |
 | Daraja STK callbacks | `/api/payments/daraja/callback` (sales), `/api/payments/daraja/invoice-callback` (invoices) | sent with each STK request |
-| WhatsApp (company's own Meta app) | `https://garage.jmsurf.co.ke/api/garage/i/whatsapp/webhook?c=<company id>` + the verify token shown in Connections | Meta app → WhatsApp → Configuration, field `messages` |
-| WhatsApp (platform Meta app) | `https://garage.jmsurf.co.ke/api/garage/i/whatsapp/webhook` + `WHATSAPP_VERIFY_TOKEN` | Meta app |
+| WhatsApp (company's own Meta app) | `https://jmsurfgarage.co.ke/api/garage/i/whatsapp/webhook?c=<company id>` + the verify token shown in Connections | Meta app → WhatsApp → Configuration, field `messages` |
+| WhatsApp (platform Meta app) | `https://jmsurfgarage.co.ke/api/garage/i/whatsapp/webhook` + `WHATSAPP_VERIFY_TOKEN` | Meta app |
 | Call Centre screen pop | `GET /api/garage/i/callcentre/lookup?phone=` | see `docs/garage-callcentre.md` |
 | Call Centre missed call | `POST /api/garage/i/callcentre/missed` | see `docs/garage-callcentre.md` |
 
@@ -129,11 +129,11 @@ System → KRA eTIMS or per item.
 See `docs/garage-callcentre.md`.
 
 ### JMSURF SYSTEMS hub
-The super admin works at `admin.garage.jmsurf.co.ke` and inside the hub at `sys-garage.jmsurfsys.co.ke`
+The super admin works at `admin.jmsurfgarage.co.ke` and inside the hub at `sys-garage.jmsurfsys.co.ke`
 (`src/lib/host.ts` HUB_PLATFORM_HOST; the browser client sends the platform context there and
 `platform.js` accepts that host for super-admin powers). Hub SSO for Supabase systems needs no code in
 the app: the hub signs in server-side with GoTrue (generate_link + verify, TOTP answered) and writes the
-session. Hub-side steps: add `garage` to the hub's `systems.js` (admin host `admin.garage.jmsurf.co.ke`,
+session. Hub-side steps: add `garage` to the hub's `systems.js` (admin host `admin.jmsurfgarage.co.ke`,
 `supa` storage local), add the owner email to `ssoAs.garage`, re-run `mksupa.py`, add a Traefik route for
 `sys-garage.jmsurfsys.co.ke`, and add Garage's `subscription_payments` to the hub's payment collector.
 

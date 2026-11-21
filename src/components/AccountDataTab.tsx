@@ -69,6 +69,7 @@ export default function AccountDataTab() {
   const [closing, setClosing] = useState(false);
   const isOwner = role === "admin";
   const slug = tenant?.slug || "";
+  const companyName = (tenant?.business_name || "").trim();
 
   const exportAll = async () => {
     if (!tenant?.id) return;
@@ -97,7 +98,7 @@ export default function AccountDataTab() {
 
   const closeShop = async () => {
     setClosing(true);
-    const { error } = await sb.rpc("close_my_shop", { p_confirm_slug: slugTyped, p_reason: reason });
+    const { error } = await sb.rpc("close_my_shop_by_name", { p_confirm_name: slugTyped, p_reason: reason });
     setClosing(false);
     if (error) { toast({ title: "Company not closed", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Your company is closed", description: "Your records are kept. Contact support any time to reopen it." });
@@ -140,7 +141,7 @@ export default function AccountDataTab() {
         description="You and all your staff will be signed out and won't be able to sign in."
         footer={<>
           <Button variant="outline" onClick={() => setCloseOpen(false)} disabled={closing}>Keep my company</Button>
-          <Button variant="destructive" onClick={closeShop} disabled={closing || slugTyped.trim().toLowerCase() !== slug.toLowerCase()}>
+          <Button variant="destructive" onClick={closeShop} disabled={closing || !companyName || slugTyped.trim().toLowerCase() !== companyName.toLowerCase()}>
             {closing && <OrbSpinner />} Close shop
           </Button>
         </>}>
@@ -148,8 +149,8 @@ export default function AccountDataTab() {
           <Field label="Why are you leaving? (optional)" hint="It helps us improve">
             <textarea className="fi min-h-[80px]" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />
           </Field>
-          <Field label={`Type your store address "${slug}" to confirm`}>
-            <input className="fi font-mono" value={slugTyped} onChange={(e) => setSlugTyped(e.target.value)} autoComplete="off" />
+          <Field label={`Type your company name "${companyName}" to confirm`}>
+            <input className="fi" value={slugTyped} onChange={(e) => setSlugTyped(e.target.value)} placeholder="Enter your company name" autoComplete="off" />
           </Field>
         </div>
       </Modal>

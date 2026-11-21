@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader, SiteFooter } from "@/components/site/SiteChrome";
+import { CONTACT } from "@/lib/siteFacts";
 
 import { UPDATED, termsSections, privacySections } from "./legalText";
 import { PRIVACY_META, TERMS_META, canonicalUrl } from "@/seo/meta";
@@ -10,17 +10,9 @@ import { PRIVACY_META, TERMS_META, canonicalUrl } from "@/seo/meta";
 export default function Legal() {
   const { pathname } = useLocation();
   const isPrivacy = pathname.includes("privacy");
-  const [cms, setCms] = useState<Record<string, any>>({});
-  useEffect(() => {
-    supabase.from("cms_content").select("section, content").in("section", ["contact", "footer"]).then(({ data }) => {
-      const map: Record<string, any> = {};
-      (data || []).forEach((r: any) => { map[r.section] = r.content; });
-      setCms(map);
-    });
-    window.scrollTo(0, 0);
-  }, [pathname]);
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
 
-  const email = cms.contact?.email || "info@jmsurf.co.ke";
+  const email = CONTACT.email;
   const sections = isPrivacy ? privacySections(email) : termsSections(email);
   const title = isPrivacy ? "Privacy Policy" : "Terms of Service";
   const meta = isPrivacy ? PRIVACY_META : TERMS_META;

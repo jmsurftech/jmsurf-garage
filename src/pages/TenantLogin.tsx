@@ -13,7 +13,7 @@ import { resolveTenantBySlug } from "@/hooks/useTenant";
 import { useAuth } from "@/hooks/useAuth";
 import { friendlyError } from "@/lib/friendlyError";
 import { safeNextPath } from "@/lib/safeNext";
-import { getHostSlug, ROOT_HOST, tenantPath } from "@/lib/host";
+import { getHostSlug, tenantPath, APP_ORIGIN } from "@/lib/host";
 import { sendVerificationEmail, requestPasswordReset, resolveLoginEmail } from "@/lib/platformEmail";
 
 
@@ -300,9 +300,9 @@ export default function TenantLogin() {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="max-w-sm text-center space-y-4">
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground"><Store className="h-7 w-7" /></span>
-          <h1 className="font-display text-2xl font-bold">Store not found</h1>
-          <p className="text-muted-foreground">The store URL "/{slug}" does not exist.</p>
-          <div className="flex justify-center gap-2"><button onClick={() => nav("/login")} className="h-11 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground">Find my store</button><button onClick={() => nav("/")} className="h-11 rounded-xl border border-border px-5 text-sm font-semibold hover:bg-muted">Home</button></div>
+          <h1 className="font-display text-2xl font-bold">Company not found</h1>
+          <p className="text-muted-foreground">Sign in with your email and you go straight to your company.</p>
+          <div className="flex justify-center gap-2"><a href={`${APP_ORIGIN}/login`} className="inline-flex h-11 items-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground">Sign in</a><button onClick={() => nav("/")} className="h-11 rounded-xl border border-border px-5 text-sm font-semibold hover:bg-muted">Home</button></div>
         </div>
       </div>
     );

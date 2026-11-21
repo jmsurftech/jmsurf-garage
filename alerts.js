@@ -1,3 +1,4 @@
+import { publicBase } from "./hosts.js";
 // ---------------------------------------------------------------------------
 // Customer alerts, run every 15 minutes after the shop's send hour (Nairobi):
 //
@@ -17,13 +18,8 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL 
 const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY ||
   process.env.SUPABASE_SECRET_KEY || process.env.JMSURF_SUPABASE_SERVICE_KEY || "";
-const PUBLIC_ORIGIN = (process.env.PUBLIC_ORIGIN || process.env.SHOP_ORIGIN || "https://garage.jmsurf.co.ke").replace(/\/+$/, "");
-/** The company's own address (custom domain when live, else <slug>.garage.jmsurf.co.ke) for links in reminders. */
-async function companyOrigin(tenantId) {
-  const t = (await rows(`tenants?id=eq.${tenantId}&select=slug`))[0];
-  const d = (await rows(`tenant_domains?tenant_id=eq.${tenantId}&kind=eq.custom&status=in.(approved,active)&select=host&limit=1`))[0];
-  return d?.host ? `https://${d.host}` : t?.slug ? `https://${t.slug}.garage.jmsurf.co.ke` : PUBLIC_ORIGIN;
-}
+/** The company's customer pages (custom domain when live, else app.jmsurfgarage.co.ke/<slug>) for links in reminders. */
+const companyOrigin = (tenantId) => publicBase(tenantId);
 
 export const DEFAULT_ALERTS = {
   send_hour: 9,

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Store, Lock, ArrowLeft, ArrowRight, Check, Eye, EyeOff } from "lucide-react";
 import { friendlyError } from "@/lib/friendlyError";
-import { ROOT_HOST, isReservedSubdomain, tenantUrl } from "@/lib/host";
+import { APP_ORIGIN } from "@/lib/host";
 import { ADDON_MODULES } from "@/lib/modules";
 import { BUSINESS_KINDS, SIZES, kes, modulesForKinds, planByCode, priceBox, TRIAL_DAYS } from "@/lib/garagePlans";
 import { useGarageCatalogue } from "@/hooks/useGarageCatalogue";
@@ -59,16 +59,12 @@ export default function Register() {
     planCode: startPlan,
     kinds: [] as string[],
     modules: startModules as string[],
-    storeSlug: "",
     password: "", confirmPassword: "",
     country: guessCountry(),
     currency: countryByCode(guessCountry())?.currency || "KES",
     jobTitle: "", website: "", heardFrom: "", heardDetail: "",
   });
-  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
-  const [checkingSlug, setCheckingSlug] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [slugTouched, setSlugTouched] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [marketing, setMarketing] = useState(false);
 
@@ -85,18 +81,8 @@ export default function Register() {
   const box = useMemo(() => priceBox(catalogue, form.planCode === "enterprise" ? "pro" : form.planCode, form.modules), [catalogue, form.planCode, form.modules]);
   const trialEnd = new Date(Date.now() + TRIAL_DAYS * 86400000).toLocaleDateString("en-KE", { day: "numeric", month: "long", year: "numeric" });
 
-  const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-
-  const checkSlug = async (slug: string) => {
-    if (!slug || slug.length < 3) { setSlugAvailable(null); return; }
-    if (isReservedSubdomain(slug, true)) { setSlugAvailable(false); setCheckingSlug(false); return; }
-    setCheckingSlug(true);
-    const { data } = await supabase.from("tenants" as any).select("id").eq("slug", slug).maybeSingle();
-    setSlugAvailable(!data);
-    setCheckingSlug(false);
-  };
   const canNext = () => {
-    if (step === 1) return form.businessName && form.businessEmail && form.businessPhone && form.contactName && form.storeSlug.length >= 3 && slugAvailable === true;
+    if (step === 1) return form.businessName.trim().length >= 2 && form.businessEmail && form.businessPhone && form.contactName;
     if (step === 2) return !!form.planCode && !!form.heardFrom && (!HEARD_NEEDS_DETAIL.includes(form.heardFrom) || !!form.heardDetail.trim());
     if (step === 3) return form.businessEmail && form.password && form.password === form.confirmPassword && form.password.length >= 6 && agreed;
     return false;
@@ -128,7 +114,7 @@ export default function Register() {
             business_kinds: form.kinds,
             custom_users: 0,
             billing_cycle: "monthly",
-            store_slug: form.storeSlug,
+            // No company address: the database makes the company's id from its name.
             country: form.country,
             currency: form.currency,
             // Every chosen module starts its 14-day trial with the garage (modules in the plan need none).
@@ -143,7 +129,7 @@ export default function Register() {
             terms_source: "signup",
             marketing_opt_in: marketing,
           },
-          emailRedirectTo: tenantUrl(form.storeSlug, "/login"),
+          emailRedirectTo: `${APP_ORIGIN}/login`,
         },
       });
       const taken = (r: Awaited<ReturnType<typeof signUp>>) =>
@@ -164,13 +150,13 @@ export default function Register() {
       // Send the confirmation email through our own mail server so it always
       // arrives, even when the built-in mailer is not wired up.
       if (!data.user?.email_confirmed_at) {
-        sendVerificationEmail(form.businessEmail, tenantUrl(form.storeSlug, "/dashboard")).catch(() => {});
+        sendVerificationEmail(form.businessEmail, `${APP_ORIGIN}/dashboard`).catch(() => {});
       }
 
       sendWelcomeEmail({
         email: form.businessEmail,
         name: form.contactName || form.businessName,
-        loginUrl: tenantUrl(form.storeSlug, "/login"),
+        loginUrl: `${APP_ORIGIN}/login`,
       }).catch(() => {});
 
       // Notify the platform admin about the new signup
@@ -180,28 +166,24 @@ export default function Register() {
         email: form.businessEmail,
         phone: form.businessPhone,
         industry: form.industry,
-        storeSlug: form.storeSlug,
       }).catch(() => {});
 
 
       // Signed in straight away: start the chosen apps' trials and open the
-      // new company's own address, already signed in.
+      // new company on app.jmsurfgarage.co.ke, already signed in.
       track("CompleteRegistration", { content_name: form.planCode, value: box.total, currency: "KES", status: true });
       if (data.session) {
         // The first visit switches the chosen apps on (and single-app use) from the sign-up details.
         const mine = await listMyCompanies().catch(() => []);
-        await goToCompany(mine[0]?.slug || form.storeSlug, "/dashboard?welcome=1");
+        await goToCompany(mine[0]?.slug || "", "/dashboard?welcome=1");
         return;
       }
-      // Company addresses (<slug>.garage.jmsurf.co.ke) are served by the wildcard
-      // route, so a new company is reachable immediately.
-      const liveUrl = tenantUrl(form.storeSlug, "/login?new=1");
       toast({
         title: "Your company is ready",
-        description: `Your address is ${liveUrl} — already active. Check ${form.businessEmail} to verify your email, then sign in.`,
+        description: `Check ${form.businessEmail} to confirm your email, then sign in at ${APP_ORIGIN.replace(/^https:\/\//, "")}.`,
         duration: 10000,
       });
-      window.location.href = liveUrl;
+      window.location.href = `${APP_ORIGIN}/login?new=1`;
     } catch (err: any) {
       toast({ title: "Could not create account", description: friendlyError(err), variant: "destructive" });
     } finally {
@@ -218,18 +200,18 @@ export default function Register() {
       <Helmet>
         <title>{REGISTER_META.title}</title>
         <meta name="description" content={REGISTER_META.description} />
-        <link rel="canonical" href="https://garage.jmsurf.co.ke/register" />
+        <link rel="canonical" href="https://jmsurfgarage.co.ke/register" />
         <meta property="og:title" content={REGISTER_META.title} />
         <meta property="og:description" content={REGISTER_META.description} />
-        <meta property="og:url" content="https://garage.jmsurf.co.ke/register" />
+        <meta property="og:url" content="https://jmsurfgarage.co.ke/register" />
         <meta name="twitter:title" content={REGISTER_META.title} />
         <meta name="twitter:description" content={REGISTER_META.description} />
-        <meta property="og:image" content="https://garage.jmsurf.co.ke/og-image.png" />
+        <meta property="og:image" content="https://jmsurfgarage.co.ke/og-image.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content="JMSURF Garage: garage management software for Kenya" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:image" content="https://garage.jmsurf.co.ke/og-image.png" />
+        <meta name="twitter:image" content="https://jmsurfgarage.co.ke/og-image.png" />
       </Helmet>
     <AuthShell wide title="Start your free trial" subtitle="14 days free. No card required."
       points={["Your garage is ready in a few minutes", "Job cards, estimates, M-Pesa and eTIMS invoices", "See your monthly price before you start"]}
@@ -257,7 +239,7 @@ export default function Register() {
               <h2 className="text-lg font-semibold">Your garage and contact details</h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div><label className={labelClass}>Garage or business name *</label>
-                  <input value={form.businessName} onChange={e => { set("businessName", e.target.value); if (!slugTouched) { const sug = slugify(e.target.value).slice(0, 30); set("storeSlug", sug); if (sug.length >= 3) checkSlug(sug); } }} className={inputClass} placeholder="Enter business name" /></div>
+                  <input value={form.businessName} onChange={e => set("businessName", e.target.value)} className={inputClass} placeholder="Enter business name" /></div>
                 <div><label className={labelClass}>Your full name *</label>
                   <input value={form.contactName} onChange={e => set("contactName", e.target.value)} className={inputClass} placeholder="Enter full name" /></div>
               </div>
@@ -265,7 +247,7 @@ export default function Register() {
                 <div><label className={labelClass}>Email *</label>
                   <input type="email" value={form.businessEmail} onChange={e => set("businessEmail", e.target.value)} className={inputClass} placeholder="Enter email address" /></div>
                 <div><label className={labelClass}>Phone *</label>
-                  <input value={form.businessPhone} onChange={e => set("businessPhone", e.target.value)} className={inputClass} placeholder="07XXXXXXXX" inputMode="tel" /></div>
+                  <input value={form.businessPhone} onChange={e => set("businessPhone", e.target.value)} className={inputClass} placeholder="Enter phone number" inputMode="tel" /></div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div><label className={labelClass}>Country *</label>
@@ -290,28 +272,6 @@ export default function Register() {
               </div>
               <div><label className={labelClass}>Business address</label>
                 <input value={form.businessAddress} onChange={e => set("businessAddress", e.target.value)} className={inputClass} placeholder="Enter location, e.g. street and town" /></div>
-              <div>
-                <label className={labelClass}>Your garage address for customers *</label>
-                <div className="flex items-stretch">
-                  <input
-                    value={form.storeSlug}
-                    onChange={e => {
-                      setSlugTouched(true);
-                      const slug = slugify(e.target.value);
-                      set("storeSlug", slug);
-                      checkSlug(slug);
-                    }}
-                    className={`fi h-11 flex-1 rounded-r-none ${
-                      slugAvailable === true ? "!border-success" : slugAvailable === false ? "!border-destructive" : ""
-                    }`}
-                    placeholder="yourgarage"
-                  />
-                  <span className="flex items-center rounded-r-xl border border-l-0 border-input bg-muted px-3 text-sm text-muted-foreground">.{ROOT_HOST}</span>
-                </div>
-                {checkingSlug && <p className="text-muted-foreground text-xs mt-1.5">Checking...</p>}
-                {slugAvailable === true && <p className="text-green-600 text-xs mt-1.5">Available</p>}
-                {slugAvailable === false && <p className="text-red-600 text-xs mt-1.5">{isReservedSubdomain(form.storeSlug, true) ? "This name is reserved" : "Already taken"}</p>}
-              </div>
             </div>
           )}
 
@@ -429,7 +389,7 @@ export default function Register() {
                 {form.confirmPassword && form.password !== form.confirmPassword && <p className="text-red-600 text-xs mt-1.5">Passwords do not match</p>}
               </div>
               <div className="rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm">
-                You will go straight into your garage at app.garage.jmsurf.co.ke. We also email you a link to confirm your email.
+                You go straight into your garage at app.jmsurfgarage.co.ke, the one sign-in for you and your staff. We also email you a link to confirm your email.
               </div>
               <label className="flex items-start gap-3 text-sm">
                 <input type="checkbox" required checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[hsl(var(--primary))]" />

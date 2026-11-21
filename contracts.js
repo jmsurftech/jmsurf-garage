@@ -1,3 +1,4 @@
+import { APP_ORIGIN } from "./hosts.js";
 // ---------------------------------------------------------------------------
 // Contracts (server side):
 //
@@ -63,9 +64,8 @@ async function notifyAndEmail(c, title, body) {
   if (!deliverEmail) return;
   const to = await ownerEmail(c.owner_id);
   if (!to) return;
-  const t = await one(`tenants?id=eq.${c.tenant_id}&select=slug`).catch(() => null);
-  const root = (process.env.ROOT_HOST || "garage.jmsurf.co.ke").replace(/^app./, "");
-  const link = `https://${t?.slug ? t.slug : "app"}.${root}/contracts/${c.id}`;
+  // Staff open contracts on app. (the company comes from their sign-in).
+  const link = `${APP_ORIGIN}/contracts/${c.id}`;
   await deliverEmail(c.tenant_id, { to: [to], subject: title, text: `${body}
 
 Open the contract: ${link}`, html: `<p style="font-size:15px;line-height:23px;margin:0">${body.replace(/[&<>]/g, (x) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[x])}</p><p style="margin-top:16px"><a href="${link}">Open the contract</a></p>` })

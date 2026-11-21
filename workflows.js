@@ -1,3 +1,4 @@
+import { publicBase } from "./hosts.js";
 // ---------------------------------------------------------------------------
 // Workflow rules (System → Workflow rules). A company's no-code automations:
 //
@@ -22,7 +23,7 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL 
 const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY ||
   process.env.SUPABASE_SECRET_KEY || process.env.JMSURF_SUPABASE_SERVICE_KEY || "";
-const PUBLIC_ORIGIN = (process.env.PUBLIC_ORIGIN || process.env.SHOP_ORIGIN || "https://garage.jmsurf.co.ke").replace(/\/+$/, "");
+
 
 /** Modules: table, number column, link in the app, date fields a date rule may use. */
 export const WF_MODULES = {
@@ -77,11 +78,10 @@ async function company(tenantId) {
   if (hit && Date.now() - hit.at < 60_000) return hit.v;
   const t = (await rows(`tenants?id=eq.${tenantId}&select=slug,business_name`))[0] || {};
   const s = (await rows(`business_settings?tenant_id=eq.${tenantId}&select=business_name&limit=1`))[0] || {};
-  const d = (await rows(`tenant_domains?tenant_id=eq.${tenantId}&kind=eq.custom&status=in.(approved,active)&select=host&limit=1`))[0];
   const v = {
     demo: t.slug === "demo",
     name: str(s.business_name || t.business_name) || "JMSURF Garage",
-    origin: d?.host ? `https://${d.host}` : t.slug ? `https://${t.slug}.garage.jmsurf.co.ke` : PUBLIC_ORIGIN,
+    origin: await publicBase(tenantId),
   };
   companyCache.set(tenantId, { at: Date.now(), v });
   return v;

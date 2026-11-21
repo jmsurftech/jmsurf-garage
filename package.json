@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "start": "node server.js",
     "serve": "node server.js",
-    "test": "vitest run && node --test tests/payhero.test.js tests/sendmoney.test.js tests/companySeo.test.js",
+    "test": "vitest run && node --test tests/payhero.test.js tests/sendmoney.test.js tests/companySeo.test.js tests/hosts.test.js",
     "test:watch": "vitest"
   },
   "dependencies": {

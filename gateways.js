@@ -1,3 +1,4 @@
+import { PUBLIC_ORIGIN } from "./hosts.js";
 // ---------------------------------------------------------------------------
 // Company-owned gateways handled by the app container:
 //
@@ -25,7 +26,7 @@ const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.SUPABASE_SERVICE_KEY ||
   "";
-const PUBLIC_ORIGIN = (process.env.PUBLIC_ORIGIN || "https://garage.jmsurf.co.ke").replace(/\/+$/, "");
+
 const CALLBACK_TOKEN = process.env.PAYMENT_CALLBACK_TOKEN || "";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -433,7 +434,7 @@ async function paystackInitialize(req, body) {
   const email = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(str(body.email)) ? str(body.email)
     : /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(str(settings?.business_email)) ? str(settings.business_email)
     : "customer@jmsurf.co.ke";
-  const callback = /^https:\/\/([a-z0-9-]+\.)*garage\.jmsurf\.co\.ke(\/|$)/i.test(str(body.callback_url))
+  const callback = /^https:\/\/([a-z0-9-]+\.)?jmsurfgarage\.co\.ke(\/|$)/i.test(str(body.callback_url))
     ? str(body.callback_url) : `${PUBLIC_ORIGIN}/`;
   const channels = Array.isArray(body.channels) ? body.channels.filter((c) => ["card", "mobile_money", "bank"].includes(c)) : undefined;
   const payload = await paystack(secret, "/transaction/initialize", {

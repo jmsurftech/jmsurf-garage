@@ -57,6 +57,7 @@ COPY --from=build /app/fetchTimeout.js ./fetchTimeout.js
 COPY --from=build /app/payments.js ./payments.js
 COPY --from=build /app/sendmoney.js ./sendmoney.js
 COPY --from=build /app/staff.js ./staff.js
+COPY --from=build /app/hosts.js ./hosts.js
 COPY --from=build /app/gateways.js ./gateways.js
 COPY --from=build /app/recurring.js ./recurring.js
 COPY --from=build /app/monitor.js ./monitor.js

@@ -1,5 +1,5 @@
 /**
- * Build-time snapshots of the public website (garage.jmsurf.co.ke).
+ * Build-time snapshots of the public website (jmsurfgarage.co.ke).
  *
  * Search engines, AI assistants and link previews do not run JavaScript, so
  * scripts/prerender.mjs writes one HTML file per public page: the page's own head
@@ -13,7 +13,7 @@
  */
 import { MODULE_BY_KEY, MODULE_CATEGORIES, PUBLIC_MODULES, type ModuleDef } from "@/lib/modules";
 import { BUNDLE_MODULES, DEFAULT_CATALOGUE, EXTRA_BRANCH_PRICE, bundleListPrice } from "@/lib/garagePlans";
-import { JMSURF_FAMILY, PUBLIC_PLANS, SITE_ORIGIN, SUITE_AUDIENCE, suiteFaqs, suiteShort } from "@/lib/siteFacts";
+import { CONTACT, JMSURF_FAMILY, PUBLIC_PLANS, SITE_ORIGIN, SUITE_AUDIENCE, suiteFaqs, suiteShort } from "@/lib/siteFacts";
 import { UPDATED, privacySections, termsSections, type Section } from "@/pages/legalText";
 import { HOME, HOME_HEADINGS } from "./homeContent";
 import {
@@ -285,7 +285,7 @@ function registerBody(): string {
     + p("14 days free. No card required.")
     + ul(["Tell us your garage's size and what you do", "See your monthly price before you start", "Every module you choose is free for 14 days"])
     + h2("Your garage")
-    + p("Enter your garage name, your name, email and phone, and choose your address. Then pick your size, tick what your business does, check the price and set your password.")
+    + p("Enter your garage name, your name, email and phone. Then pick your size, tick what your business does, check the price and set your password.")
     + `<p class="mt-6">Already have an account? <a href="/login" class="${linkCls}">Sign in</a></p>`,
   );
 }
@@ -293,7 +293,7 @@ function registerBody(): string {
 function loginBody(): string {
   return wrap(
     `<h1 class="font-display text-3xl font-bold tracking-tight">Sign in</h1>`
-    + p("Staff sign in at app.garage.jmsurf.co.ke with their email and password and land in their garage. One login works for every garage you run.")
+    + p("Staff sign in at app.jmsurfgarage.co.ke with their email and password and land in their garage. One login works for every garage you run.")
     + `<p class="mt-6">New to JMSURF Garage? <a href="/register" class="${linkCls}">Start free</a> · <a href="/reset-password" class="${linkCls}">Forgot password?</a></p>`,
   );
 }
@@ -367,10 +367,10 @@ export function llmsTxt(): string {
   return [
     "# JMSURF Garage",
     "",
-    "> JMSURF Garage (https://garage.jmsurf.co.ke) is garage management software for Kenya, for every kind of motor business from the roadside fundi to the dealer. "
+    "> JMSURF Garage (https://jmsurfgarage.co.ke) is garage management software for Kenya, for every kind of motor business from the roadside fundi to the dealer. "
     + "Garage Core (in every plan) covers job cards, customers and vehicles, estimates that customers approve online, M-Pesa payments, KRA eTIMS invoices, SMS updates, basic stock and the owner's dashboard. "
     + "Modules add workshop inspections and a bay board, parts stock and purchasing, accounting, payroll, insurance claims, a spares POS, an online parts shop, imports and landed cost, a vehicle yard, body and paint, car wash, tyres, fleet contracts, towing, car hire and a WhatsApp inbox. "
-    + "Staff work at app.garage.jmsurf.co.ke; each garage also gets its own address (yourgarage.garage.jmsurf.co.ke) or custom domain for its customers. 14 days free, no card. Made by JMSURF TECHNOLOGIES LTD, Nairobi, Kenya.",
+    + "Every garage's staff sign in at app.jmsurfgarage.co.ke; customers follow their jobs and pay at app.jmsurfgarage.co.ke/<garage>, or on the garage's own domain (KES 300 once). 14 days free, no card. Made by JMSURF TECHNOLOGIES LTD, Nairobi, Kenya.",
     "",
     "## Key pages",
     `- [Home](${SITE_ORIGIN}/): who it is for, how a car moves through the garage, M-Pesa and eTIMS, modules, plans and questions`,
@@ -388,9 +388,12 @@ export function llmsTxt(): string {
     ...mods,
     "",
     "## Contact",
-    `- Website: ${SITE_ORIGIN}/ (WhatsApp and phone details are on the website)`,
+    `- Website: ${SITE_ORIGIN}/`,
+    `- Email: ${CONTACT.email}`,
+    `- Phone and WhatsApp: ${CONTACT.phone}`,
+    `- Office: ${CONTACT.address}`,
     `- Sign up: ${SITE_ORIGIN}/register`,
-    "- Sign in: https://app.garage.jmsurf.co.ke/login",
+    "- Sign in: https://app.jmsurfgarage.co.ke/login",
     "",
     "## Other JMSURF products",
     ...JMSURF_FAMILY.map((f) => `- [${f.name}](${f.url}): ${f.what}`),

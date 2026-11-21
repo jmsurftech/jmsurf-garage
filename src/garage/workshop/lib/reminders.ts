@@ -1,3 +1,4 @@
+import { customerUrl } from "@/lib/host";
 /**
  * Service and document reminders: what is due for a vehicle on a given day, the message
  * texts (English and Swahili) and the SMS length counter.
@@ -176,8 +177,8 @@ export function smsInfo(text: string): { length: number; parts: number; limit: n
 /** Sample values used to measure a template (longest realistic values, so the real message still fits). */
 export const MEASURE_VARS = {
   name: "Xxxxxxxxx", plate: "KDA 123A", date: "28 Nov 2026", garage: "Xxxxxxxxxxxxxxxx", phone: "07XXXXXXXX",
-  link: "garage.jmsurf.co.ke/book/xxxxxxxxxx",
+  link: "app.jmsurfgarage.co.ke/book/xxxxxxxxxx",
 };
 
-/** Short public link for a garage page (no https:// so it fits in one SMS part). */
-export const shortLink = (path: string) => `garage.jmsurf.co.ke${path.startsWith("/") ? path : `/${path}`}`;
+/** Short public link for a garage page whose path names the company (no https://, so it fits in one SMS part). */
+export const shortLink = (path: string) => customerUrl(path).replace(/^https?:\/\//, "").replace(/^(app\.jmsurfgarage\.co\.ke)\/[a-z0-9-]+(?=\/)/, "$1");

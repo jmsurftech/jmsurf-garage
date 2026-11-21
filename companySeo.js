@@ -1,4 +1,4 @@
-// Search engines on a company's own address (company.garage.jmsurf.co.ke or its custom domain).
+// Search engines on a company's pages (app.jmsurfgarage.co.ke/<slug>/… or its custom domain).
 // The company's public website and shop are its storefront and are indexed (when the company
 // has switched its website on); the workspace, sign-in, account, cart and checkout never are.
 

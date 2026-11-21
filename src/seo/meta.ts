@@ -47,7 +47,7 @@ export const REGISTER_META: PageMeta = {
 export const LOGIN_META: PageMeta = {
   path: "/login",
   title: "Sign in to JMSURF Garage | Garage Management Software",
-  description: "Sign in to JMSURF Garage at app.garage.jmsurf.co.ke: job cards, customers, vehicles, parts and every garage you run, in one place, with two-step sign-in.",
+  description: "Sign in to JMSURF Garage at app.jmsurfgarage.co.ke: job cards, customers, vehicles, parts and every garage you run, in one place, with two-step sign-in.",
   noindex: true,
 };
 

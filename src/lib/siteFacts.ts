@@ -7,7 +7,16 @@
 import { DEFAULT_PLANS, YEAR_MONTHS, type GaragePlan } from "@/lib/garagePlans";
 import type { ModuleCategory } from "@/lib/modules";
 
-export const SITE_ORIGIN = "https://garage.jmsurf.co.ke";
+export const SITE_ORIGIN = "https://jmsurfgarage.co.ke";
+
+/** JMSURF's contacts, as on jmsurf.co.ke: website, legal pages, footers and emails. */
+export const CONTACT = {
+  email: "info@jmsurf.co.ke",
+  phone: "+254 712 504 593",
+  /** WhatsApp number (same line). */
+  wa: "254712504593",
+  address: "Devan Plaza, 5th Floor, Westlands, Nairobi, Kenya",
+};
 
 /** The other launched JMSURF products (owner 2026-11-07: launched systems only; names and addresses as the company publishes them). */
 export const JMSURF_FAMILY: { name: string; url: string; what: string }[] = [

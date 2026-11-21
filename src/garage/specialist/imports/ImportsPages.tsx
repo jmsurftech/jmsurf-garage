@@ -1,3 +1,4 @@
+import { customerUrl } from "@/lib/host";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -77,7 +78,7 @@ export function ImportsHome() {
             </tbody>
           </table>
         </div>
-        {preRec?.data?.token && <div className="p-3"><ShareLink url={`${window.location.origin}/preorder/${preRec.data.token}`} label="Customer's status link" text={`Your vehicle order ${preRec.number}: follow its status here`} /></div>}
+        {preRec?.data?.token && <div className="p-3"><ShareLink url={customerUrl(`/preorder/${preRec.data.token}`)} label="Customer's status link" text={`Your vehicle order ${preRec.number}: follow its status here`} /></div>}
       </Panel>
     </ModuleHome>
   );

@@ -1,6 +1,6 @@
 // Guards production builds against being pointed at the wrong database.
 // The live JMSURF POS system runs on the self-hosted database at db.jmsurfpos.co.ke.
-const ALLOWED_PRODUCTION_HOSTS = ["db.jmsurfpos.co.ke", "garage.jmsurf.co.ke"];
+const ALLOWED_PRODUCTION_HOSTS = ["db.jmsurfpos.co.ke", "jmsurfgarage.co.ke", "garage.jmsurf.co.ke"];
 
 const isProductionBuild = Boolean(
   process.env.NETLIFY || process.env.COOLIFY_URL || process.env.PRODUCTION_BUILD,

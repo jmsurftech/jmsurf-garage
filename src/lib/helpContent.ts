@@ -77,7 +77,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     { q: "What can Garage AI do?", to: "/ai", a: ["Ask about your business in plain words (sales, debtors, stock) by typing or speaking, and let it draft invoices, reminders and tasks, always with your confirmation. Open it from the sparkle button in the top bar."] },
   ] },
   { id: "website", title: "Website & online shop", icon: "Globe", articles: [
-    { q: "Your website and shop", to: "/settings?tab=shop", a: ["Publish a website and online shop on your own address. Items marked 'Show on online shop' (when eCommerce is on) are listed for sale; orders and payments come into JMSURF Garage."] },
+    { q: "Your website and shop", to: "/settings?tab=shop", a: ["Publish a website and online shop for your customers (at app.jmsurfgarage.co.ke/your-garage, or your own domain: System → Custom domain). Items marked 'Show on online shop' (when eCommerce is on) are listed for sale; orders and payments come into JMSURF Garage."] },
     { q: "Customer portal", to: "/settings?tab=portal", a: ["Customers sign in to see invoices and statements and pay online."] },
   ] },
   { id: "data", title: "Data, import & backups", icon: "DatabaseBackup", articles: [

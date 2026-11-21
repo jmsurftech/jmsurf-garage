@@ -38,7 +38,7 @@ async function api(path, { method = 'GET', body } = {}) {
         'X-API-Key': apiKey(),
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'User-Agent': 'JMSURF-GARAGE/1.0 (+https://garage.jmsurf.co.ke)',
+        'User-Agent': 'JMSURF-GARAGE/1.0 (+https://jmsurfgarage.co.ke)',
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });

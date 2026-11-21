@@ -1,5 +1,5 @@
 /**
- * One page per module (garage.jmsurf.co.ke/solutions/<key>): what it does, what is in it,
+ * One page per module (jmsurfgarage.co.ke/solutions/<key>): what it does, what is in it,
  * the features, how it works with the rest of JMSURF Garage, who it is for and how to start.
  * Prices are on /pricing.
  */
@@ -45,10 +45,10 @@ export default function Solution() {
       <Helmet>
         <title>{meta?.title || `${m.name} · JMSURF Garage`}</title>
         <meta name="description" content={meta?.description || m.tagline} />
-        <link rel="canonical" href={`https://garage.jmsurf.co.ke/solutions/${m.key}`} />
+        <link rel="canonical" href={`https://jmsurfgarage.co.ke/solutions/${m.key}`} />
         <meta property="og:title" content={`${m.name} · JMSURF Garage`} />
         <meta property="og:description" content={meta?.description || m.tagline} />
-        <meta property="og:url" content={`https://garage.jmsurf.co.ke/solutions/${m.key}`} />
+        <meta property="og:url" content={`https://jmsurfgarage.co.ke/solutions/${m.key}`} />
       </Helmet>
       <Nav />
       <main>

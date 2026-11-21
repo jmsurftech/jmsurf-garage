@@ -7,7 +7,7 @@ import { PageHeader, Panel, Modal, Field, Pill } from "@/components/kit";
 import { useTenant } from "@/hooks/useTenant";
 import { useAuth } from "@/hooks/useAuth";
 import { listMyCompanies, switchCompany } from "@/lib/companySwitch";
-import { ROOT_HOST, isReservedSubdomain } from "@/lib/host";
+
 import { CURRENCIES } from "@/lib/currencies";
 import { confirmAction } from "@/components/books/confirm";
 import { friendlyError } from "@/lib/friendlyError";
@@ -54,7 +54,7 @@ export default function Companies() {
   return (
     <div className="space-y-6">
       <PageHeader title="My companies" icon={Building2}
-        description="Run several companies from one login. Each has its own address, books and users; switch in one click."
+        description="Run several companies from one login. Each has its own books and users; switch in one click."
         actions={<button onClick={() => setAdding(true)} className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"><Plus className="h-4 w-4" /> Add company</button>} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -66,7 +66,6 @@ export default function Companies() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-display font-bold">{c.business_name}</p>
-                <p className="truncate text-xs text-muted-foreground">{c.slug}.{ROOT_HOST}</p>
                 <div className="mt-1.5 flex flex-wrap gap-1"><Pill tone="primary">{ROLES.find((r) => r.value === c.role)?.label || c.role}</Pill>{c.is_owner && <Pill tone="success">Owner</Pill>}{c.tenant_id === tenant?.id && <Pill>Open now</Pill>}</div>
               </div>
             </div>
@@ -105,32 +104,25 @@ export default function Companies() {
 
 function AddCompany({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [touched, setTouched] = useState(false);
   const [currency, setCurrency] = useState("KES");
   const [busy, setBusy] = useState(false);
   const qc = useQueryClient();
-  const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
   const create = async () => {
-    if (name.trim().length < 2 || slug.length < 3) return toast.error("Enter the company name and an address of at least 3 letters.");
-    if (isReservedSubdomain(slug, true)) return toast.error("That address is reserved. Choose another.");
+    if (name.trim().length < 2) return toast.error("Enter the company name.");
     setBusy(true);
     try {
-      const { data, error } = await (supabase as any).rpc("create_company", { p_name: name.trim(), p_slug: slug, p_currency: currency });
+      const { data, error } = await (supabase as any).rpc("create_company", { p_name: name.trim(), p_slug: "", p_currency: currency });
       if (error) throw error;
       await qc.invalidateQueries({ queryKey: ["my-companies"] });
-      toast.success(`${name} is ready at ${slug}.${ROOT_HOST}`, { action: { label: "Open", onClick: () => void switchCompany(data) } });
-      onClose(); setName(""); setSlug(""); setTouched(false);
+      toast.success(`${name.trim()} is ready`, { action: { label: "Open", onClick: () => void switchCompany(data) } });
+      onClose(); setName("");
     } catch (e) { toast.error(friendlyError(e)); } finally { setBusy(false); }
   };
   return (
-    <Modal open={open} onClose={onClose} title="Add a company" icon={Building2} description="It gets its own address, books, users and subscription. You are its owner."
+    <Modal open={open} onClose={onClose} title="Add a company" icon={Building2} description="It gets its own books, users and subscription. You are its owner, and you switch between companies from the company menu."
       footer={<><button onClick={onClose} className="rounded-xl border border-border px-4 py-2 text-sm">Cancel</button><button disabled={busy} onClick={create} className="rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{busy ? "Creating…" : "Create company"}</button></>}>
       <div className="space-y-4">
-        <Field label="Company name" required><input className="fi" value={name} onChange={(e) => { setName(e.target.value); if (!touched) setSlug(slugify(e.target.value)); }} /></Field>
-        <Field label="Address" hint={`${slug || "yourcompany"}.${ROOT_HOST}`} required>
-          <input className="fi" value={slug} onChange={(e) => { setTouched(true); setSlug(slugify(e.target.value)); }} />
-        </Field>
+        <Field label="Company name" required><input className="fi" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter company name" /></Field>
         <Field label="Currency">
           <select className="fi" value={currency} onChange={(e) => setCurrency(e.target.value)}>
             {CURRENCIES.map((c: any) => <option key={c.code} value={c.code}>{c.code} · {c.name}</option>)}

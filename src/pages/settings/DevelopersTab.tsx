@@ -10,10 +10,12 @@ import { Button } from "@/components/ui/button";
 import { OrbSpinner } from "@/components/orbs";
 import { confirmAction } from "@/components/books/confirm";
 import { cn } from "@/lib/utils";
+import { APP_ORIGIN } from "@/lib/host";
 
 import { PagedRows } from "@/components/Pager";
 const sb = supabase as any;
-const ORIGIN = typeof window !== "undefined" ? window.location.origin.replace(/\/\/[^.]+\.(garage\.jmsurf\.co\.ke)/, "//$1") : "https://garage.jmsurf.co.ke";
+// The public API answers on app.jmsurfgarage.co.ke for every company (the key names the company).
+const ORIGIN = APP_ORIGIN;
 const BASE = `${ORIGIN}/api/v1`;
 const EVENTS: [string, string][] = [
   ["invoice.created", "Invoice created"], ["invoice.paid", "Invoice fully paid"], ["invoice.updated", "Invoice changed"],

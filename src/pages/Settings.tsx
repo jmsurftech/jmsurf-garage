@@ -1556,7 +1556,7 @@ const TAB_TITLES: Record<string, [string, string]> = {
   "custom-fields": ["Custom fields", "Your own fields on customers, suppliers, items and documents."],
   menu: ["Menu items", "Hide the screens your company does not use, module by module. Nothing is deleted."],
   etims: ["KRA eTIMS", "KRA e-invoicing: sign invoices and credit notes, report purchases, fetch purchases and imports, notices and daily reports."],
-  domain: ["Custom domain", "Use your own domain (e.g. erp.yourcompany.co.ke or yourcompany.com) for your workspace, website and customer portal."],
+  domain: ["Custom domain", "Your customer pages, website and staff sign-in on your own domain instead of app.jmsurfgarage.co.ke."],
   service: ["Service & Marketing", "Helpdesk mailbox, website live chat, online booking, events page and social media accounts."],
   portal: ["Customer portal & website", "Open the customer portal, send customers their access by SMS, switch on your website and its tracking."],
   shop: ["Online shop & website", "Colours, layout, every piece of text, contacts and checkout."],

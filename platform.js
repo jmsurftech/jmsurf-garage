@@ -22,7 +22,7 @@ export const requestStore = new AsyncLocalStorage();
 export function platformRequest(req = requestStore.getStore()?.req) {
   if (!req) return false;
   const host = String(req.headers["x-forwarded-host"] || req.headers.host || "").toLowerCase().split(":")[0];
-  // admin.garage.jmsurf.co.ke, or the JMSURF SYSTEMS hub's framing proxy for this console
+  // admin.jmsurfgarage.co.ke, or the JMSURF SYSTEMS hub's framing proxy for this console
   // (sys-garage.jmsurfsys.co.ke) when it passes its own host through.
   return host.startsWith("admin.") || host === HUB_PLATFORM_HOST ||
     (String(req.headers["x-dash-context"] || "") === "platform" && host.startsWith("localhost"));

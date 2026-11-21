@@ -6,8 +6,9 @@ import { fileURLToPath } from "node:url";
 import nodemailer from "nodemailer";
 import { configurePayments, isPaymentsRoute, handlePaymentsRequest, startPayheroReconciler } from "./payments.js";
 import { handleSendMoneyRequest, startSendMoneyReconciler, startInvoicePromptReconciler } from "./sendmoney.js";
-import { configureStaff, isStaffRoute, handleStaffRequest, domainVerifyResponse } from "./staff.js";
-import { shopBrand, brandHtml, serveBrandAsset, subdomainSlug } from "./shopBrand.js";
+import { configureStaff, isStaffRoute, handleStaffRequest, domainVerifyResponse, startDomainPayments } from "./staff.js";
+import { shopBrand, brandHtml, serveBrandAsset } from "./shopBrand.js";
+import { ROOT_HOST, OLD_ROOT_HOST, APP_HOST, APP_ORIGIN, SITE_ORIGIN, SHOP_ORIGIN, slugLike, publicBaseFor, oldHostRedirect, LIVE_DOMAIN_STATUSES } from "./hosts.js";
 import { isGatewayRoute, handleGatewayRequest, startGatewayReconciler } from "./gateways.js";
 import { startRecurringScheduler } from "./recurring.js";
 import { startMonitor, handleErrorReport } from "./monitor.js";
@@ -50,17 +51,13 @@ const indexFile = path.join(distDir, "index.html");
 const seoDir = path.join(__dirname, "seo-pages");
 let seoRoutes = {};
 try { seoRoutes = JSON.parse(readFileSync(path.join(seoDir, "routes.json"), "utf8")); } catch { /* not built: plain page everywhere */ }
-const SITE_HOST = "garage.jmsurf.co.ke";
-/** The website itself; every other garage.jmsurf.co.ke address is a workspace (kept out of search results). */
+const SITE_HOST = ROOT_HOST;
+/** The website itself; every other jmsurfgarage.co.ke address (app., admin.) is a workspace (kept out of search results). */
 const isWorkspaceHost = (host) => host.endsWith(`.${SITE_HOST}`) && host !== `www.${SITE_HOST}`;
 const port = Number(process.env.PORT || 3000);
 
-// A standalone deployment (one shop on its own domain) sets SHOP_ORIGIN, e.g.
-// https://garage.jmsurf.co.ke; otherwise each shop lives on <slug>.garage.jmsurf.co.ke.
-const SHOP_ORIGIN = (process.env.SHOP_ORIGIN || "").replace(/\/+$/, "");
-const shopOrigin = (slug) => SHOP_ORIGIN || `https://${slug}.garage.jmsurf.co.ke`;
-/** Staff sign in and work on app.garage.jmsurf.co.ke (the company comes from the membership): links in staff emails go there. */
-const STAFF_ORIGIN = SHOP_ORIGIN || (process.env.APP_ORIGIN || "https://app.garage.jmsurf.co.ke").replace(/\/+$/, "");
+/** Staff sign in and work on app.jmsurfgarage.co.ke (the company comes from the membership): links in staff emails go there. */
+const STAFF_ORIGIN = SHOP_ORIGIN || APP_ORIGIN;
 
 // Backend address used to verify the signed-in user and read the saved
 // email settings. Falls back to the values baked in at build time.
@@ -96,8 +93,8 @@ const CONTENT_SECURITY_POLICY = [
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
   "media-src 'self' data: blob:",
-  // The database lives on the website address; the staff ERP (its own address) calls it there too.
-  `connect-src 'self' blob: data: ${DB_ORIGINS} https://garage.jmsurf.co.ke https://*.garage.jmsurf.co.ke wss://*.garage.jmsurf.co.ke https://cloudflareinsights.com https://www.facebook.com https://connect.facebook.net https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com`,
+  // The database lives on the website address; app., admin. and companies' own domains call it there too.
+  `connect-src 'self' blob: data: ${DB_ORIGINS} https://${ROOT_HOST} wss://${ROOT_HOST} https://*.${ROOT_HOST} wss://*.${ROOT_HOST} https://cloudflareinsights.com https://www.facebook.com https://connect.facebook.net https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com`,
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   "frame-src 'self' blob: https://app.jmsurfcallcentre.co.ke https://checkout.paystack.com https://*.paystack.co https://www.youtube-nocookie.com https://player.vimeo.com",
@@ -138,29 +135,84 @@ function resolveFilePath(urlPath) {
   return fullPath;
 }
 
-// A shop's own domain (e.g. order.myshop.co.ke) is served by this app too.
-// The page is stamped with the shop's slug so it starts exactly like the
-// shop's garage.jmsurf.co.ke subdomain. Lookups are cached for a minute.
+// A company's own domain (e.g. myshop.co.ke, or its www alias) is served by this app too (paid
+// add-on). The page is stamped with the company's slug so the workspace and its customer pages
+// run at the root of that domain. Lookups are cached for a minute.
 const domainCache = new Map();
-async function customDomainSlug(rawHost) {
+/** { slug, host } of the company whose own domain (or www alias) this is, else null. */
+async function customDomain(rawHost) {
   const host = String(rawHost || "").split(":")[0].trim().toLowerCase().replace(/\.$/, "");
-  if (!host || host === "localhost" || /^[\d.]+$/.test(host) || host === "garage.jmsurf.co.ke" || host.endsWith(".garage.jmsurf.co.ke")) return null;
+  if (!host || host === "localhost" || /^[\d.]+$/.test(host) || host === ROOT_HOST || host.endsWith(`.${ROOT_HOST}`)
+    || host === OLD_ROOT_HOST || host.endsWith(`.${OLD_ROOT_HOST}`) || host.endsWith(".jmsurfsys.co.ke")) return null;
   if (!/^[a-z0-9.-]{3,253}$/.test(host) || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
   const hit = domainCache.get(host);
-  if (hit && hit.until > Date.now()) return hit.slug;
-  let slug = null;
+  if (hit && hit.until > Date.now()) return hit.value;
+  let value = null;
   try {
+    const h = encodeURIComponent(host);
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/tenant_domains?host=eq.${encodeURIComponent(host)}&kind=eq.custom&status=in.(approved,active)&select=tenants(slug,is_active,deleted_at)&limit=1`,
+      `${SUPABASE_URL}/rest/v1/tenant_domains?or=(host.eq.${h},alias_host.eq.${h})&kind=eq.custom&status=in.${LIVE_DOMAIN_STATUSES}&select=host,tenants(slug,is_active,deleted_at)&limit=1`,
       { headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }, signal: AbortSignal.timeout(5000) },
     );
     const [row] = response.ok ? await response.json() : [];
     const t = row?.tenants;
-    if (t?.slug && t.is_active && !t.deleted_at) slug = t.slug;
-  } catch { return hit?.slug ?? null; }
-  domainCache.set(host, { slug, until: Date.now() + 60_000 });
+    if (t?.slug && t.is_active && !t.deleted_at) value = { slug: t.slug, host: String(row.host).toLowerCase() };
+  } catch { return hit?.value ?? null; }
+  domainCache.set(host, { value, until: Date.now() + 60_000 });
   if (domainCache.size > 5000) domainCache.clear();
-  return slug;
+  return value;
+}
+async function customDomainSlug(rawHost) {
+  return (await customDomain(rawHost))?.slug || null;
+}
+
+/**
+ * A company page on app.jmsurfgarage.co.ke/<slug>/…: { slug } when that company exists,
+ * { moved } when the slug was renamed (old links keep working), null otherwise (an app screen
+ * such as /dashboard, or an unknown word). Cached a minute; any lookup error means null.
+ */
+const pathCompanies = new Map();
+async function pathCompany(segment) {
+  const slug = String(segment || "").toLowerCase();
+  if (!slugLike(slug) || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  const hit = pathCompanies.get(slug);
+  if (hit && hit.until > Date.now()) return hit.value;
+  let value = null;
+  try {
+    const [live] = await strictRows(`tenants?slug=eq.${encodeURIComponent(slug)}&is_active=eq.true&deleted_at=is.null&select=slug&limit=1`);
+    if (live) value = { slug: live.slug };
+    else {
+      const [old] = await strictRows(`tenant_slug_history?slug=eq.${encodeURIComponent(slug)}&select=tenant_id&limit=1`);
+      const [now] = old ? await strictRows(`tenants?id=eq.${encodeURIComponent(old.tenant_id)}&deleted_at=is.null&select=slug&limit=1`) : [];
+      if (now?.slug && now.slug !== slug) value = { moved: now.slug };
+    }
+  } catch { return hit?.value ?? null; }
+  pathCompanies.set(slug, { value, until: Date.now() + 60_000 });
+  if (pathCompanies.size > 5000) pathCompanies.clear();
+  return value;
+}
+
+/** First path segment of a URL path ("/acme/t/x" gives "acme"). */
+const firstSegment = (pathname) => String(pathname || "").split("/")[1] || "";
+
+/**
+ * The company whose customer pages a request belongs to: its own domain, else (on app. and
+ * local development) the x-shop-slug header the page sends from app.jmsurfgarage.co.ke/<slug>/…,
+ * else the page it came from. "" when none.
+ */
+async function requestSlug(req) {
+  const host = shopHost(req);
+  const own = await customDomainSlug(host);
+  if (own) return own;
+  if (host !== APP_HOST && !/^(localhost|127\.0\.0\.1)$/.test(host)) return "";
+  const sent = String(req.headers["x-shop-slug"] || "").trim().toLowerCase();
+  if (slugLike(sent)) return sent;
+  try {
+    const ref = new URL(String(req.headers.referer || ""));
+    const seg = firstSegment(ref.pathname).toLowerCase();
+    if (ref.hostname === host && slugLike(seg)) return (await pathCompany(seg))?.slug || "";
+  } catch { /* no referrer */ }
+  return "";
 }
 
 /** Whether a company has switched its public website on (Settings → Website); cached a minute. */
@@ -184,19 +236,28 @@ async function companySiteEnabled(slug) {
   return on;
 }
 
-/** The company whose address this is (subdomain or custom domain), with its website state; null elsewhere. */
-async function companyAddress(req) {
+/**
+ * The company whose pages these are, with its website state; null elsewhere. On its own domain the
+ * pages sit at the root; on app.jmsurfgarage.co.ke under /<slug> (base), and `path` is the page
+ * path inside the company (without the /<slug> prefix).
+ */
+async function companyAddress(req, pathname = "/") {
   const host = shopHost(req);
-  const slug = (await customDomainSlug(host)) || subdomainSlug(host);
+  let slug = await customDomainSlug(host);
+  let base = "";
+  if (!slug && host === APP_HOST) {
+    const seg = firstSegment(pathname).toLowerCase();
+    slug = seg ? (await pathCompany(seg))?.slug || null : null;
+    if (slug) base = `/${seg}`;
+  }
   if (!slug) return null;
-  return { slug, origin: `https://${host}`, siteEnabled: SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY ? await companySiteEnabled(slug) : false };
+  const path = base ? pathname.slice(base.length) || "/" : pathname;
+  return { slug, base, path, origin: `https://${host}${base}`, siteEnabled: SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY ? await companySiteEnabled(slug) : false };
 }
 
-/** The address the visitor used (a shop worker may forward it). */
+/** The address the visitor used. */
 function shopHost(req) {
-  const fwd = String(req.headers["x-forwarded-host"] || "").split(",")[0].trim();
-  const raw = /\.garage\.jmsurf\.co\.ke$/i.test(fwd.split(":")[0]) ? fwd : req.headers.host;
-  return String(raw || "").split(":")[0].trim().toLowerCase();
+  return String(req.headers.host || "").split(":")[0].trim().toLowerCase();
 }
 
 async function fileExists(filePath) {
@@ -655,7 +716,7 @@ function emailShell(title, innerHtml) {
 <p style="margin:0 0 18px;font-size:18px;font-weight:bold;color:#0f172a;">JMSURF Garage</p>
 <p style="margin:0 0 14px;font-size:16px;font-weight:bold;color:#0f172a;">${esc(title)}</p>
 ${innerHtml}
-<p style="margin:24px 0 0;font-size:13px;line-height:20px;color:#6b7280;">JMSURF Garage · Powered by JMSURF TECHNOLOGIES, Nairobi, Kenya<br>Support: jmsurftech@gmail.com</p>
+<p style="margin:24px 0 0;font-size:13px;line-height:20px;color:#6b7280;">JMSURF Garage · <a href="https://jmsurfgarage.co.ke" style="color:#6b7280;">jmsurfgarage.co.ke</a> · Powered by JMSURF TECHNOLOGIES<br>Devan Plaza, 5th Floor, Westlands, Nairobi, Kenya<br>Support: info@jmsurf.co.ke · +254 712 504 593 (call or WhatsApp)</p>
 </td></tr></table></td></tr></table></body></html>`;
 }
 
@@ -814,35 +875,6 @@ function throttled(key, ms = 45_000) {
 }
 
 /** Admin (service key) REST read; returns the rows or []. */
-/**
- * Where a company address that no longer belongs to a company should go: an old slug forwards to the
- * company's current address, an address never used goes to the company finder. Any lookup error means
- * "serve the page as usual", so a database hiccup never sends a real company's visitors away.
- */
-const slugMoves = new Map();
-async function slugMove(host) {
-  const slug = subdomainSlug(host);
-  if (!slug || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
-  const hit = slugMoves.get(slug);
-  if (hit && hit.until > Date.now()) return hit.to;
-  try {
-    let to = null;
-    const [live] = await strictRows(`tenants?slug=eq.${encodeURIComponent(slug)}&select=id&limit=1`);
-    if (!live) {
-      const [old] = await strictRows(`tenant_slug_history?slug=eq.${encodeURIComponent(slug)}&select=tenant_id&limit=1`);
-      const [now] = old ? await strictRows(`tenants?id=eq.${encodeURIComponent(old.tenant_id)}&select=slug,deleted_at&limit=1`) : [];
-      to = now?.slug && !now.deleted_at && now.slug !== slug ? `https://${now.slug}.garage.jmsurf.co.ke` : "https://app.garage.jmsurf.co.ke";
-    }
-    // Only "this company exists" is cached; a redirect is always looked up fresh, so a company that
-    // signs up a moment after someone tried its address is never sent away.
-    if (!to) slugMoves.set(slug, { to, until: Date.now() + 60_000 });
-    if (slugMoves.size > 5000) slugMoves.clear();
-    return to;
-  } catch {
-    return null;
-  }
-}
-
 async function adminRows(pathAndQuery) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return [];
   try {
@@ -884,10 +916,10 @@ async function recentlyRegisteredShop(email) {
 }
 
 /** Only allows links that point back at our own shop addresses. */
-function safeTarget(value, fallback = SHOP_ORIGIN ? `${SHOP_ORIGIN}/login` : "https://garage.jmsurf.co.ke/login") {
+function safeTarget(value, fallback = `${STAFF_ORIGIN}/login`) {
   const candidate = String(value || "").trim();
   if (SHOP_ORIGIN && (candidate === SHOP_ORIGIN || candidate.startsWith(`${SHOP_ORIGIN}/`))) return candidate;
-  return /^https:\/\/([a-z0-9-]+\.)*garage\.jmsurf\.co\.ke(\/|$)/i.test(candidate) ? candidate : fallback;
+  return /^https:\/\/([a-z0-9-]+\.)?jmsurfgarage\.co\.ke(\/|$)/i.test(candidate) ? candidate : fallback;
 }
 
 // --- Account verification -----------------------------------------------------
@@ -961,9 +993,9 @@ async function handleEmailVerify(req, res) {
   }
 
   const hashed = link.hashed_token || link.properties?.hashed_token;
-  // The public address (garage.jmsurf.co.ke), never the database's internal one: mail filters
+  // The public address (jmsurfgarage.co.ke), never the database's internal one: mail filters
   // mark the internal sslip.io host as spam and people should only ever see our own domain.
-  const publicAuth = (process.env.VITE_SUPABASE_URL || "https://garage.jmsurf.co.ke").replace(/\/+$/, "");
+  const publicAuth = (process.env.VITE_SUPABASE_URL || SITE_ORIGIN).replace(/\/+$/, "");
   const url = hashed
     ? `${publicAuth}/auth/v1/verify?token=${encodeURIComponent(hashed)}&type=${encodeURIComponent(linkType)}&redirect_to=${encodeURIComponent(target)}`
     : link.action_link || link.properties?.action_link;
@@ -1218,7 +1250,7 @@ async function handleEmailWelcome(req, res) {
   if (!registered) return sendJson(res, 200, { ok: true, skipped: true });
   const name = String(registered.tenant.contact_name || registered.tenant.business_name || "there").slice(0, 120);
   const loginUrl = `${STAFF_ORIGIN}/login`;
-  const siteUrl = registered.tenant.slug ? shopOrigin(registered.tenant.slug) : "";
+  const siteUrl = registered.tenant.slug ? publicBaseFor(registered.tenant.slug) : "";
   const html = emailShell(
     "Your garage is ready",
     `<p style="margin:0 0 14px;font-size:15px;line-height:22px;">Hi ${esc(name)}, your JMSURF Garage workspace is set up and ready to use. Every module you chose is free for 14 days.</p>
@@ -1257,7 +1289,7 @@ async function handleEmailSignupAlert(req, res) {
     ["Contact", tenant.contact_name],
     ["Email", email],
     ["Phone", tenant.contact_phone],
-    ["Shop address", tenant.slug ? shopOrigin(tenant.slug).replace(/^https:\/\//, "") : ""],
+    ["Customer pages", tenant.slug ? publicBaseFor(tenant.slug).replace(/^https:\/\//, "") : ""],
     ["Registered", new Date().toLocaleString("en-KE", { timeZone: "Africa/Nairobi" })],
   ].filter(([, value]) => String(value || "").trim());
 
@@ -1405,6 +1437,7 @@ startOwnerAlerts((message) => deliverSavedSmtp(message));
 startDemoReset();
 startCcBilling();
 startSmsCredit();
+startDomainPayments();
 startWebhooks();
 startMigrationJobs();
 startEngageJobs((tenantId, message) => deliverForTenant(tenantId, message));
@@ -1429,8 +1462,7 @@ const mfaCache = new Map();
 // (business_settings.erp_settings.shop.site.tracking). Empty when not set.
 const trackingCache = new Map();
 async function trackingIds(req) {
-  const host = shopHost(req);
-  const slug = (await customDomainSlug(host)) || subdomainSlug(host);
+  const slug = await requestSlug(req);
   const key = slug || "_platform";
   const hit = trackingCache.get(key);
   if (hit && hit.until > Date.now()) return hit.ids;
@@ -1494,30 +1526,47 @@ async function mfaSatisfied(req) {
 createServer(async (req, res) => {
   // Every route can see which address this request came from (platform.js).
   requestStore.enterWith({ req });
-  // Both garage.jmsurf.co.ke and garage.jmsurf.co.ke are served directly here.
-  // Any www/non-www preference is handled by the proxy in front of this app.
-
   const url = req.url || "/";
   const [pathname, search] = url.split("?");
-
-  // The super admin lives on admin.<root>; dash.<root> is an old alias that moves there.
   const hostOnly = String(req.headers.host || "").toLowerCase().split(":")[0];
-  if (hostOnly === "dash.garage.jmsurf.co.ke") {
-    // Browsers that cached the website here keep an old service worker; a redirected
-    // worker script is refused, so hand them one that clears itself and reloads.
+
+  // The old garage.jmsurf.co.ke addresses move to jmsurfgarage.co.ke (hosts.js oldHostRedirect):
+  // website to the apex, app./admin. to theirs, <slug>.garage.jmsurf.co.ke to app.jmsurfgarage.co.ke/<slug>.
+  // /api/ (payment, WhatsApp and eTIMS callbacks: POSTs do not follow redirects) keeps answering here.
+  if (hostOnly === OLD_ROOT_HOST || hostOnly.endsWith(`.${OLD_ROOT_HOST}`)) {
+    // Browsers that installed the app there keep an old service worker; a redirected worker
+    // script is refused, so hand them one that clears itself and reloads (then the page redirects).
     if (pathname === "/sw.js") {
       res.writeHead(200, { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-store" });
       return res.end("self.addEventListener(\"install\",()=>self.skipWaiting());self.addEventListener(\"activate\",e=>e.waitUntil((async()=>{for(const k of await caches.keys())await caches.delete(k);await self.registration.unregister();for(const c of await self.clients.matchAll({type:\"window\"}))c.navigate(c.url);})()));");
     }
-    res.writeHead(302, { Location: `https://admin.garage.jmsurf.co.ke${pathname === "/" ? "/admin" : url}`, "Cache-Control": "no-store" });
+    const to = oldHostRedirect(hostOnly, pathname, url);
+    if (to) {
+      const plain = req.method === "GET" || req.method === "HEAD";
+      res.writeHead(plain ? 301 : 308, { Location: to, "Cache-Control": "public, max-age=3600" });
+      return res.end();
+    }
+  }
+  // One address for the website: www.jmsurfgarage.co.ke goes to jmsurfgarage.co.ke (same path).
+  if (hostOnly === `www.${ROOT_HOST}` && !pathname.startsWith("/api/") && !pathname.startsWith("/.well-known/")) {
+    res.writeHead(req.method === "GET" || req.method === "HEAD" ? 301 : 308, { Location: `${SITE_ORIGIN}${url}`, "Cache-Control": "public, max-age=3600" });
     return res.end();
   }
 
-  // Proof that a shop's domain (even behind Cloudflare's proxy) reaches this server.
-  const domainProof = domainVerifyResponse(pathname);
+  // Proof that a company's domain reaches this server (the custom-domain sync job and the Check button).
+  const domainProof = await domainVerifyResponse(pathname);
   if (domainProof !== null) {
     res.writeHead(domainProof ? 200 : 404, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
     return res.end(domainProof);
+  }
+
+  // A company's www alias opens its main domain.
+  if ((req.method === "GET" || req.method === "HEAD") && !pathname.startsWith("/api/")) {
+    const own = await customDomain(hostOnly);
+    if (own && own.host !== hostOnly) {
+      res.writeHead(301, { Location: `https://${own.host}${url}`, "Cache-Control": "public, max-age=3600" });
+      return res.end();
+    }
   }
 
   // Shops' own domains arrive on plain http from the proxy (its redirect is off
@@ -1532,16 +1581,23 @@ createServer(async (req, res) => {
   }
 
   // A shop's own icon, install manifest and link-preview picture.
-  if ((req.method === "GET" || req.method === "HEAD") && (pathname === "/favicon.ico" || pathname.startsWith("/shop-brand/"))) {
+  if ((req.method === "GET" || req.method === "HEAD") && (pathname === "/favicon.ico" || pathname.includes("/shop-brand/"))) {
     const host = shopHost(req);
-    const slug = (await customDomainSlug(host)) || subdomainSlug(host);
+    let slug = await customDomainSlug(host);
+    let base = "";
+    // app.jmsurfgarage.co.ke/<slug>/shop-brand/… for a company's pages there.
+    const seg = firstSegment(pathname);
+    if (!slug && host === APP_HOST && pathname.startsWith(`/${seg}/shop-brand/`)) {
+      slug = (await pathCompany(seg))?.slug || null;
+      base = `/${seg}`;
+    }
     const brand = slug ? await shopBrand(slug).catch(() => null) : null;
     try {
-      if (brand && serveBrandAsset(pathname, brand, host, res)) return;
+      if (brand && serveBrandAsset(pathname, brand, host, res, base)) return;
     } catch (error) {
       console.error("shop brand asset failed:", error?.message || error);
     }
-    if (pathname.startsWith("/shop-brand/")) {
+    if (pathname.includes("/shop-brand/")) {
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
       return res.end("Not found");
     }
@@ -1667,7 +1723,7 @@ createServer(async (req, res) => {
   if (isDevRoute(pathname)) return await handleDev(req, res, pathname, readJsonBody, sendJson);
   if (isContractsPublicRoute(pathname)) return await handleContractsPublic(req, res, pathname, search, readJsonBody, sendJson);
   // Staff self-registration files (/join/<token>) and the company careers page.
-  if (isHrPublicRoute(pathname)) return await handleHrPublic(req, res, pathname, search, readJsonBody, sendJson, async (r) => (await customDomainSlug(shopHost(r))) || subdomainSlug(shopHost(r)) || "");
+  if (isHrPublicRoute(pathname)) return await handleHrPublic(req, res, pathname, search, readJsonBody, sendJson, requestSlug);
   // Invoice payment links (/pay/<token>): the invoice summary and paying it, by token only.
   if (isPayLinkRoute(pathname)) return await handlePayLink(req, res, pathname, search, readJsonBody, sendJson);
   // Website lead forms (CRM → Web forms), posted from any website.
@@ -1689,7 +1745,7 @@ createServer(async (req, res) => {
   if (isEngageRoute(pathname)) {
     // Website chat widget, online booking, event tickets, learner links, IoT devices, email tracking.
     const engageBody = req.method === "POST" ? await readJsonBody(req, 200_000).catch(() => ({})) : {};
-    return await handleEngageRequest(req, res, pathname, search, engageBody, sendJson, async (r) => (await customDomainSlug(shopHost(r))) || subdomainSlug(shopHost(r)) || "");
+    return await handleEngageRequest(req, res, pathname, search, engageBody, sendJson, requestSlug);
   }
 
   if (isErpRoute(pathname)) {
@@ -1710,10 +1766,8 @@ createServer(async (req, res) => {
     if (req.method !== "POST") return sendJson(res, 405, { error: "Method not allowed" });
     // Portal messages may carry a file (up to 5 MB, sent as base64).
     const shopBody = await readJsonBody(req, isPortalUpload(pathname) ? 8_000_000 : undefined).catch(() => ({}));
-    // The company is the one whose address this is (its subdomain or own domain).
-    const shopHostName = shopHost(req);
-    const shopSlug = (await customDomainSlug(shopHostName)) || subdomainSlug(shopHostName)
-      || (/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(String(req.headers.host || "")) ? String(req.headers["x-shop-slug"] || "") : "");
+    // The company is the one whose pages these are (its own domain, or app.jmsurfgarage.co.ke/<slug>/).
+    const shopSlug = await requestSlug(req);
     return await handleShopRequest(req, res, pathname, shopBody, sendJson, shopSlug);
   }
 
@@ -1781,8 +1835,17 @@ createServer(async (req, res) => {
     }
   }
 
-  // A company's address: its own robots.txt and sitemap.xml (public website pages only).
-  if ((pathname === "/robots.txt" || pathname === "/sitemap.xml") && hostOnly !== SITE_HOST && hostOnly !== `www.${SITE_HOST}`) {
+  // A company's own domain: its own robots.txt and sitemap.xml (public website pages only);
+  // on app.jmsurfgarage.co.ke a company's sitemap is /<slug>/sitemap.xml.
+  const companySitemapPath = hostOnly === APP_HOST && /^\/[a-z0-9-]+\/sitemap\.xml$/.test(pathname);
+  if (companySitemapPath) {
+    const company = await companyAddress(req, pathname);
+    if (company?.siteEnabled) {
+      res.writeHead(200, { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=3600" });
+      return res.end(companySitemap(company.origin, new Date().toISOString().slice(0, 10)));
+    }
+  }
+  if ((pathname === "/robots.txt" || pathname === "/sitemap.xml") && hostOnly !== SITE_HOST && hostOnly !== APP_HOST) {
     const company = await companyAddress(req);
     if (company && pathname === "/robots.txt") {
       res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" });
@@ -1796,7 +1859,7 @@ createServer(async (req, res) => {
   }
   if (pathname === "/robots.txt" && isWorkspaceHost(hostOnly)) {
     res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" });
-    return res.end("# A JMSURF Garage workspace: its pages are kept out of search results (noindex).\n# The website is https://garage.jmsurf.co.ke/\nUser-agent: *\nDisallow: /api/\n");
+    return res.end(`# JMSURF Garage: staff pages are kept out of search results (noindex); a company's public website\n# pages (app.jmsurfgarage.co.ke/<company>/) are indexed when the company switches its website on.\n# The JMSURF Garage website is ${SITE_ORIGIN}/\nUser-agent: *\nDisallow: /api/\n`);
   }
 
   const filePath = resolveFilePath(url);
@@ -1828,19 +1891,16 @@ createServer(async (req, res) => {
     if (pathname === "/tracking.js") return await serveTracking(req, res);
     let content = await fs.readFile(targetPath);
     const ext = path.extname(targetPath).toLowerCase();
-    if (ext === ".html" && (req.method === "GET" || req.method === "HEAD")) {
-      // A renamed company's old address forwards to the new one; an unknown address goes to the company finder.
-      const moved = await slugMove(shopHost(req));
+    // The company these pages belong to: its own domain, or app.jmsurfgarage.co.ke/<slug>/….
+    const company = ext === ".html" && targetPath === indexFile && hostOnly !== SITE_HOST ? await companyAddress(req, pathname) : null;
+    if (ext === ".html" && !company && hostOnly === APP_HOST && (req.method === "GET" || req.method === "HEAD")) {
+      // A renamed company's old links forward to its current slug.
+      const seg = firstSegment(pathname);
+      const moved = seg ? (await pathCompany(seg))?.moved : null;
       if (moved) {
-        const dest = moved.startsWith("https://app.") ? `${moved}/login` : `${moved}${url}`;
-        res.writeHead(302, { Location: dest, "Cache-Control": "no-store" });
+        res.writeHead(302, { Location: `/${moved}${pathname.slice(seg.length + 1)}${search ? `?${search}` : ""}`, "Cache-Control": "no-store" });
         return res.end();
       }
-    }
-    // One address for the website: www goes to garage.jmsurf.co.ke (same path).
-    if (ext === ".html" && hostOnly === `www.${SITE_HOST}` && (req.method === "GET" || req.method === "HEAD")) {
-      res.writeHead(301, { Location: `https://${SITE_HOST}${url}`, "Cache-Control": "public, max-age=3600" });
-      return res.end();
     }
     // The website's public pages come with their text and head tags in the HTML;
     // its other pages (sign-in internals, unknown paths) stay out of search results.
@@ -1857,27 +1917,26 @@ createServer(async (req, res) => {
         content = Buffer.from(noindexHtml(content.toString("utf8"), robotsTag));
       }
     }
-    if (ext === ".html") {
-      // A shop's own address shows the shop's name, icon and link preview
-      // from the very first byte (WhatsApp and friends never run the app).
+    if (ext === ".html" && company) {
+      // A company's pages show its name, icon and link preview from the very first byte
+      // (WhatsApp and friends never run the app), and are stamped with its slug (and /<slug>
+      // base on app.) so the app opens that company's pages.
       const host = shopHost(req);
-      const shopSlug = await customDomainSlug(host);
-      const brandSlug = shopSlug || subdomainSlug(host);
-      const brand = brandSlug ? await shopBrand(brandSlug).catch(() => null) : null;
+      const brand = await shopBrand(company.slug).catch(() => null);
       if (brand) {
-        content = Buffer.from(brandHtml(content.toString("utf8"), brand, host, { stampSlug: !!shopSlug }));
-      } else if (shopSlug) {
-        content = Buffer.from(content.toString("utf8").replace("<head>", `<head><meta name="jmsurf-shop" content="${shopSlug.replace(/[^a-z0-9-]/g, "")}">`));
+        content = Buffer.from(brandHtml(content.toString("utf8"), brand, host, { stampSlug: true, base: company.base }));
+      } else {
+        const slug = company.slug.replace(/[^a-z0-9-]/g, "");
+        content = Buffer.from(content.toString("utf8").replace("<head>", `<head><meta name="jmsurf-shop" content="${slug}">${company.base ? `<meta name="jmsurf-base" content="/${slug}">` : ""}`));
       }
     }
     // A company's public website and shop are its storefront: indexed, canonical to itself.
-    // Its workspace, sign-in, account, cart and checkout are not; app. and dash. never are.
-    const company = ext === ".html" && targetPath === indexFile && hostOnly !== SITE_HOST ? await companyAddress(req) : null;
+    // Its workspace, sign-in, account, cart and checkout are not; app. and admin. never are.
     if (company) {
-      robotsTag = companyRobots(pathname, company.siteEnabled);
+      robotsTag = companyRobots(company.path, company.siteEnabled);
       content = Buffer.from(robotsTag
         ? noindexHtml(content.toString("utf8"), robotsTag)
-        : indexableHtml(content.toString("utf8"), company.origin, pathname));
+        : indexableHtml(content.toString("utf8"), company.origin, company.path));
     } else if (ext === ".html" && isWorkspaceHost(hostOnly)) {
       robotsTag = "noindex, nofollow";
       content = Buffer.from(noindexHtml(content.toString("utf8"), robotsTag));

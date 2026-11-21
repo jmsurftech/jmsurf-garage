@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Panel, Field, Pill, Segmented } from "@/components/kit";
 import { useErpSettings, Toggle } from "@/pages/settings/ErpSettingsTabs";
 import { useTenant } from "@/hooks/useTenant";
-import { ROOT_HOST } from "@/lib/host";
+import { useCustomerBase } from "@/hooks/useCustomerBase";
 import { friendlyError } from "@/lib/friendlyError";
 import { toast } from "sonner";
 
@@ -14,7 +14,8 @@ const sb = supabase as any;
 /**
  * System → Customer portal & website. The company opens its customer portal
  * (customers see invoices, statements, pay by M-Pesa, order) and sends each
- * customer their sign-in by SMS; the company website shows at its address.
+ * customer their sign-in by SMS; the company website opens on its customer pages
+ * (its own domain, else app.jmsurfgarage.co.ke/<slug>).
  */
 export default function PortalTab({ canManage }: { canManage: boolean }) {
   const { settings, save } = useErpSettings();
@@ -29,11 +30,7 @@ export default function PortalTab({ canManage }: { canManage: boolean }) {
     setPortal(shop.portal_enabled === true); setSite(shop.site_enabled === true); setSignups(shop.approve_signups !== false);
     setPixel(shop.site?.tracking?.meta_pixel_id || ""); setGa(shop.site?.tracking?.ga4_id || "");
   }, [settings.shop]);
-  const { data: domain } = useQuery({
-    queryKey: ["portal-domain", tenant?.id], enabled: !!tenant?.id,
-    queryFn: async () => (await sb.from("tenant_domains").select("host").eq("kind", "custom").in("status", ["approved", "active"]).limit(1).maybeSingle()).data?.host as string | undefined,
-  });
-  const origin = domain ? `https://${domain}` : `https://${tenant?.slug}.${ROOT_HOST}`;
+  const origin = useCustomerBase();
 
   const persist = async (patch: Record<string, any>) => {
     const next = { ...shop, ...patch };
@@ -62,8 +59,8 @@ export default function PortalTab({ canManage }: { canManage: boolean }) {
 
       {portal && <SendAccess />}
 
-      <Panel title="Company website" icon={Globe} description="A public website at your address with your products, services and contacts (edit it under Online shop & website).">
-        <Toggle label="Show the website at my address" hint={site ? `Visitors to ${origin} see your website; staff still sign in at ${origin}/login.` : `Visitors to ${origin} see your sign-in page.`} checked={site} disabled={!canManage}
+      <Panel title="Company website" icon={Globe} description="A public website with your products, services and contacts (edit it under Online shop & website). Your own domain: System → Custom domain.">
+        <Toggle label="Show my website" hint={site ? `Visitors to ${origin} see your website.` : "Off: nobody sees a website."} checked={site} disabled={!canManage}
           onChange={(v) => { setSite(v); void persist({ site_enabled: v }); }} />
       </Panel>
 

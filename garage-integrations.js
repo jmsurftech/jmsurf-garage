@@ -40,13 +40,14 @@ import {
   maskPhone, matchInvoiceRef, ipInRanges, SAFARICOM_RANGES, clientIp, darajaUrlAllowed, secretsKey,
 } from "./integrations-core.js";
 import { createHmac } from "node:crypto";
+import { PUBLIC_ORIGIN } from "./hosts.js";
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
 const ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
 const SERVICE_KEY =
   process.env.JMSURF_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY ||
   process.env.SUPABASE_SERVICE_KEY || "";
-const PUBLIC_ORIGIN = (process.env.PUBLIC_ORIGIN || "https://garage.jmsurf.co.ke").replace(/\/+$/, "");
+
 const GRAPH = `https://graph.facebook.com/${process.env.WHATSAPP_GRAPH_VERSION || "v21.0"}`;
 const CC_APP = (process.env.CALLCENTRE_APP_URL || "https://app.jmsurfcallcentre.co.ke").replace(/\/+$/, "");
 const MAIL_URL = (process.env.JMSURF_MAIL_URL || "https://api.jmsurfmail.co.ke").replace(/\/+$/, "");

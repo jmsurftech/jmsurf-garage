@@ -1,3 +1,4 @@
+import { customerUrl } from "@/lib/host";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -13,8 +14,8 @@ import { downloadPdf, item, party } from "../shared/pdf";
 import { btn, btnDark, btnPrimary, Gate, KV, Labeled, LinesTable, ModuleHome, NumIn, RecTable, ShareLink, StageBar, StageChip, useAction } from "../shared/ui";
 import { contractPrice, costPerKm, normalisePlate, parseFuelCsv, serviceDue, withholdingVat, type FuelCsvRow } from "../lib/calc";
 
-const portalUrl = (t: string) => `${window.location.origin}/fleet/${t}`;
-const checkUrl = (t: string) => `${window.location.origin}/check/${t}`;
+const portalUrl = (t: string) => customerUrl(`/fleet/${t}`);
+const checkUrl = (t: string) => customerUrl(`/check/${t}`);
 const monthKey = (d: string | Date) => new Date(d).toISOString().slice(0, 7);
 
 export function FleetHome() {

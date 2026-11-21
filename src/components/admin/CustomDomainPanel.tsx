@@ -1,92 +1,88 @@
-import { getAuthUser } from "@/lib/authUser";
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Globe2, Plus, Trash2, ExternalLink } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Globe2, Trash2, ExternalLink, Unlock, RefreshCw } from "lucide-react";
 import { Panel, Field, Pill } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { callServer } from "@/lib/serverStaff";
 import { confirmAction } from "@/components/books/confirm";
+import { OrbSpinner } from "@/components/orbs";
 
 const sb: any = supabase;
-export const SERVER_IP = "37.60.255.35";
 
-const cleanHost = (v: string) => v.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/\.$/, "");
+interface Domain { id: string; host: string; alias_host: string | null; status: string; live?: boolean }
+interface State { server_ip: string; price_kes: number; paid: boolean; paid_via: string | null; domain: Domain | null; public_base: string }
 
 /**
- * Platform admin: the shop's own domain (e.g. maji.co.ke or order.maji.co.ke).
- * Once saved, the server picks it up within a minute, gets it a certificate,
- * and the domain opens this shop exactly like <slug>.garage.jmsurf.co.ke.
+ * Platform admin: a company's custom domain. Unlock it free (no M-Pesa payment), connect its one
+ * domain for it, check or remove it. The company sees the same domain under System › Custom domain.
  */
 export default function CustomDomainPanel({ tenantId }: { tenantId: string }) {
-  const qc = useQueryClient();
   const { toast } = useToast();
+  const [state, setState] = useState<State | null>(null);
   const [host, setHost] = useState("");
   const [busy, setBusy] = useState(false);
-  const { data: domains = [] } = useQuery({
-    queryKey: ["tenant-domains", tenantId],
-    queryFn: async () => {
-      const { data, error } = await sb.from("tenant_domains").select("id,host,status,created_at").eq("tenant_id", tenantId).eq("kind", "custom").order("created_at");
-      if (error) throw error;
-      return data || [];
-    },
-  });
-  const refresh = () => qc.invalidateQueries({ queryKey: ["tenant-domains", tenantId] });
 
-  const add = async () => {
-    const h = cleanHost(host);
-    if (!/^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/.test(h) || h.endsWith("garage.jmsurf.co.ke")) {
-      toast({ title: "Enter a valid domain", variant: "destructive" });
-      return;
-    }
+  const load = useCallback(async (check = false) => {
+    const r = await callServer<State>("/api/staff/domains", { tenant_id: tenantId, check });
+    if (r.data && !r.error) setState(r.data);
+    else toast({ title: "Could not load the domain", description: r.error || "Try again.", variant: "destructive" });
+  }, [tenantId, toast]);
+  useEffect(() => { void load(); }, [load]);
+
+  const unlock = async (on: boolean) => {
     setBusy(true);
-    const { data: { user } } = await getAuthUser();
-    const { error } = await sb.from("tenant_domains").insert({
-      tenant_id: tenantId, host: h, kind: "custom", status: "approved",
-      approved_by: user?.id ?? null, approved_at: new Date().toISOString(), activated_at: new Date().toISOString(),
-      payment_status: "waived", dns_target: SERVER_IP,
-    });
+    const { error } = await sb.rpc("garage_domain_unlock", { p_tenant: tenantId, p_unlock: on });
     setBusy(false);
-    if (error) {
-      toast({ title: "Could not add the domain", description: /unique|duplicate/i.test(error.message) ? "That domain is already used by a company." : error.message, variant: "destructive" });
-      return;
-    }
-    setHost("");
-    refresh();
-    toast({ title: "Domain added", description: "Point its DNS to the server. It works within a few minutes of the DNS being right." });
+    if (error) { toast({ title: "Could not change it", description: error.message, variant: "destructive" }); return; }
+    toast({ title: on ? "Custom domain unlocked free" : "Custom domain locked" });
+    void load();
   };
 
-  const remove = async (id: string, h: string) => {
-    if (!(await confirmAction({ title: `Stop serving this company on ${h}?`, danger: true, confirmLabel: "Stop" }))) return;
-    const { error } = await sb.from("tenant_domains").delete().eq("id", id);
-    if (error) toast({ title: "Could not remove", description: error.message, variant: "destructive" });
-    refresh();
+  const call = async (path: string, body: Record<string, unknown>, done: string) => {
+    setBusy(true);
+    const r = await callServer<State>(path, { tenant_id: tenantId, ...body });
+    setBusy(false);
+    if (r.error || !r.data) { toast({ title: "Did not go through", description: r.error || "Try again.", variant: "destructive" }); return; }
+    if ("domain" in r.data) setState(r.data); else void load();
+    toast({ title: done });
   };
+
+  const remove = async (d: Domain) => {
+    if (!(await confirmAction({ title: `Remove ${d.host}?`, message: "The company stops opening there within a few minutes. It can connect a domain again without paying.", danger: true, confirmLabel: "Remove" }))) return;
+    await call("/api/staff/domain-remove", { id: d.id }, "Domain removed");
+  };
+
+  if (!state) return <Panel title="Custom domain" icon={Globe2}><div className="flex justify-center py-4"><OrbSpinner className="h-4 w-4 text-muted-foreground" /></div></Panel>;
+  const d = state.domain;
+  const on = d && (d.status === "approved" || d.status === "active");
 
   return (
-    <Panel title="Custom domain" icon={Globe2} description="The company also opens on its own domain.">
-      <div className="space-y-3">
-        {domains.length > 0 && (
-          <ul className="divide-y divide-border rounded-xl border border-border text-sm">
-            {domains.map((d: any) => (
-              <li key={d.id} className="flex items-center gap-2 px-3 py-2">
-                <a href={`https://${d.host}`} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center gap-1.5 font-mono hover:text-primary"><span className="truncate">{d.host}</span><ExternalLink className="h-3 w-3 shrink-0" /></a>
-                <Pill tone={d.status === "approved" || d.status === "active" ? "success" : "muted"}>{d.status === "approved" || d.status === "active" ? "On" : d.status}</Pill>
-                <button type="button" className="icon-btn-danger h-7 w-7" onClick={() => remove(d.id, d.host)} aria-label="Remove"><Trash2 className="h-3.5 w-3.5" /></button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <Field label="Add a domain">
-          <div className="flex min-w-0 gap-2">
-            <input className="fi min-w-0 flex-1 font-mono" value={host} onChange={(e) => setHost(e.target.value)} placeholder="Enter domain" />
-            <Button disabled={!host.trim() || busy} onClick={add}><Plus /> Add</Button>
+    <Panel title="Custom domain" icon={Globe2}
+      actions={state.paid
+        ? <Pill tone="success">{state.paid_via === "free" ? "Unlocked free" : state.paid_via === "existing" ? "Had a domain" : "Paid"}</Pill>
+        : <Button size="sm" variant="outline" disabled={busy} onClick={() => void unlock(true)}><Unlock /> Unlock free</Button>}>
+      <div className="space-y-3 text-sm">
+        {!state.paid && <p className="text-muted-foreground">Not paid (KES {state.price_kes.toLocaleString("en-KE")} once). The company pays from System › Custom domain, or unlock it free here.</p>}
+        {d ? (
+          <div className="flex items-center gap-2 rounded-xl border border-border px-3 py-2">
+            <a href={`https://${d.host}`} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center gap-1.5 font-mono hover:text-primary">
+              <span className="truncate">{d.host}{d.alias_host ? ` + ${d.alias_host}` : ""}</span><ExternalLink className="h-3 w-3 shrink-0" />
+            </a>
+            <Pill tone={d.live ? "success" : on ? "info" : "warning"}>{d.live ? "Live" : on ? "Securing" : "Waiting for DNS"}</Pill>
+            <button type="button" className="icon-btn h-7 w-7" disabled={busy} onClick={() => void call("/api/staff/domain-check", { id: d.id }, "Checked")} aria-label="Check"><RefreshCw className="h-3.5 w-3.5" /></button>
+            <button type="button" className="icon-btn-danger h-7 w-7" disabled={busy} onClick={() => void remove(d)} aria-label="Remove"><Trash2 className="h-3.5 w-3.5" /></button>
           </div>
-        </Field>
-        <div className="space-y-0.5 rounded-xl bg-muted/60 p-3 text-xs leading-relaxed text-muted-foreground">
-          <p>DNS: add an <b>A record</b> to <span className="font-mono text-foreground">{SERVER_IP}</span>.</p>
-          <p>On Cloudflare keep it <b>DNS only</b> until the padlock shows; the certificate comes within minutes.</p>
-        </div>
+        ) : state.paid && (
+          <Field label="Connect a domain">
+            <form className="flex min-w-0 gap-2" onSubmit={(e) => { e.preventDefault(); if (host.trim()) void call("/api/staff/domain-connect", { host }, "Domain added").then(() => setHost("")); }}>
+              <input className="fi min-w-0 flex-1 font-mono" value={host} onChange={(e) => setHost(e.target.value)} placeholder="Enter domain" autoCapitalize="none" spellCheck={false} />
+              <Button type="submit" disabled={!host.trim() || busy}>Connect</Button>
+            </form>
+          </Field>
+        )}
+        {d && !d.live && <p className="text-xs text-muted-foreground">DNS: A record{d.alias_host ? "s for @ and www" : ""} to <span className="font-mono text-foreground">{state.server_ip}</span>, no AAAA, DNS only on Cloudflare.</p>}
+        {state.paid && state.paid_via === "free" && <button type="button" className="text-xs text-muted-foreground underline-offset-2 hover:underline" disabled={busy} onClick={() => void unlock(false)}>Lock again</button>}
       </div>
     </Panel>
   );

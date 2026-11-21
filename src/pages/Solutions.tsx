@@ -30,9 +30,9 @@ export default function Solutions() {
       <Helmet>
         <title>{SOLUTIONS_META.title}</title>
         <meta name="description" content={SOLUTIONS_META.description} />
-        <link rel="canonical" href="https://garage.jmsurf.co.ke/solutions" />
+        <link rel="canonical" href="https://jmsurfgarage.co.ke/solutions" />
         <meta property="og:title" content="All modules · JMSURF Garage" />
-        <meta property="og:url" content="https://garage.jmsurf.co.ke/solutions" />
+        <meta property="og:url" content="https://jmsurfgarage.co.ke/solutions" />
       </Helmet>
       <Nav />
       <main>

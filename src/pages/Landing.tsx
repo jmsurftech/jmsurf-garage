@@ -1,5 +1,5 @@
 /**
- * garage.jmsurf.co.ke: the JMSURF Garage website home page. Phone first, light by
+ * jmsurfgarage.co.ke: the JMSURF Garage website home page. Phone first, light by
  * default with dark mode, plain words. The words come from src/seo/homeContent.ts
  * (the build-time snapshot in src/seo/pages.ts uses the same text).
  */
@@ -10,7 +10,7 @@ import { motion, useInView } from "framer-motion";
 import {
   ArrowRight, Check, X, Menu, Smartphone, ShieldCheck, FileCheck, MessageSquare, WifiOff, Headset, Wallet,
   ClipboardList, ClipboardCheck, FileText, ThumbsUp, Wrench, Receipt, BellRing, ChevronDown, MessageCircle, Phone, Mail,
-  Sun, Moon, Car, Store, Ship, SprayCan, Droplets, Truck, Gauge, Building2, Lock, DatabaseBackup, UserRoundCog,
+  Sun, Moon, Car, Store, Ship, SprayCan, Droplets, Truck, Gauge, Building2, Lock, DatabaseBackup, UserRoundCog, MapPin,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashLogo, DashMark } from "@/components/brand/DashLogo";
@@ -22,7 +22,7 @@ import { kes } from "@/lib/garagePlans";
 import { useGarageCatalogue } from "@/hooks/useGarageCatalogue";
 import { useTheme } from "@/hooks/useTheme";
 import { track } from "@/lib/tracking";
-import { JMSURF_FAMILY } from "@/lib/siteFacts";
+import { JMSURF_FAMILY, CONTACT } from "@/lib/siteFacts";
 import { HOME, HOME_HEADINGS } from "@/seo/homeContent";
 import { HOME_META, canonicalUrl } from "@/seo/meta";
 import { cn } from "@/lib/utils";
@@ -114,7 +114,7 @@ export function Nav() {
         </nav>
         <div className="hidden shrink-0 items-center gap-1 whitespace-nowrap lg:flex xl:gap-2">
           <ThemeToggle />
-          <a href="https://app.garage.jmsurf.co.ke/login" className="rounded-full px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted">Sign in</a>
+          <a href="https://app.jmsurfgarage.co.ke/login" className="rounded-full px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted">Sign in</a>
           <CTA className="!px-5 !py-2.5 text-sm">Start free</CTA>
         </div>
         <div className="ml-auto flex items-center gap-1 lg:hidden">
@@ -126,7 +126,7 @@ export function Nav() {
         <div className="border-t border-border bg-background px-4 pb-5 pt-2 shadow-xl lg:hidden">
           {links.map(([h, l]) => <a key={h} href={h} onClick={() => setOpen(false)} className="block rounded-lg px-3 py-3 font-medium text-foreground hover:bg-muted">{l}</a>)}
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <a href="https://app.garage.jmsurf.co.ke/login" className="rounded-full border border-border py-3 text-center font-semibold">Sign in</a>
+            <a href="https://app.jmsurfgarage.co.ke/login" className="rounded-full border border-border py-3 text-center font-semibold">Sign in</a>
             <Link to="/register" className="rounded-full bg-primary py-3 text-center font-semibold text-primary-foreground">Start free</Link>
           </div>
         </div>
@@ -433,7 +433,7 @@ export function FinalCta() {
           <h2 className="font-display text-[2.3rem] font-extrabold leading-[1.02] tracking-[-0.035em] text-foreground sm:text-6xl"><Title text={HOME_HEADINGS.final} highlight={3} /></h2>
         </MaskRise>
         <Reveal delay={0.12}><p className="mt-5 text-lg text-muted-foreground">Set up in a few minutes. Free for 14 days, no card needed.</p></Reveal>
-        <Reveal delay={0.2} className="mt-8 flex flex-col justify-center gap-3 sm:flex-row"><CTA /><a href="https://app.garage.jmsurf.co.ke/login" className="rounded-full bg-card/70 px-6 py-3.5 font-display font-bold text-foreground ring-1 ring-border backdrop-blur hover:bg-muted">Sign in</a></Reveal>
+        <Reveal delay={0.2} className="mt-8 flex flex-col justify-center gap-3 sm:flex-row"><CTA /><a href="https://app.jmsurfgarage.co.ke/login" className="rounded-full bg-card/70 px-6 py-3.5 font-display font-bold text-foreground ring-1 ring-border backdrop-blur hover:bg-muted">Sign in</a></Reveal>
       </div>
     </section>
   );
@@ -442,7 +442,7 @@ export function FinalCta() {
 export function Footer({ phone, email }: { phone: string; email: string }) {
   const { darkMode } = useTheme();
   const cols: [string, [string, string][]][] = [
-    ["Product", [["Modules", "/solutions"], ["Pricing", "/pricing"], ["How it works", "/#how"], ["Start free", "/register"], ["Sign in", "https://app.garage.jmsurf.co.ke/login"]]],
+    ["Product", [["Modules", "/solutions"], ["Pricing", "/pricing"], ["How it works", "/#how"], ["Start free", "/register"], ["Sign in", "https://app.jmsurfgarage.co.ke/login"]]],
     ["Modules", [["Garage Core", "/solutions/garage_core"], ["Workshop Pro", "/solutions/workshop_pro"], ["Parts & Stock", "/solutions/inventory"], ["Body & Paint", "/solutions/body_paint"], ["Car Wash", "/solutions/car_wash"], ["All modules", "/solutions"]]],
     ["Legal", [["Terms of service", "/terms"], ["Privacy policy", "/privacy"], ["System status", "/status"], ["Photo credits", "/photo-credits"]]],
   ];
@@ -454,8 +454,9 @@ export function Footer({ phone, email }: { phone: string; email: string }) {
             <DashLogo tone={darkMode ? "light" : "dark"} tagline="Garage management" />
             <p className="mt-4 max-w-xs text-sm">Garage management software for Kenya, from the roadside fundi to the dealer.</p>
             <div className="mt-4 space-y-1.5 text-sm">
-              {phone && <a href={`tel:${phone.replace(/\s/g, "")}`} className="flex items-center gap-2 hover:text-foreground"><Phone className="h-4 w-4" />{phone}</a>}
-              {email && <a href={`mailto:${email}`} className="flex items-center gap-2 hover:text-foreground"><Mail className="h-4 w-4" />{email}</a>}
+              {phone && <a href={`tel:${phone.replace(/\s/g, "")}`} className="flex items-center gap-2 hover:text-foreground"><Phone className="h-4 w-4 shrink-0" />{phone} <span className="text-xs">(call or WhatsApp)</span></a>}
+              {email && <a href={`mailto:${email}`} className="flex items-center gap-2 hover:text-foreground"><Mail className="h-4 w-4 shrink-0" />{email}</a>}
+              <p className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0" />{CONTACT.address}</p>
             </div>
           </div>
           {cols.map(([t, links]) => (
@@ -481,21 +482,9 @@ export function Footer({ phone, email }: { phone: string; email: string }) {
   );
 }
 
-/** Contact details from the website settings (super admin → CMS), with the JMSURF defaults. */
+/** JMSURF's contacts (as on jmsurf.co.ke): phone and WhatsApp, email, office. */
 export function useSiteContact() {
-  const [c, setC] = useState({ phone: "0712 504 593", email: "info@jmsurf.co.ke", wa: "254712504593" });
-  useEffect(() => {
-    void supabase.from("cms_content").select("section, content").in("section", ["contact", "whatsapp"]).then(({ data }) => {
-      const map: Record<string, any> = {};
-      (data || []).forEach((r: any) => { map[r.section] = r.content || {}; });
-      setC((x) => ({
-        phone: String(map.contact?.phone || x.phone),
-        email: String(map.contact?.email || x.email),
-        wa: String(map.whatsapp?.number || x.wa).replace(/\D/g, "") || x.wa,
-      }));
-    });
-  }, []);
-  return c;
+  return CONTACT;
 }
 
 export function WhatsAppButton({ wa, text = "Hello, I'd like to know more about JMSURF Garage." }: { wa: string; text?: string }) {

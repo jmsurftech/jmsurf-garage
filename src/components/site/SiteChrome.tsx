@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { DashLogo } from "@/components/brand/DashLogo";
+import { APP_ORIGIN } from "@/lib/host";
+import { CONTACT } from "@/lib/siteFacts";
 
 /** Header for the website's inner pages (terms, privacy, status). */
 export function SiteHeader() {
@@ -8,7 +10,7 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
         <Link to="/" aria-label="JMSURF Garage home"><DashLogo /></Link>
         <nav className="ml-auto flex items-center gap-2">
-          <Link to="/login" className="rounded-full px-4 py-2 text-sm font-semibold text-[#15171c] hover:bg-black/5">Sign in</Link>
+          <a href={`${APP_ORIGIN}/login`} className="rounded-full px-4 py-2 text-sm font-semibold text-[#15171c] hover:bg-black/5">Sign in</a>
           <Link to="/register" className="rounded-full bg-[#a8121b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#8a0d15]">Start free</Link>
         </nav>
       </div>
@@ -30,6 +32,9 @@ export function SiteFooter() {
         </nav>
         <p>© {new Date().getFullYear()} JMSURF Garage · <a href="https://www.jmsurf.co.ke" className="hover:text-white">Powered by <b className="tracking-wide">JMSURF TECHNOLOGIES</b></a></p>
       </div>
+      <p className="mx-auto mt-6 max-w-6xl px-4 text-center text-xs sm:px-6 sm:text-left">
+        <a href={`mailto:${CONTACT.email}`} className="hover:text-white">{CONTACT.email}</a> · <a href={`tel:${CONTACT.phone.replace(/\s/g, "")}`} className="hover:text-white">{CONTACT.phone}</a> (call or WhatsApp) · {CONTACT.address}
+      </p>
     </footer>
   );
 }

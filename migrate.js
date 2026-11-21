@@ -19,10 +19,14 @@
 // the quota resets.
 // ---------------------------------------------------------------------------
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { OLD_ROOT_HOST, SITE_ORIGIN, APP_ORIGIN } from "./hosts.js";
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY = process.env.JMSURF_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const ROOT_HOST = process.env.ROOT_HOST || "garage.jmsurf.co.ke";
+// OAuth redirect addresses are registered with QuickBooks, Xero, Sage and the books API: they stay on
+// app.garage.jmsurf.co.ke (its /api/ keeps answering) until re-registered and set by env
+// (MIGRATE_REDIRECT_URI, QBO_REDIRECT_URI, SAGE_REDIRECT_URI, XERO_REDIRECT_URI).
+const ROOT_HOST = OLD_ROOT_HOST;
 const CLIENT_ID = process.env.MIGRATE_CLIENT_ID || "";
 const CLIENT_SECRET = process.env.MIGRATE_CLIENT_SECRET || "";
 const REDIRECT_URI = process.env.MIGRATE_REDIRECT_URI || `https://app.${ROOT_HOST}/api/migrate/oauth/callback`;
@@ -337,7 +341,7 @@ async function applyZohoProfile(tenantId, c) {
       const file = `${tenantId}/logo-${Date.now()}.${type.split("/")[1] === "jpeg" ? "jpg" : type.split("/")[1] || "png"}`;
       const up = await fetch(`${SUPABASE_URL}/storage/v1/object/tenant-logos/${file}`, { method: "POST", body: Buffer.from(await res.arrayBuffer()), headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, "Content-Type": type, "x-upsert": "true" }, signal: AbortSignal.timeout(30000) });
       if (up.ok) {
-        const base = (process.env.PUBLIC_SUPABASE_URL || `https://${ROOT_HOST}`).replace(/\/+$/, "");
+        const base = (process.env.PUBLIC_SUPABASE_URL || SITE_ORIGIN).replace(/\/+$/, "");
         await db(`tenants?id=eq.${tenantId}`, { method: "PATCH", prefer: "return=minimal", body: { logo_url: `${base}/storage/v1/object/public/tenant-logos/${file}` } });
         done.push("logo");
       }
@@ -692,9 +696,9 @@ const verify = (state) => {
   return p.exp > Date.now() ? p : null;
 };
 
-async function companyOrigin(tenantId) {
-  const t = await one(`tenants?id=eq.${tenantId}&select=slug`);
-  return t?.slug ? `https://${t.slug}.${ROOT_HOST}` : `https://app.${ROOT_HOST}`;
+/** Staff come back to the workspace on app. (the company comes from their sign-in). */
+async function companyOrigin(_tenantId) {
+  return APP_ORIGIN;
 }
 
 async function afterConnect(tenantId, j, accounts) {
@@ -717,7 +721,7 @@ export async function handleMigrateCallback(req, res, search) {
   const q = new URLSearchParams(search || "");
   const st = verify(q.get("state"));
   const redirect = (url) => { res.writeHead(302, { Location: url, "Cache-Control": "no-store" }); res.end(); };
-  if (!st) return redirect(`https://app.${ROOT_HOST}/`);
+  if (!st) return redirect(`${APP_ORIGIN}/`);
   const back = `${await companyOrigin(st.t)}/migrate`;
   try {
     if (q.get("error")) throw new HttpError(400, "access was not granted");
@@ -1100,7 +1104,7 @@ export async function handleQboCallback(req, res, search) {
   const q = new URLSearchParams(search || "");
   const st = verify(q.get("state"));
   const redirect = (url) => { res.writeHead(302, { Location: url, "Cache-Control": "no-store" }); res.end(); };
-  if (!st || st.src !== "qbo") return redirect(`https://app.${ROOT_HOST}/`);
+  if (!st || st.src !== "qbo") return redirect(`${APP_ORIGIN}/`);
   const back = `${await companyOrigin(st.t)}/migrate?from=quickbooks`;
   try {
     if (q.get("error")) throw new HttpError(400, "access was not granted");
@@ -1239,7 +1243,7 @@ export async function handleSourceCallback(req, res, src, search) {
   const q = new URLSearchParams(search || "");
   const st = verify(q.get("state"));
   const redirect = (url) => { res.writeHead(302, { Location: url, "Cache-Control": "no-store" }); res.end(); };
-  if (!cfg || !st || st.src !== src) return redirect(`https://app.${ROOT_HOST}/`);
+  if (!cfg || !st || st.src !== src) return redirect(`${APP_ORIGIN}/`);
   const back = `${await companyOrigin(st.t)}/migrate?from=${src}`;
   try {
     if (q.get("error")) throw new HttpError(400, "access was not granted");

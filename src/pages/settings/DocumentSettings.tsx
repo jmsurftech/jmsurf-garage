@@ -363,8 +363,8 @@ function sampleModel(title: string, kind: DocKindKey, settings: DocSettings): Do
     company: {
       name: "JMSURF Garage",
       lines: [],
-      fields: { address: "Company 12, Ngong Road", postal: "Nairobi, Kenya", phone: "+254 700 000 000", email: "hello@jmsurf.co.ke", website: "garage.jmsurf.co.ke", kraPin: "P051234567X", vatNumber: "0123456A" },
-      kra_pin: "P051234567X", vat_number: "0123456A",
+      fields: { address: "Devan Plaza, 5th Floor, Westlands", postal: "Nairobi, Kenya", phone: "+254 712 504 593", email: "info@jmsurf.co.ke", website: "jmsurfgarage.co.ke", kraPin: "KRA PIN", vatNumber: "VAT number" },
+      kra_pin: "KRA PIN", vat_number: "VAT number",
     },
     party: {
       label: vendor ? "Vendor" : settings.details.billToLabel || "Bill To",

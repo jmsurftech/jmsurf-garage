@@ -30,6 +30,7 @@
 // The due rules match src/garage/workshop/lib/reminders.ts (unit tested there); keep them in step.
 // ---------------------------------------------------------------------------
 import { sendForShop } from "./messaging.js";
+import { smsBase } from "./hosts.js";
 import { pushInvoiceForShop, invoicePromptStatus } from "./sendmoney.js";
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
@@ -119,7 +120,8 @@ async function garage(tenantId) {
 }
 const garageName = (t) => str(t?.business_name) || "the garage";
 const garagePhone = (t) => str(t?.business_phone || t?.contact_phone);
-const publicLink = (path) => `garage.jmsurf.co.ke${path}`;
+/** A customer link for SMS/WhatsApp (token or slug in the path): the company's own domain, else app.jmsurfgarage.co.ke, without https://. */
+const publicLink = async (tenantId, path) => `${await smsBase(tenantId)}${path}`;
 const fmtDate = (iso, withTime = false) => new Date(iso).toLocaleString("en-GB", {
   day: "numeric", month: "short", ...(withTime ? { hour: "2-digit", minute: "2-digit", hour12: false } : { year: "numeric" }), timeZone: "Africa/Nairobi",
 });
@@ -232,7 +234,7 @@ async function runCompany(tenantId, { dry = false, now = Date.now() } = {}) {
   if (!tenant) return { due: [] };
   const cfg = reminderSettings(settings.reminders);
   const due = [];
-  const vars = { garage: garageName(tenant), phone: garagePhone(tenant), link: publicLink(`/book/${tenant.slug}`) };
+  const vars = { garage: garageName(tenant), phone: garagePhone(tenant), link: await publicLink(tenantId, `/book/${tenant.slug}`) };
   const text = (kind, lang, extra) => render((lang === "sw" ? cfg.kinds[kind].text_sw : cfg.kinds[kind].text_en) || DEFAULT_KINDS[kind].text_en, { ...vars, ...extra });
 
   // Bookings starting soon.
@@ -331,7 +333,7 @@ async function staffRoute(req, res, sub, body, sendJson) {
     const to = str(body.phone) || str(customer?.phone);
     if (!to) throw new HttpError(400, "The customer has no phone number");
     const { tenant } = await garage(t);
-    const link = publicLink(`/e/${est.token}`);
+    const link = await publicLink(t, `/e/${est.token}`);
     const text = str(body.text) || `${garageName(tenant)}: the ${est.kind === "extra" ? "extra work" : "estimate"} for ${formatPlate(vehicle?.plate) || job.job_no} is ready. Approve or decline each item here: ${link}`;
     const r = await sendForShop({ tenantId: t, channel, to, text, userId: me.userId, reference: `garage-estimate-${est.id}`, event: "estimate_ready" });
     if (r.ok) {
@@ -350,7 +352,7 @@ async function staffRoute(req, res, sub, body, sendJson) {
     const to = str(body.phone) || str(customer?.phone);
     if (!to) throw new HttpError(400, "The customer has no phone number");
     const { tenant } = await garage(t);
-    const link = publicLink(`/t/${job.tracking_token}`);
+    const link = await publicLink(t, `/t/${job.tracking_token}`);
     const plate = formatPlate(vehicle?.plate) || "your vehicle";
     const kind = str(body.kind) || "tag";
     const text = kind === "custom" ? str(body.text)
@@ -407,7 +409,7 @@ async function staffRoute(req, res, sub, body, sendJson) {
     const { tenant, settings } = await garage(t);
     const cfg = reminderSettings(settings.reminders);
     const tpl = (body.lang === "sw" ? cfg.kinds[kind].text_sw : cfg.kinds[kind].text_en) || DEFAULT_KINDS[kind].text_en;
-    const text = render(tpl, { name: str(me.name).split(" ")[0], plate: "KXX 000X", date: fmtDate(new Date(Date.now() + 7 * DAY).toISOString()), garage: garageName(tenant), phone: garagePhone(tenant), link: publicLink(`/book/${tenant.slug}`) });
+    const text = render(tpl, { name: str(me.name).split(" ")[0], plate: "KXX 000X", date: fmtDate(new Date(Date.now() + 7 * DAY).toISOString()), garage: garageName(tenant), phone: garagePhone(tenant), link: await publicLink(t, `/book/${tenant.slug}`) });
     const r = await sendForShop({ tenantId: t, channel: cfg.channel === "whatsapp" ? "whatsapp" : "sms", to: str(body.phone), text, userId: me.userId, reference: "garage-test", event: "test" });
     return sendJson(res, r.ok ? 200 : 400, { ok: !!r.ok, error: r.ok ? undefined : r.error, text });
   }

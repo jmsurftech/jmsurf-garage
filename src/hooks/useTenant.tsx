@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cacheTenant, clearCachedBusinessSettings, getCachedTenant, wipeAllOfflineCaches } from "@/lib/offlineDb";
-import { cleanPaths, getHostSlug, isAppHost, isSubdomainMode, tenantUrl } from "@/lib/host";
+import { cleanPaths, getHostSlug, isAppHost, isSubdomainMode, pathBase, publicBase, setCompanyBase } from "@/lib/host";
+import { callServer } from "@/lib/serverStaff";
 import { goToCompany } from "@/lib/companySwitch";
 
 /**
@@ -53,8 +54,9 @@ export const useTenant = () => useContext(TenantCtx);
 const RESERVED = ["admin", "whats-new", "login", "register", "reset-password", "subscription-expired", "billing", "dashboard", "pos", "inventory", "customers", "sales", "purchases", "payments", "communication", "email-logs", "reports", "staff", "settings", "message-logs", "delivery-notes", "packing-lists", "delivery-confirm", "stock-transfer", "purchase-orders", "suppliers", "invoices", "quotes", "expenses", "bills", "services", "mpesa-history", "credit-balances", "order", "rider", "water"];
 
 /**
- * The active shop comes from the subdomain (<slug>.garage.jmsurf.co.ke) when
- * present, otherwise from the first path segment (legacy /<slug>/... links).
+ * The active shop comes from the page stamp (a company's own domain or its pages on
+ * app.jmsurfgarage.co.ke/<slug>/) when present, otherwise (local development) from the
+ * first path segment.
  */
 function getSlugFromPath() {
   const hostSlug = getHostSlug();
@@ -113,7 +115,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       // Already in the company of this address (nearly every load): nothing to look up or switch.
       // Not on the hand-over page: it switches the company itself and then loads the dashboard (reloading it
       // here as well cut the sign-in short and added another full load).
-      if (user && profile && host && navigator.onLine && window.location.pathname !== "/auth/handoff"
+      // Not on a company's customer pages on app. (app.…/<slug>/…): a signed-in person may open
+      // another company's pay link or job tracking there without their own session moving.
+      if (user && profile && host && !pathBase() && navigator.onLine && window.location.pathname !== "/auth/handoff"
         && String(ownCompany?.slug || "").toLowerCase() !== host.toLowerCase()) {
         const moved = await ensureHostCompany(host, profile.tenant_id, role);
         if (moved === "switched") {
@@ -268,7 +272,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   // back to this tab, offer to switch back (never reload on its own).
   useEffect(() => {
     const host = getHostSlug();
-    if (!host || !user?.id) return;
+    if (!host || pathBase() || !user?.id) return;
     const onVisible = async () => {
       if (document.visibilityState !== "visible" || !tenant?.id) return;
       const { data: prof } = await supabase.from("profiles").select("tenant_id").eq("user_id", user.id).maybeSingle();
@@ -277,6 +281,18 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [user?.id, tenant?.id]);
+
+  // Links for this company's customers (customerUrl): its own domain when active, else app.…/<slug>.
+  useEffect(() => {
+    if (!tenant?.slug) { setCompanyBase(null); return; }
+    setCompanyBase(publicBase(tenant.slug));
+    if (!user?.id) return;
+    let cancelled = false;
+    void callServer<{ public_base: string | null }>("/api/staff/address", {}).then((r) => {
+      if (!cancelled && r.data?.public_base) setCompanyBase(r.data.public_base);
+    });
+    return () => { cancelled = true; };
+  }, [tenant?.id, tenant?.slug, user?.id]);
 
   // Whenever the active tenant changes, immediately invalidate + refetch all
   // tenant-scoped dashboard data so the UI never shows previous-tenant zeros.

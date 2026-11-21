@@ -1,3 +1,4 @@
+import { PUBLIC_ORIGIN, ADMIN_ORIGIN } from "./hosts.js";
 // ---------------------------------------------------------------------------
 // Health monitoring inside the app server.
 //
@@ -15,7 +16,7 @@ const ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBL
 const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY ||
   process.env.SUPABASE_SECRET_KEY || process.env.JMSURF_SUPABASE_SERVICE_KEY || "";
-const SITE_URL = (process.env.PUBLIC_ORIGIN || "https://garage.jmsurf.co.ke").replace(/\/+$/, "");
+const SITE_URL = PUBLIC_ORIGIN;
 
 let sendMail = null; // injected by server.js: ({ to, subject, html, text }) => Promise
 
@@ -159,7 +160,7 @@ async function errorDigest() {
   for (const g of [...groups.values()].sort((a, b) => b.count - a.count).slice(0, 15)) {
     lines.push(`• ${g.count}× ${g.message}${g.shops.size ? ` — shops: ${[...g.shops].slice(0, 5).join(", ")}` : ""}${g.paths.size ? ` — pages: ${[...g.paths].slice(0, 3).join(", ")}` : ""}`);
   }
-  lines.push(`Details: ${SITE_URL}/admin/health`);
+  lines.push(`Details: ${ADMIN_ORIGIN}/admin/health`);
   await notify(`${rows.length} new app error${rows.length === 1 ? "" : "s"}`, lines);
   const ids = rows.map((r) => r.id).join(",");
   await db(`app_errors?id=in.(${ids})`, { method: "PATCH", body: { emailed: true } }).catch(() => {});

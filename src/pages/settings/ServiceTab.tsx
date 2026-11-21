@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Mail, MessagesSquare, CalendarClock, Ticket, Share2, Copy, Plug, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { APP_ORIGIN } from "@/lib/host";
+import { useCustomerBase } from "@/hooks/useCustomerBase";
 import { Panel, Field, Pill } from "@/components/kit";
 import { useErpSettings, Toggle } from "@/pages/settings/ErpSettingsTabs";
 import { useModules } from "@/hooks/useModules";
@@ -27,8 +29,8 @@ export default function ServiceTab({ canManage }: { canManage: boolean }) {
   const isSet = (n: string) => (saved as any[]).some((s) => s.name === n);
   const sec = (k: string) => (e[k] || {}) as any;
   const upd = (k: string, patch: any) => setE({ ...e, [k]: { ...sec(k), ...patch } });
-  const slug = tenant?.slug || window.location.hostname.split(".")[0] || "yourcompany";
-  const base = `https://${slug}.garage.jmsurf.co.ke`;
+  // The company's customer pages (own domain, else app.jmsurfgarage.co.ke/<slug>).
+  const base = useCustomerBase();
 
   const persist = async () => {
     setBusy("save");
@@ -50,7 +52,7 @@ export default function ServiceTab({ canManage }: { canManage: boolean }) {
 
   const b = sec("booking");
   const days: number[] = Array.isArray(b.days) && b.days.length ? b.days : [1, 2, 3, 4, 5, 6];
-  const snippet = `<script src="${base}/chat.js" async></script>`;
+  const snippet = `<script src="${APP_ORIGIN}/chat.js?c=${tenant?.tenant?.slug || tenant?.slug || ""}" async></script>`;
 
   return (
     <div className="space-y-5">

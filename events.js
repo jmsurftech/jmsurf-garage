@@ -1,3 +1,4 @@
+import { publicBase } from "./hosts.js";
 // ---------------------------------------------------------------------------
 // Event alerts (System → Notifications). Database triggers queue an alert in
 // alert_queue when something needs a person (approval, quote answered, lead or
@@ -16,7 +17,7 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL 
 const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY ||
   process.env.SUPABASE_SECRET_KEY || process.env.JMSURF_SUPABASE_SERVICE_KEY || "";
-const PUBLIC_ORIGIN = (process.env.PUBLIC_ORIGIN || process.env.SHOP_ORIGIN || "https://garage.jmsurf.co.ke").replace(/\/+$/, "");
+
 
 /** Every event, its group in the settings screen, and the channels on by default. */
 export const ALERT_EVENTS = {
@@ -95,11 +96,8 @@ async function rulesFor(tenantId) {
   return rules;
 }
 
-async function companyOrigin(tenantId) {
-  const t = (await rows(`tenants?id=eq.${tenantId}&select=slug`))[0];
-  const d = (await rows(`tenant_domains?tenant_id=eq.${tenantId}&kind=eq.custom&status=in.(approved,active)&select=host&limit=1`))[0];
-  return d?.host ? `https://${d.host}` : t?.slug ? `https://${t.slug}.garage.jmsurf.co.ke` : PUBLIC_ORIGIN;
-}
+/** The company's customer pages (custom domain when live, else app.jmsurfgarage.co.ke/<slug>). */
+const companyOrigin = (tenantId) => publicBase(tenantId);
 
 const contacts = (tenantId, users, roles) =>
   db("rpc/alert_contacts", { method: "POST", body: { p_tenant: tenantId, p_users: users || [], p_roles: roles || [] } }).then((d) => (Array.isArray(d) ? d : [])).catch((e) => { console.error("[events] contacts", e.message); return []; });

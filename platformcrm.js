@@ -1,3 +1,4 @@
+import { APP_ORIGIN, ADMIN_ORIGIN } from "./hosts.js";
 // ---------------------------------------------------------------------------
 // Super admin CRM and owner alerts.
 //
@@ -54,13 +55,13 @@ function mailHtml(subject, body) {
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e6e8eb">
 <tr><td style="background:#a8121b;color:#fff;padding:16px 24px;font-weight:bold">JMSURF Garage</td></tr>
 <tr><td style="padding:24px;font-size:15px;line-height:1.6">${esc(body).replace(/\n/g, "<br>")}</td></tr>
-<tr><td style="padding:14px 24px;border-top:1px solid #eef0f2;color:#8a9199;font-size:11px">JMSURF Garage · Powered by JMSURF TECHNOLOGIES · <a href="https://garage.jmsurf.co.ke" style="color:#a8121b">garage.jmsurf.co.ke</a></td></tr>
+<tr><td style="padding:14px 24px;border-top:1px solid #eef0f2;color:#8a9199;font-size:11px">JMSURF Garage · Powered by JMSURF TECHNOLOGIES · <a href="https://jmsurfgarage.co.ke" style="color:#a8121b">jmsurfgarage.co.ke</a> · info@jmsurf.co.ke · +254 712 504 593</td></tr>
 </table></td></tr></table></body></html>`;
 }
 
 export const isPlatformCrmRoute = (p) => p === "/api/admin/crm/audience" || p === "/api/admin/crm/send" || p === "/api/admin/alerts/test" || p === "/api/admin/company/open";
 
-const ROOT = process.env.ROOT_HOST || "garage.jmsurf.co.ke";
+
 
 export async function handlePlatformCrm(req, res, pathname, body, { sendJson, requireSuperAdmin, deliverEmail }) {
   const who = await requireSuperAdmin(req);
@@ -99,7 +100,7 @@ export async function handlePlatformCrm(req, res, pathname, body, { sendJson, re
         }
       }
       console.log(`[admin] ${who.user.id} opened company ${id} as ${userId}${sp ? " (support pass)" : ""}`);
-      return sendJson(res, 200, { ok: true, url: `https://${t.slug}.${ROOT}/auth/handoff#th=${encodeURIComponent(th)}${sp ? `&sp=${sp}` : ""}&next=${encodeURIComponent("/dashboard")}` });
+      return sendJson(res, 200, { ok: true, url: `${APP_ORIGIN}/auth/handoff#th=${encodeURIComponent(th)}&co=${encodeURIComponent(t.slug)}${sp ? `&sp=${sp}` : ""}&next=${encodeURIComponent("/dashboard")}` });
     }
     if (pathname === "/api/admin/crm/audience") {
       const list = await audienceOf(body?.audience);
@@ -157,7 +158,7 @@ async function ownerSettings() {
 async function sendOwnerAlert(a, everyChannel = false) {
   const s = await ownerSettings();
   const ch = everyChannel ? { email: true, sms: true, whatsapp: true } : s.events[a.event] || {};
-  const link = `https://admin.garage.jmsurf.co.ke${a.link || "/admin"}`;
+  const link = `${ADMIN_ORIGIN}${a.link || "/admin"}`;
   const result = { email: 0, sms: 0, whatsapp: 0, errors: [] };
   if (!s.emails.length && !s.phones.length) result.errors.push("no alert recipients set (Admin → Notifications)");
   if (ch.email && deliver) for (const to of s.emails) {
@@ -181,7 +182,7 @@ async function emailTicketReplies() {
     if (/@/.test(to)) {
       const slug = str(t.tenants?.slug);
       // Staff work on app. (the company comes from their sign-in).
-      const link = slug ? `https://app.garage.jmsurf.co.ke/help?ticket=${m.ticket_id}` : "https://app.garage.jmsurf.co.ke/login";
+      const link = slug ? `${APP_ORIGIN}/help?ticket=${m.ticket_id}` : `${APP_ORIGIN}/login`;
       const subject = `Re: [Ticket #${t.number}] ${str(t.subject)}`;
       const text = `Hello ${str(t.opener_name).split(" ")[0] || "there"},
 

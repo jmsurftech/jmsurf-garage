@@ -3,7 +3,7 @@ import { Orb } from "@/components/Orb";
 import { acceptHandoff } from "@/lib/companySwitch";
 import { useBootCover } from "@/lib/bootScreen";
 
-/** Arrival on a company address from another JMSURF Garage address, already signed in. */
+/** Arrival on app. (or a company's own domain) from another JMSURF Garage address, already signed in. */
 export default function Handoff() {
   useBootCover();
   useEffect(() => {

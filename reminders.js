@@ -1,3 +1,4 @@
+import { APP_ORIGIN, SHOP_ORIGIN } from "./hosts.js";
 // ---------------------------------------------------------------------------
 // Package renewal reminders to shops by email, SMS and WhatsApp.
 //
@@ -111,7 +112,7 @@ function messageFor(stage, sub, tenant, cfg, support) {
     days, dayword: days === 1 ? "day" : "days",
     date: end.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Nairobi" }),
     // Staff renew on the workspace address (app.), where the company comes from the sign-in.
-    link: `${process.env.SHOP_ORIGIN || process.env.APP_ORIGIN || "https://app.garage.jmsurf.co.ke"}/billing`,
+    link: `${SHOP_ORIGIN || APP_ORIGIN}/billing`,
     support,
   };
   const key = stage === "0" ? "today" : stage.startsWith("-") ? "before" : "after";

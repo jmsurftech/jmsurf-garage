@@ -1,5 +1,5 @@
 /**
- * garage.jmsurf.co.ke/pricing: plans by garage size, every module's monthly price,
+ * jmsurfgarage.co.ke/pricing: plans by garage size, every module's monthly price,
  * extra branches, the All modules bundle and a live price calculator. Prices come
  * from the live plans and platform_modules tables (super admin), over the defaults.
  */

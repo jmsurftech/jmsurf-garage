@@ -1,3 +1,4 @@
+import { PUBLIC_ORIGIN } from "./hosts.js";
 // ---------------------------------------------------------------------------
 // Payment hub for the extra gateways in providers.js.
 //
@@ -28,7 +29,7 @@ const ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBL
 const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY ||
   process.env.SUPABASE_SECRET_KEY || process.env.JMSURF_SUPABASE_SERVICE_KEY || "";
-const ORIGIN = (process.env.PUBLIC_ORIGIN || "https://garage.jmsurf.co.ke").replace(/\/+$/, "");
+const ORIGIN = PUBLIC_ORIGIN;
 
 const str = (v) => (v === null || v === undefined ? "" : String(v).trim());
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

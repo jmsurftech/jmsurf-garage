@@ -34,9 +34,9 @@ describe("Daraja", () => {
     expect(darajaReference("", "  ")).toBe("GARAGE");
   });
   it("callback paths may not name the forbidden words", () => {
-    expect(darajaUrlAllowed("https://garage.jmsurf.co.ke/api/garage/i/c2b/abc/confirm")).toBe(true);
-    expect(darajaUrlAllowed("https://garage.jmsurf.co.ke/api/mpesa/confirm")).toBe(false);
-    expect(darajaUrlAllowed("http://garage.jmsurf.co.ke/api/garage/i/c2b/abc/confirm")).toBe(false);
+    expect(darajaUrlAllowed("https://jmsurfgarage.co.ke/api/garage/i/c2b/abc/confirm")).toBe(true);
+    expect(darajaUrlAllowed("https://jmsurfgarage.co.ke/api/mpesa/confirm")).toBe(false);
+    expect(darajaUrlAllowed("http://jmsurfgarage.co.ke/api/garage/i/c2b/abc/confirm")).toBe(false);
   });
 });
 
@@ -144,7 +144,7 @@ describe("automatic SMS fit one part", () => {
     expect(t).toBe("We're done - your car's ready");
   });
   it("shortens long text to 160 and keeps the link whole", () => {
-    const link = "https://acme.garage.jmsurf.co.ke/t/abc123def456";
+    const link = "https://app.jmsurfgarage.co.ke/acme/t/abc123def456";
     const long = `Hello Customer, your vehicle KDA 123A has been inspected and the estimate for the brake pads, discs and labour is ready for your approval. Please review: ${link}`;
     const t = fitOneSms(long);
     expect(gsmLength(t)).toBeLessThanOrEqual(160);

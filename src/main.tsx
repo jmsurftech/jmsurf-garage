@@ -13,7 +13,10 @@ import { installResponsiveTables } from "./lib/responsiveTables";
 import { installTableFit } from "./lib/tableFit";
 import { installActiveTabInView } from "./lib/activeTabInView";
 import { startBootCover } from "./lib/bootScreen";
+import { installShopSlugHeader } from "./lib/host";
 
+// A company's pages on app.jmsurfgarage.co.ke/<slug>/ tell the server which company their API calls are for.
+installShopSlugHeader();
 installErrorReporter();
 installResponsiveTables();
 installTableFit();

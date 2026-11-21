@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Water refill shops: customer ordering portal + low-tank alerts.
 //
-// Customers of a water shop sign in on <shop>.garage.jmsurf.co.ke/order with
+// Customers of a water shop sign in on app.jmsurfgarage.co.ke/<shop>/order (or its own domain) with
 // phone + password. They are NOT Supabase users: this module keeps their
 // accounts and sessions (customer_accounts / customer_sessions) and reaches
 // the database with the service key, scoped to the one shop and the one

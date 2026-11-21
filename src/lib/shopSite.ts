@@ -1,6 +1,6 @@
 /**
  * Content of a shop's one-page website (shown on its own domain and on
- * <slug>.garage.jmsurf.co.ke). Stored in shop_sites.content; anything missing
+ * app.jmsurfgarage.co.ke/<slug> or its own domain). Stored in shop_sites.content; anything missing
  * falls back to sensible wording built from the shop's name.
  */
 export interface SiteFeature { title: string; text: string }

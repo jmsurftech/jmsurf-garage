@@ -262,7 +262,7 @@ export default function ShopLanding({ shop, sizes: catalogue, site, orderHref, s
         <footer className="border-t border-white/15">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-5 text-xs text-white/70 sm:px-6">
             <span>© {new Date().getFullYear()} {shop.name}</span>
-            <a href="https://garage.jmsurf.co.ke" target="_blank" rel="noopener noreferrer" className="font-medium underline-offset-2 hover:text-white hover:underline">Powered by JMSURF Garage</a>
+            <a href="https://jmsurfgarage.co.ke" target="_blank" rel="noopener noreferrer" className="font-medium underline-offset-2 hover:text-white hover:underline">Powered by JMSURF Garage</a>
           </div>
         </footer>
       </section>

@@ -15,12 +15,12 @@ describe("garage message events", () => {
     }
   });
   it("each default text fits one SMS with realistic values", () => {
-    const vars = { company: "Acme Motors Westlands", name: "Customer", reg: "KDA 123A", date: "Mon 24 Nov", time: "9:00", job: "JC-0042", link: "https://acme.garage.jmsurf.co.ke/t/0123456789abcdef", amount: "12,500", total: "48,300", item: "front brake pads and discs", doc: "speed governor certificate", receipt: "TKA1B2C3D4" };
+    const vars = { company: "Acme Motors Westlands", name: "Customer", reg: "KDA 123A", date: "Mon 24 Nov", time: "9:00", job: "JC-0042", link: "https://app.jmsurfgarage.co.ke/acme/t/0123456789abcdef", amount: "12,500", total: "48,300", item: "front brake pads and discs", doc: "speed governor certificate", receipt: "TKA1B2C3D4" };
     for (const k of Object.keys(GARAGE_TEXTS)) expect(smsPartsOf(garageText(k, vars))).toBe(1);
   });
   it("fills placeholders and drops labels whose value is missing", () => {
-    expect(garageText("job_checked_in", { company: "Acme", reg: "KDA 123A", job: "JC-1", link: "https://x.garage.jmsurf.co.ke/t/1" }))
-      .toBe("Acme: KDA 123A is checked in, job JC-1. Follow the progress here: https://x.garage.jmsurf.co.ke/t/1");
+    expect(garageText("job_checked_in", { company: "Acme", reg: "KDA 123A", job: "JC-1", link: "https://app.jmsurfgarage.co.ke/x/t/1" }))
+      .toBe("Acme: KDA 123A is checked in, job JC-1. Follow the progress here: https://app.jmsurfgarage.co.ke/x/t/1");
     expect(garageText("payment_received", { company: "Acme", amount: "500", reg: "KDA 123A" })).toBe("Acme: we received KES 500 for KDA 123A. Thank you!");
   });
   it("companies can switch each event per channel", () => {
