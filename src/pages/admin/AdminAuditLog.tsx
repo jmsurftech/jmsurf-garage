@@ -6,6 +6,7 @@ import { allRows, downloadCsv } from "@/lib/fetchAll";
 import { PageHeader, Toolbar, SearchBox, Segmented, Panel, EmptyState, PageLoader, PickMenu, ExportMenu, btnCls } from "@/components/kit";
 import Pager from "@/components/Pager";
 import { cn } from "@/lib/utils";
+import { actionLabel } from "@/lib/adminApi";
 
 interface AuditEntry {
   id: string;
@@ -16,7 +17,7 @@ interface AuditEntry {
   metadata?: Record<string, any>;
 }
 
-const ACTION: Record<string, string> = { set_role: "changed the role of", reset_mfa: "reset two-step sign-in for", sign_out_everywhere: "signed out everywhere" };
+
 
 export default function AdminAuditLog() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
@@ -40,7 +41,7 @@ export default function AdminAuditLog() {
       allRows(() => sb.from("subscriptions").select("id, tenant_id, plan_name, status, created_at, updated_at").gte("created_at", since).order("created_at", { ascending: false })),
       allRows(() => sb.from("subscription_payments").select("id, tenant_id, amount, gateway, status, created_at").gte("created_at", since).order("created_at", { ascending: false })),
       allRows(() => sb.from("tenant_access_audit").select("id, user_email, user_tenant_slug, attempted_url, attempted_slug, redirected_to, created_at").gte("created_at", since).order("created_at", { ascending: false })),
-      allRows(() => sb.from("platform_admin_actions").select("id, admin_id, action, target_type, target_id, detail, created_at").gte("created_at", since).order("created_at", { ascending: false })),
+      allRows(() => sb.from("platform_admin_actions").select("id, admin_id, action, target_type, target_id, tenant_id, detail, created_at").gte("created_at", since).order("created_at", { ascending: false })),
       allRows(() => sb.from("feature_audit_logs").select("id, actor_email, scope, tenant_id, diff, created_at").gte("created_at", since).order("created_at", { ascending: false })),
     ]);
 
@@ -60,11 +61,10 @@ export default function AdminAuditLog() {
 
     (actions || []).forEach((a: any) => {
       const who = people[a.admin_id] || "An admin";
-      const target = people[a.target_id] || tenantMap[a.target_id] || "a user";
-      let description = `${who} ${ACTION[a.action] || a.action} ${target}`;
-      if (a.action === "set_role") description += ` (${a.detail?.from || "none"} → ${a.detail?.to})`;
-      if (a.action === "sign_out_everywhere") description = `${who} signed ${target} out everywhere (${a.detail?.sessions_ended ?? 0} sessions)`;
-      auditEntries.push({ id: `adm-${a.id}`, type: "admin", description, created_at: a.created_at });
+      // Who did what, to whom (a person), in which company. Details are on the company's Activity tab.
+      const person = a.target_type === "user" ? people[a.target_id] || a.detail?.email || "" : "";
+      const description = `${who}: ${actionLabel(a.action)}${person ? ` · ${person}` : ""}`;
+      auditEntries.push({ id: `adm-${a.id}`, type: "admin", description, tenant_name: a.tenant_id ? tenantMap[a.tenant_id] : undefined, created_at: a.created_at });
     });
 
     (features || []).forEach((f: any) => {

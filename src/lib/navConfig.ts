@@ -81,7 +81,7 @@ export const NAV: NavSection[] = [
           { path: "/warehouse/packages", label: "Packages", icon: Boxes, module: "inventory" },
           { path: "/warehouse/shipments", label: "Shipments & Delivery Notes", icon: Truck, module: "inventory" },
           { path: "/warehouse/reorder", label: "Reorder", icon: Repeat, module: "inventory" },
-          { path: "/apps/fleet", label: "Fleet", icon: Car, module: "fleet", match: ["/apps/fleet"] },
+          { path: "/apps/fleet", label: "Company vehicles", icon: Car, module: "fleet", match: ["/apps/fleet"] },
         ],
       },
       {

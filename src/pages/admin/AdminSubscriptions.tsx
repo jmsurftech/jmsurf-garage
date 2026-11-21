@@ -220,7 +220,7 @@ export default function AdminSubscriptions() {
     return (
       <div className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Package name" required className="sm:col-span-3"><input className="fi" value={data.name} onChange={(e) => set({ ...data, name: e.target.value })} placeholder="Enter package name" /></Field>
+          <Field label="Plan name" required className="sm:col-span-3"><input className="fi" value={data.name} onChange={(e) => set({ ...data, name: e.target.value })} placeholder="Enter plan name" /></Field>
           <Field label="Monthly price (KSh)" required><input className="fi" type="number" min={0} value={data.price_monthly || ""} onChange={num("price_monthly")} /></Field>
           <Field label="Quarterly discount %"><input className="fi" type="number" min={0} max={90} value={data.quarterly_discount} onChange={num("quarterly_discount")} /></Field>
           <Field label="Yearly discount %"><input className="fi" type="number" min={0} max={90} value={data.annual_discount} onChange={num("annual_discount")} /></Field>
@@ -238,7 +238,7 @@ export default function AdminSubscriptions() {
         {renderFeaturePicker(data.features || emptyFeatureState(), (key) => set({ ...data, features: { ...(data.features || emptyFeatureState()), [key]: !(data.features || emptyFeatureState())[key] } }))}
         {withActive && (
           <label className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm">
-            <span><span className="font-medium">Show on the website and sign-up</span><span className="block text-xs text-muted-foreground">Hidden packages keep working for companies already on them.</span></span>
+            <span><span className="font-medium">Show on the website and sign-up</span><span className="block text-xs text-muted-foreground">Hidden plans keep working for companies already on them.</span></span>
             <input type="checkbox" className="h-5 w-5 accent-[hsl(var(--primary))]" checked={!!data.is_active} onChange={(e) => set({ ...data, is_active: e.target.checked })} />
           </label>
         )}
@@ -248,10 +248,10 @@ export default function AdminSubscriptions() {
 
   return (
     <div className="space-y-3">
-      <PageHeader title="Packages" icon={Package}
-        actions={<Button size="sm" onClick={() => setShowAdd(true)}><Plus /> Add package</Button>} />
+      <PageHeader title="Plans" icon={Package}
+        actions={<Button size="sm" onClick={() => setShowAdd(true)}><Plus /> Add plan</Button>} />
 
-      {plans.length === 0 ? <Panel><EmptyState icon={Package} title="No packages yet" /></Panel> : (
+      {plans.length === 0 ? <Panel><EmptyState icon={Package} title="No plans yet" /></Panel> : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {plans.map((plan) => {
             const stats = planStats(plan.id);
@@ -297,16 +297,16 @@ export default function AdminSubscriptions() {
         </div>
       )}
 
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} size="xl" icon={Package} title="Add a package"
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} size="xl" icon={Package} title="Add a plan"
         footer={<>
           <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-          <Button onClick={addPlan} disabled={!newPlan.name.trim()}><Save /> Save package</Button>
+          <Button onClick={addPlan} disabled={!newPlan.name.trim()}><Save /> Save plan</Button>
         </>}>
         {renderPlanForm(newPlan, setNewPlan, false)}
       </Modal>
 
-      <Modal open={!!editingId} onClose={() => setEditingId(null)} size="xl" icon={Edit3} title="Edit package"
-        description="Price and feature changes apply to every company on this package."
+      <Modal open={!!editingId} onClose={() => setEditingId(null)} size="xl" icon={Edit3} title="Edit plan"
+        description="Price and feature changes apply to every company on this plan."
         footer={<>
           <Button variant="outline" onClick={() => setEditingId(null)}>Cancel</Button>
           <Button onClick={saveEdit} disabled={!String(editData.name || "").trim()}><Save /> Save changes</Button>
@@ -315,7 +315,7 @@ export default function AdminSubscriptions() {
       </Modal>
 
       <Modal center open={!!confirmDelete} onClose={() => setConfirmDelete(null)} size="sm" icon={Trash2}
-        title={confirmDelete && planStats(confirmDelete.id).total > 0 ? "This package is in use" : "Delete this package?"}
+        title={confirmDelete && planStats(confirmDelete.id).total > 0 ? "This plan is in use" : "Delete this plan?"}
         description={confirmDelete && planStats(confirmDelete.id).total > 0
           ? `${planStats(confirmDelete.id).total} company(ies) are on ${confirmDelete.name}. Hide it instead so new companies can't pick it.`
           : "It will no longer appear anywhere. This can't be undone."}
@@ -324,7 +324,7 @@ export default function AdminSubscriptions() {
           <Button onClick={() => { const p = confirmDelete; setConfirmDelete(null); startEdit(p); }}><Edit3 /> Edit and hide</Button>
         </> : <>
           <Button variant="outline" onClick={() => setConfirmDelete(null)}>Cancel</Button>
-          <Button variant="destructive" onClick={() => { deletePlan(confirmDelete.id); setConfirmDelete(null); }}>Delete package</Button>
+          <Button variant="destructive" onClick={() => { deletePlan(confirmDelete.id); setConfirmDelete(null); }}>Delete plan</Button>
         </>}
       />
     </div>

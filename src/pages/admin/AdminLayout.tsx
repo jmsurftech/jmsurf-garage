@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import PageBoundary from "@/components/PageBoundary";
 import { OrbLoader } from "@/components/Orb";
 import {
-  LayoutDashboard, Building2, CreditCard, FileText, Settings, Banknote, Users, Activity, Menu, X, BarChart3, ExternalLink, ChevronLeft, PanelLeft, HeartPulse, Globe, MessagesSquare, Grid2x2, Sun, Moon, Search, Target, Bell, UserRound, ShieldCheck, LogOut, Headset, KeyRound, Wifi } from "lucide-react";
+  LayoutDashboard, Building2, CreditCard, FileText, Settings, Banknote, Users, Activity, Menu, X, BarChart3, ExternalLink, ChevronLeft, PanelLeft, HeartPulse, Globe, MessagesSquare, Grid2x2, Sun, Moon, Search, Target, Bell, UserRound, LogOut, Headset, KeyRound, Wifi } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { closeAllDropdowns } from "@/lib/singleDropdown";
@@ -22,27 +22,28 @@ type NavSection = { label: string; items: NavItem[] };
 const NAV: NavSection[] = [
   { label: "Overview", items: [{ to: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true }] },
   {
+    // A company's plan, modules, users, SMS, notes and activity are all on its own page.
     label: "Companies",
     items: [
-      { to: "/admin/customers", icon: Building2, label: "Companies" },
+      { to: "/admin/companies", icon: Building2, label: "Companies" },
       { to: "/admin/users", icon: Users, label: "Users" },
-      { to: "/admin/subscriptions", icon: CreditCard, label: "Plans" },
-      { to: "/admin/modules", icon: Grid2x2, label: "Modules & prices" },
       { to: "/admin/domains", icon: Globe, label: "Domains" },
       { to: "/admin/etims-tokens", icon: KeyRound, label: "KRA tokens" },
     ],
   },
   {
-    label: "Growth",
+    label: "Sales",
     items: [
       { to: "/admin/leads", icon: Target, label: "Leads & CRM" },
       { to: "/admin/support", icon: Headset, label: "Support" },
+      { to: "/admin/payments", icon: Banknote, label: "Payments" },
     ],
   },
   {
-    label: "Money",
+    label: "Pricing",
     items: [
-      { to: "/admin/payments", icon: Banknote, label: "Payments" },
+      { to: "/admin/subscriptions", icon: CreditCard, label: "Plans" },
+      { to: "/admin/modules", icon: Grid2x2, label: "Modules & prices" },
     ],
   },
   {
@@ -127,7 +128,6 @@ export default function AdminLayout() {
   }, [user?.id, role]);
   const isOwner = role === "super_admin" || confirmedOwner === true;
   const loc = useLocation();
-  const navigate = useNavigate();
   const [platformName, setPlatformName] = useState("JMSURF Garage");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [palette, setPalette] = useState(false);
@@ -285,9 +285,6 @@ export default function AdminLayout() {
             <button onClick={toggleDarkMode} className="ws-ib" aria-label={darkMode ? "Light mode" : "Dark mode"} title={darkMode ? "Light mode" : "Dark mode"}>
               {darkMode ? <Sun /> : <Moon />}
             </button>
-            <button onClick={() => navigate("/admin/settings")} aria-label="Settings" title="Settings" className={cn("ws-gear hidden md:grid", loc.pathname.startsWith("/admin/settings") && "is-on")}>
-              <Settings />
-            </button>
             <div className="relative">
               <button onClick={() => setAccountOpen(!accountOpen)} className="adm-user" aria-label="Account" aria-expanded={accountOpen}>
                 <span className="adm-avatar">{initials}</span>
@@ -301,10 +298,7 @@ export default function AdminLayout() {
                   <div className="fixed inset-0 z-40" onClick={() => setAccountOpen(false)} />
                   <div className="absolute right-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-border bg-popover p-1.5 shadow-2xl">
                     <div className="px-3 py-2"><p className="truncate text-sm font-semibold">{displayName}</p><p className="truncate text-xs text-muted-foreground">{user?.email}</p></div>
-                    <Link to="/admin/account" onClick={() => setAccountOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm hover:bg-muted"><UserRound className="h-4 w-4" /> My account</Link>
-                    <Link to="/admin/account" onClick={() => setAccountOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm hover:bg-muted"><ShieldCheck className="h-4 w-4" /> Password and two-step sign-in</Link>
-                    <Link to="/admin/notifications" onClick={() => setAccountOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm hover:bg-muted"><Bell className="h-4 w-4" /> Notifications</Link>
-                    <Link to="/admin/settings" onClick={() => setAccountOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm hover:bg-muted md:hidden"><Settings className="h-4 w-4" /> Settings</Link>
+                    <Link to="/admin/account" onClick={() => setAccountOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm hover:bg-muted"><UserRound className="h-4 w-4" /> My account and security</Link>
                     <a href="https://garage.jmsurf.co.ke" target="_blank" rel="noopener noreferrer" onClick={() => setAccountOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm hover:bg-muted sm:hidden"><ExternalLink className="h-4 w-4" /> View site</a>
                     <div className="my-1 border-t border-border" />
                     <button onClick={() => void signOut()} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10"><LogOut className="h-4 w-4" /> Sign out</button>
@@ -335,24 +329,24 @@ export default function AdminLayout() {
 function CommandPalette({ onClose }: { onClose: () => void }) {
   const [q, setQ] = useState("");
   const nav = useNavigate();
-  const { data: companies = [] } = useQuery({ queryKey: ["admin-palette-companies"], queryFn: async () => ((await (supabase as any).from("tenants").select("id,business_name,slug").order("business_name").limit(2000)).data || []) as any[] });
+  const { data: companies = [] } = useQuery({ queryKey: ["admin-palette-companies"], queryFn: async () => ((await (supabase as any).from("tenants").select("id,business_name,contact_name").is("deleted_at", null).order("business_name").limit(5000)).data || []) as any[] });
   const pages = [...NAV.flatMap((s) => s.items.map((i) => ({ ...i, section: s.label }))), { to: "/admin/account", icon: UserRound, label: "My account", section: "Account" }];
   const t = q.trim().toLowerCase();
   const hitPages = pages.filter((p) => !t || `${p.label} ${p.section}`.toLowerCase().includes(t)).slice(0, 8);
-  const hitCos = t ? companies.filter((c) => `${c.business_name} ${c.slug}`.toLowerCase().includes(t)).slice(0, 8) : [];
+  const hitCos = t ? companies.filter((c) => `${c.business_name} ${c.contact_name || ""}`.toLowerCase().includes(t)).slice(0, 8) : [];
   const go = (to: string) => { onClose(); nav(to); };
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 p-3 pt-[12vh] backdrop-blur-[2px]" onClick={onClose}>
       <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-popover shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 border-b border-border px-4"><Search className="h-4 w-4 text-muted-foreground" /><input autoFocus className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Search pages and companies" value={q} onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { if (hitCos[0]) go(`/admin/customers?open=${hitCos[0].id}`); else if (hitPages[0]) go(hitPages[0].to); } }} />
+          onKeyDown={(e) => { if (e.key === "Enter") { if (hitCos[0]) go(`/admin/companies/${hitCos[0].id}`); else if (hitPages[0]) go(hitPages[0].to); } }} />
           <kbd className="hidden rounded-md border border-border px-1.5 py-0.5 text-[10.5px] font-semibold text-muted-foreground sm:block">Esc</kbd></div>
         <div className="max-h-[60vh] overflow-y-auto p-1.5">
           {hitPages.length > 0 && <p className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Pages</p>}
           {hitPages.map((p) => <button key={p.to} onClick={() => go(p.to)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-muted"><p.icon className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="min-w-0 truncate">{p.label}</span><span className="ml-auto shrink-0 text-xs text-muted-foreground">{p.section}</span></button>)}
           {hitCos.length > 0 && <p className="px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Companies</p>}
-          {hitCos.map((c) => <button key={c.id} onClick={() => go(`/admin/customers?open=${c.id}`)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-muted"><Building2 className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="min-w-0 truncate">{c.business_name}</span><span className="ml-auto shrink-0 text-xs text-muted-foreground">{c.slug}</span></button>)}
+          {hitCos.map((c) => <button key={c.id} onClick={() => go(`/admin/companies/${c.id}`)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-muted"><Building2 className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="min-w-0 truncate">{c.business_name}</span><span className="ml-auto max-w-[40%] shrink-0 truncate text-xs text-muted-foreground">{c.contact_name}</span></button>)}
           {!hitPages.length && !hitCos.length && <p className="px-3 py-6 text-center text-sm text-muted-foreground">Nothing found.</p>}
         </div>
       </div>

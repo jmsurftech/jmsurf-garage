@@ -7,6 +7,8 @@ export type WhatsNewTag = "new" | "improved" | "fixed" | "notice";
 export interface WhatsNewEntry { slug: string; date: string; tag: WhatsNewTag; title: string; body: string }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  { slug: "garage-support-account-help", date: "2026-11-21", tag: "improved", title: "Faster help from JMSURF support",
+    body: "- JMSURF support can now add a person to your company for you, change their role, send them a password reset link or reset their two-step sign-in\n- New people get an email with a link to choose their own password, or a one-time password they change when they first sign in\n- Your plan, trial, modules and SMS credit can be sorted out in one call\n- If your account is ever put on hold, the sign-in screen says why" },
   { slug: "garage-clean-pages", date: "2026-11-20", tag: "improved", title: "Cleaner, simpler pages",
     body: "- Page titles sit on one line and stay at the top while you scroll\n- One main button per page; the rest are in More, and downloads in Export\n- The dashboard shows one strip of key figures, then what needs attention, then the charts\n- Job cards: one page with a Board and a List switch\n- On a job card, one button shows the next step: Check in, Inspect, Estimate, Approve, Quality check, Ready, Release\n- Job cards and vehicles open beside their list on a wide screen\n- Pop-ups open from the right side\n- On phones, lists show as cards with two details per line" },
   // ── JMSURF Garage launch ────────────────────────────────────────────────

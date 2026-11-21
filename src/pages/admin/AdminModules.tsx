@@ -1,22 +1,21 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Grid2x2, Gift, Save, TrendingUp } from "lucide-react";
+import { CheckCircle2, Gift, Grid2x2, Save, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Panel, Modal, Field, PageHeader, MoreMenu, StatGrid, StatTile, Toolbar, SearchBox, Segmented, btnCls, btnPrimaryCls } from "@/components/kit";
-import { MODULES, MODULE_BY_KEY } from "@/lib/modules";
+import { Panel, PageHeader, StatGrid, StatTile, Toolbar, SearchBox, Segmented, btnPrimaryCls } from "@/components/kit";
+import { MODULE_BY_KEY } from "@/lib/modules";
 import { friendlyError } from "@/lib/friendlyError";
 import { toast } from "sonner";
 
 const sb = supabase as any;
 const kes = (n: number) => `KES ${Math.round(n).toLocaleString("en-KE")}`;
 
-/** Super admin: module prices, availability, adoption and free (comped) modules per company. */
+/** Super admin: module prices, availability and adoption. A module for one company (free, trial, paid) is set on that company's page. */
 export default function AdminModules() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [edits, setEdits] = useState<Record<string, { price?: string; active?: boolean }>>({});
   const [saving, setSaving] = useState(false);
-  const [comp, setComp] = useState(false);
   const [cat, setCat] = useState("All");
 
   const { data: rows = [] } = useQuery({
@@ -73,7 +72,6 @@ export default function AdminModules() {
         <button type="button" disabled={!dirty || saving} onClick={save} className={btnPrimaryCls}>
           <Save className="h-4 w-4" /> {saving ? "Saving…" : dirty ? `Save ${Object.keys(edits).length} change${Object.keys(edits).length > 1 ? "s" : ""}` : "Saved"}
         </button>
-        <MoreMenu items={[{ label: "Give a module free", icon: Gift, onSelect: () => setComp(true) }]} />
       </>} />
 
       <StatGrid>
@@ -149,43 +147,6 @@ export default function AdminModules() {
         })}
       </div>
 
-      <CompModule open={comp} onClose={() => setComp(false)} onDone={() => void qc.invalidateQueries({ queryKey: ["admin-tenant-modules"] })} />
     </div>
-  );
-}
-
-function CompModule({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: () => void }) {
-  const [tenant, setTenant] = useState("");
-  const [key, setKey] = useState("crm");
-  const [status, setStatus] = useState("comped");
-  const [busy, setBusy] = useState(false);
-  const { data: tenants = [] } = useQuery({
-    queryKey: ["admin-tenants-min"], enabled: open,
-    queryFn: async () => (await sb.from("tenants").select("id, business_name, slug").is("deleted_at", null).order("business_name")).data || [],
-  });
-  const go = async () => {
-    if (!tenant) return toast.error("Choose a company");
-    setBusy(true);
-    try {
-      const row: any = { tenant_id: tenant, module_key: key, status, price_monthly: status === "comped" ? 0 : (MODULE_BY_KEY[key]?.price || 0), updated_at: new Date().toISOString() };
-      if (status === "trial") row.trial_ends_at = new Date(Date.now() + 14 * 86400000).toISOString();
-      if (status === "active") row.current_period_end = new Date(Date.now() + 30 * 86400000).toISOString();
-      if (status === "cancelled") row.cancelled_at = new Date().toISOString();
-      const { error } = await sb.from("tenant_modules").upsert(row, { onConflict: "tenant_id,module_key" });
-      if (error) throw error;
-      toast.success("Module updated for the company"); onDone(); onClose();
-    } catch (e) { toast.error(friendlyError(e)); } finally { setBusy(false); }
-  };
-  return (
-    <Modal open={open} onClose={onClose} title="Set a module for a company" icon={Gift}
-      footer={<><button type="button" onClick={onClose} className={btnCls}>Cancel</button><button type="button" disabled={busy} onClick={go} className={btnPrimaryCls}>Apply</button></>}>
-      <div className="space-y-4">
-        <Field label="Company"><select className="fi" value={tenant} onChange={(e) => setTenant(e.target.value)}><option value="">Choose…</option>{tenants.map((t: any) => <option key={t.id} value={t.id}>{t.business_name} ({t.slug})</option>)}</select></Field>
-        <Field label="Module"><select className="fi" value={key} onChange={(e) => setKey(e.target.value)}>{MODULES.filter((m) => !m.included).map((m) => <option key={m.key} value={m.key}>{m.name}</option>)}</select></Field>
-        <Field label="Status"><select className="fi" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="comped">Free for this company</option><option value="trial">14-day trial</option><option value="active">Active (billed, 30 days)</option><option value="cancelled">Switched off</option>
-        </select></Field>
-      </div>
-    </Modal>
   );
 }
