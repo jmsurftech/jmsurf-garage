@@ -17,7 +17,7 @@ import { randomInt } from "node:crypto";
 const URL_ = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
 const KEY = process.env.JMSURF_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || "";
 const ANON = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
-const APP = (process.env.SHOP_ORIGIN || process.env.APP_ORIGIN || "https://app.garage.jmsurf.co.ke").replace(/\/+$/, "");
+const APP = (process.env.SHOP_ORIGIN || process.env.APP_ORIGIN || "https://app.jmsurfgarage.co.ke").replace(/\/+$/, "");
 
 /** Roles a company person can have (the platform role is never handed out here). */
 export const COMPANY_ROLES = ["admin", "manager", "finance", "cashier", "sales_person", "stock_manager", "customer_service", "rider", "packaging"];

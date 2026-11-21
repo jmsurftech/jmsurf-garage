@@ -25,7 +25,7 @@ function IntakePanel() {
   return (
     <Panel title="Sign-ups from other products" icon={Send} description="Other JMSURF products post new sign-ups here; they appear in Leads & CRM.">
       <div className="min-w-0 space-y-2 text-sm">
-        <p className="break-all">Address: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">POST https://garage.jmsurf.co.ke/api/public/lead</code></p>
+        <p className="break-all">Address: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">POST https://jmsurfgarage.co.ke/api/public/lead</code></p>
         <p className="break-all">Header <code className="rounded bg-muted px-1.5 py-0.5 text-xs">x-lead-key</code>: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{show ? key : "••••••••••••"}</code> <button className="text-xs font-semibold text-primary" onClick={() => setShow(!show)}>{show ? "Hide" : "Show"}</button></p>
         <p className="text-xs text-muted-foreground">JSON body: product (isp, sms, rms…), name, company, email, phone, country, heard_from, heard_detail, details {"{…}"}.</p>
       </div>

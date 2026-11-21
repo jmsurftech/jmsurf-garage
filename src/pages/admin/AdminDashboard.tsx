@@ -211,7 +211,6 @@ export default function AdminDashboard() {
                     <tr key={t.id}>
                       <td>
                         <p className="max-w-[180px] truncate font-medium">{t.business_name || "—"}</p>
-                        <p className="max-w-[220px] truncate font-mono text-[11px] text-muted-foreground">{t.slug ? `${t.slug}.garage.jmsurf.co.ke` : "—"}</p>
                       </td>
                       <td className="max-w-[180px] truncate text-muted-foreground">{t.contact_email || "—"}</td>
                       <td className="whitespace-nowrap text-muted-foreground">{format(new Date(t.created_at), "d MMM yyyy")}</td>

@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { EmptyState, ExportMenu, PageHeader, Panel, PickMenu, Pill, SearchBox, Segmented, StatGrid, StatTile, TableWrap, Toolbar, btnCls } from "@/components/kit";
 import { cn } from "@/lib/utils";
 import { PagedRows } from "@/components/Pager";
-import { ROOT_HOST } from "@/lib/host";
 
 type Company = { tenant_id: string; business_name: string; slug: string | null; people: number; active_people: number; logins: number; last_login: string | null; last_seen: string | null; online_now: number; minutes: number; days_used: number };
 type Person = { user_id: string; display_name: string | null; email: string | null; role: string; is_owner: boolean; logins: number; last_login: string | null; last_seen: string | null; online: boolean; here_now: boolean; path: string | null; user_agent: string | null; minutes: number; days_used: number };
@@ -125,8 +124,8 @@ export default function AdminUsage() {
             <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
           </button>
           <ExportMenu items={[{ label: "Companies CSV", icon: Download, disabled: !list.length, onSelect: () => downloadCsv(`usage-companies-${days}d.csv`,
-            ["Company", "Address", "People", "Used it", "Sign-ins", "Last sign-in", "Last seen", "Online now", "Days used", "Minutes"],
-            list.map((c) => [c.business_name, c.slug ? `${c.slug}.${ROOT_HOST}` : "", c.people, c.active_people, c.logins, c.last_login || "", c.last_seen || "", c.online_now, c.days_used, c.minutes])) }]} />
+            ["Company", "People", "Used it", "Sign-ins", "Last sign-in", "Last seen", "Online now", "Days used", "Minutes"],
+            list.map((c) => [c.business_name, c.people, c.active_people, c.logins, c.last_login || "", c.last_seen || "", c.online_now, c.days_used, c.minutes])) }]} />
         </>} />
 
       {error && <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
@@ -170,7 +169,6 @@ export default function AdminUsage() {
                   <tr key={c.tenant_id} className="cursor-pointer" onClick={() => setOpen(c)}>
                     <td>
                       <p className="max-w-[260px] truncate font-semibold">{c.business_name}</p>
-                      <p className="font-mono text-[11px] text-muted-foreground">{c.slug ? `${c.slug}.${ROOT_HOST}` : "No address"}</p>
                     </td>
                     <td className="text-right tabular-nums">{c.active_people} <span className="text-xs text-muted-foreground">/ {c.people}</span></td>
                     <td className="text-right tabular-nums">{c.logins}</td>

@@ -251,7 +251,7 @@ export default function AdminCMS() {
     <div className="space-y-3">
       <PageHeader title="Website content" icon={FileText}
         actions={<>
-          <MoreMenu items={[{ label: "View site", icon: ExternalLink, href: "https://garage.jmsurf.co.ke", newTab: true }]} />
+          <MoreMenu items={[{ label: "View site", icon: ExternalLink, href: "https://jmsurfgarage.co.ke", newTab: true }]} />
           <Segmented value={viewMode} onChange={(v) => switchMode(v as ViewMode)} options={[
             { value: "visual", label: <span className="inline-flex items-center gap-1.5"><Eye className="h-3.5 w-3.5" />Form</span> },
             { value: "json", label: <span className="inline-flex items-center gap-1.5"><Code className="h-3.5 w-3.5" />JSON</span> },

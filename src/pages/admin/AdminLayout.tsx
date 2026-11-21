@@ -281,7 +281,7 @@ export default function AdminLayout() {
             <Search />
           </button>
           <div className="ws-acts">
-            <a href="https://garage.jmsurf.co.ke" target="_blank" rel="noopener noreferrer" className="ws-ib hidden sm:grid" aria-label="View site" title="View site"><ExternalLink /></a>
+            <a href="https://jmsurfgarage.co.ke" target="_blank" rel="noopener noreferrer" className="ws-ib hidden sm:grid" aria-label="View site" title="View site"><ExternalLink /></a>
             <button onClick={toggleDarkMode} className="ws-ib" aria-label={darkMode ? "Light mode" : "Dark mode"} title={darkMode ? "Light mode" : "Dark mode"}>
               {darkMode ? <Sun /> : <Moon />}
             </button>
@@ -299,7 +299,7 @@ export default function AdminLayout() {
                   <div className="absolute right-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-border bg-popover p-1.5 shadow-2xl">
                     <div className="px-3 py-2"><p className="truncate text-sm font-semibold">{displayName}</p><p className="truncate text-xs text-muted-foreground">{user?.email}</p></div>
                     <Link to="/admin/account" onClick={() => setAccountOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm hover:bg-muted"><UserRound className="h-4 w-4" /> My account and security</Link>
-                    <a href="https://garage.jmsurf.co.ke" target="_blank" rel="noopener noreferrer" onClick={() => setAccountOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm hover:bg-muted sm:hidden"><ExternalLink className="h-4 w-4" /> View site</a>
+                    <a href="https://jmsurfgarage.co.ke" target="_blank" rel="noopener noreferrer" onClick={() => setAccountOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm hover:bg-muted sm:hidden"><ExternalLink className="h-4 w-4" /> View site</a>
                     <div className="my-1 border-t border-border" />
                     <button onClick={() => void signOut()} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10"><LogOut className="h-4 w-4" /> Sign out</button>
                   </div>
