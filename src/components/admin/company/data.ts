@@ -44,10 +44,9 @@ export function companyStatus(c: Company, s?: Sub | null): string {
   if (c.deleted_at) return "archived";
   if (!s) return "none";
   if (s.status === "suspended" || s.status === "paused") return "suspended";
-  if (s.status === "trialing") return "trial";
-  const end = s.status === "trial" ? s.trial_ends_at || s.current_period_end : s.current_period_end;
-  if ((s.status === "active" || s.status === "trial") && end && Date.parse(end) < Date.now()) return "expired";
-  return s.status;
+  const end = s.status === "trial" || s.status === "trialing" ? s.trial_ends_at || s.current_period_end : s.current_period_end;
+  if ((s.status === "active" || s.status === "trial" || s.status === "trialing") && end && Date.parse(end) < Date.now()) return "expired";
+  return s.status === "trialing" ? "trial" : s.status;
 }
 export const endOf = (s?: Sub | null) => (s ? (s.status === "trial" || s.status === "trialing" ? s.trial_ends_at || s.current_period_end : s.current_period_end || s.trial_ends_at) : null);
 export const ksh = (n: number) => `KSh ${Math.round(Number(n) || 0).toLocaleString()}`;

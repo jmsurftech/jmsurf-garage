@@ -99,7 +99,7 @@ export default function AdminCompany() {
 
         <StatGrid>
           <StatTile label="Plan" value={sub?.plan_name || "None"} hint={sub ? `${ksh(sub.price)}/mo · ${sub.billing_cycle || "monthly"}` : undefined} icon={CreditCard} tone="primary" />
-          <StatTile label={sub?.status === "trial" ? "Trial ends" : sub?.comped_until ? "Free until" : "Paid until"} value={end ? format(new Date(end), "d MMM yyyy") : "—"} icon={Calendar} tone={end && Date.parse(end) < Date.now() ? "danger" : "info"} />
+          <StatTile label={sub?.status === "trial" || sub?.status === "trialing" ? "Trial ends" : sub?.comped_until ? "Free until" : "Paid until"} value={end ? format(new Date(end), "d MMM yyyy") : "—"} icon={Calendar} tone={end && Date.parse(end) < Date.now() ? "danger" : "info"} />
           <StatTile label="Users" value={users.data ? `${active}${cap ? ` / ${cap}` : ""}` : "…"} hint={cap ? "active / plan limit" : "active"} icon={Users} tone="muted" />
           <StatTile label="SMS balance" value={(sms?.balance_units ?? 0).toLocaleString()} hint={sms ? `${(sms.total_sent || 0).toLocaleString()} sent` : undefined} icon={MessageSquare} tone="success" />
         </StatGrid>

@@ -39,8 +39,8 @@ async function ensureDemo() {
     body: JSON.stringify({
       email: DEMO_EMAIL, password: randomBytes(24).toString("base64url"), email_confirm: true,
       user_metadata: {
-        full_name: "Demo Visitor", registration_type: "tenant", business_name: "Demo Business", business_email: DEMO_EMAIL,
-        business_phone: "0700000000", contact_name: "Demo Visitor", store_slug: "demo", industry: "Retail & wholesale", business_type: "general",
+        full_name: "Demo Garage Owner", registration_type: "tenant", business_name: "JMSURF Demo Garage", business_email: DEMO_EMAIL,
+        business_phone: "0700000000", contact_name: "Demo Garage Owner", store_slug: "demo", industry: "Automotive", business_type: "general",
         country: "KE", currency: "KES", start_apps: (Array.isArray(apps) ? apps : []).map((a) => a.key),
         // The platform's own demo company (the database requires a terms record for every company).
         terms_accepted: true, terms_version: "2026-11-14", terms_source: "demo",

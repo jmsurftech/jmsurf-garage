@@ -217,7 +217,7 @@ async function companyAction(action, who, body, ctx) {
     if (status !== "expired" && !ends) refuse("Choose the date it runs to");
     const keep = sub && sub.plan_id === plan.id;
     const patch = {
-      plan_id: plan.id, plan_name: plan.name, billing_cycle: cycle, status,
+      plan_id: plan.id, plan_name: plan.name, billing_cycle: cycle, status: status === "trial" ? "trialing" : status, // sign-up stores trials as "trialing"
       price: keep ? Number(sub.price ?? plan.price_monthly) : Number(plan.price_monthly || 0),
       max_users: keep ? sub.max_users ?? plan.max_users : plan.max_users,
       max_locations: keep ? sub.max_locations ?? plan.max_locations : plan.max_locations,
@@ -245,7 +245,7 @@ async function companyAction(action, who, body, ctx) {
     }
     const until = endOfDay(body.until);
     if (!until || Date.parse(until) < Date.now()) refuse("Choose a date from today on");
-    await db(`subscriptions?id=eq.${sub.id}`, { method: "PATCH", prefer: "return=minimal", body: { status: "trial", trial_ends_at: until, current_period_end: until, paused_at: null, updated_at: now } });
+    await db(`subscriptions?id=eq.${sub.id}`, { method: "PATCH", prefer: "return=minimal", body: { status: "trialing", trial_ends_at: until, current_period_end: until, paused_at: null, updated_at: now } });
     await audit(who, tid, "trial_set", "subscription", sub.id, { from: sub.trial_ends_at, to: until });
     return { ok: true };
   }
@@ -320,7 +320,7 @@ async function companyAction(action, who, body, ctx) {
     // "paused" is the older word for the same thing.
     if (!sub || (sub.status !== "suspended" && sub.status !== "paused")) refuse("This company is not suspended");
     const nowMs = Date.now();
-    const status = sub.trial_ends_at && Date.parse(sub.trial_ends_at) > nowMs ? "trial"
+    const status = sub.trial_ends_at && Date.parse(sub.trial_ends_at) > nowMs ? "trialing"
       : sub.current_period_end && Date.parse(sub.current_period_end) > nowMs ? "active" : "expired";
     await db(`subscriptions?id=eq.${sub.id}`, { method: "PATCH", prefer: "return=minimal", body: { status, suspended_at: null, suspended_reason: null, paused_at: null, updated_at: now } });
     if (!t.deleted_at) await db(`tenants?id=eq.${tid}`, { method: "PATCH", prefer: "return=minimal", body: { is_active: true } });
