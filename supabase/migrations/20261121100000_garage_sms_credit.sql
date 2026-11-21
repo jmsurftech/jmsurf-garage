@@ -49,3 +49,9 @@ begin
 end $$;
 revoke all on function public.garage_sms_credit(uuid, text) from public, anon, authenticated;
 grant execute on function public.garage_sms_credit(uuid, text) to service_role;
+
+-- SMS is paid now: only the server may take or give back SMS (anyone could call these before).
+revoke all on function public.consume_sms_units(uuid, integer) from public, anon, authenticated;
+revoke all on function public.refund_sms_units(uuid, integer) from public, anon, authenticated;
+grant execute on function public.consume_sms_units(uuid, integer) to service_role;
+grant execute on function public.refund_sms_units(uuid, integer) to service_role;
