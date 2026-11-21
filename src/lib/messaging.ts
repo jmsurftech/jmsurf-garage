@@ -16,6 +16,8 @@ export type MessagingSettings = {
   sms_total_sent: number;
   /** A JMSURF SMS API key is saved (Settings → Integrations); SMS then goes through it. */
   has_jmsurf_sms?: boolean;
+  /** JMSURF's built-in SMS, paid from the company's prepaid SMS credit (always there). */
+  builtin_sms?: boolean;
 };
 
 /** The shop's SMS / WhatsApp setup (modes and whether keys are saved). */
@@ -30,14 +32,14 @@ export function useMessagingSettings() {
       ]);
       if (error) throw error;
       const has_jmsurf_sms = ((secrets?.data || []) as any[]).some((s) => s.name === "jmsurf_sms_key");
-      if (!data) return has_jmsurf_sms ? ({ has_jmsurf_sms, sms_mode: "off", wa_mode: "off" } as MessagingSettings) : null;
-      return { ...data, has_jmsurf_sms } as MessagingSettings;
+      if (!data) return { has_jmsurf_sms, builtin_sms: true, sms_mode: "off", wa_mode: "off" } as MessagingSettings;
+      return { ...data, has_jmsurf_sms, builtin_sms: true } as MessagingSettings;
     },
   });
 }
 
 export const smsReady = (m?: MessagingSettings | null) =>
-  !!m && (!!m.has_jmsurf_sms || (m.sms_mode === "own" && m.has_sms_key) || (m.sms_mode === "platform" && m.platform_sms_available));
+  !!m && (!!m.builtin_sms || !!m.has_jmsurf_sms || (m.sms_mode === "own" && m.has_sms_key) || (m.sms_mode === "platform" && m.platform_sms_available));
 export const whatsappReady = (m?: MessagingSettings | null) =>
   !!m && ((m.wa_mode === "own" && m.has_wa_key) || (m.wa_mode === "platform" && m.platform_wa_available));
 

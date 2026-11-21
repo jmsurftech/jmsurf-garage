@@ -11,9 +11,9 @@
 // Every message has an event (MESSAGE_EVENTS). The company chooses, per event,
 // whether it may go by SMS and/or WhatsApp (System → SMS → What uses SMS).
 //
-// A shop sends with its own provider key, or with JMSURF's account when the
-// platform owner has switched that on. JMSURF SMS uses the shop's prepaid
-// units (one per SMS part). Every send is written to email_logs (channel
+// A shop sends with its own provider key, or by default with JMSURF's built-in
+// SMS (paid: prepaid SMS credit topped up by M-Pesa, see smscredit.js; one SMS
+// per part). Every send is written to email_logs (channel
 // "sms" / "whatsapp") so it shows in Message Logs.
 // ---------------------------------------------------------------------------
 
@@ -27,6 +27,7 @@ import { jmsSend, jmsBulk, jmsBalance, jmsTopup, jmsTopupStatus } from "./jmsurf
 import { withPlatformRole } from "./platform.js";
 import { isDemoTenant } from "./demo.js";
 import { credential, fitOneSms } from "./integrations-core.js";
+import { builtinSmsKey, builtinSmsSender, creditBalance, spendCredit, refundCredit, startTopup, topupStatus } from "./smscredit.js";
 
 // WhatsApp Cloud API (Meta) lives in garage-integrations.js; loaded when first needed
 // (that file also uses this one, so a static import would be circular).
@@ -362,13 +363,13 @@ export async function smsUses(tenantId) {
 
 const lowChecked = new Map();
 /** After a JMSURF SMS send: warn the company once a day when the balance runs low. */
-async function checkLowBalance(tenantId, key) {
+async function checkLowBalance(tenantId, key, builtin = false) {
   if (Date.now() - (lowChecked.get(tenantId) || 0) < 15 * 60_000) return;
   lowChecked.set(tenantId, Date.now());
   const uses = await smsUses(tenantId);
   const limit = Number(uses?.low_balance ?? 100);
   if (!(limit > 0)) return;
-  const b = await jmsBalance(key).catch(() => null);
+  const b = builtin ? await creditBalance(tenantId).catch(() => null) : await jmsBalance(key).catch(() => null);
   if (!b?.ok || b.billing === "internal" || Number(b.sms_remaining) >= limit) return;
   const [m] = await rows(`tenant_messaging?tenant_id=eq.${encodeURIComponent(tenantId)}&select=tenant_id,low_balance_warned_at&limit=1`);
   if (m?.low_balance_warned_at && Date.now() - Date.parse(m.low_balance_warned_at) < 24 * 3600_000) return;
@@ -378,10 +379,10 @@ async function checkLowBalance(tenantId, key) {
   const left = Number(b.sms_remaining || 0).toLocaleString("en-KE");
   await db("shop_notifications", {
     method: "POST",
-    body: { tenant_id: tenantId, kind: "sms_low", title: "JMSURF SMS balance is low", body: `${left} SMS left (KES ${Number(b.balance_kes || 0).toLocaleString("en-KE")}). Top up in System → SMS so messages keep going out.`, link: "/settings?tab=sms", sent_at: new Date().toISOString() },
+    body: { tenant_id: tenantId, kind: "sms_low", title: "SMS balance is low", body: `${left} SMS left (KES ${Number(b.balance_kes || 0).toLocaleString("en-KE")}). Top up in System → SMS so messages keep going out.`, link: "/settings?tab=sms", sent_at: new Date().toISOString() },
   }).catch(() => undefined);
   const phone = internationalDigits(uses?.low_balance_phone);
-  if (phone) await jmsSend(key, phone, `JMSURF Garage: your JMSURF SMS balance is low (${left} SMS left). Top up in System → SMS.`).catch(() => undefined);
+  if (phone) await jmsSend(builtin ? builtinSmsKey() : key, phone, `JMSURF Garage: your SMS balance is low (${left} SMS left). Top up in System → SMS.`, builtin ? builtinSmsSender() : undefined).catch(() => undefined);
 }
 
 // --- Which account a shop sends with --------------------------------------------
@@ -414,6 +415,8 @@ async function shopRoute(tenantId, channel) {
     if (key && !(m?.sms_preferred === "own" && ownReady)) return { via: "jmsurfsms", apiKey: key, senderId: m?.sms_sender_id || "" };
   }
   const mode = channel === "sms" ? m?.sms_mode : m?.wa_mode;
+  // Default SMS: JMSURF's built-in SMS, paid from the company's SMS credit.
+  if (channel === "sms" && !(mode === "own" && m?.sms_api_key) && builtinSmsKey()) return { via: "builtin", apiKey: builtinSmsKey(), senderId: builtinSmsSender() || "" };
   if (!mode || mode === "off") return { error: channel === "sms" ? "SMS is not set up yet (System → SMS & WhatsApp)" : "WhatsApp sending is not set up yet (System → SMS & WhatsApp)" };
   if (mode === "own") {
     const apiKey = channel === "sms" ? m.sms_api_key : m.wa_api_key;
@@ -439,7 +442,7 @@ async function logSend({ tenantId, channel, to, text, ok, via, provider, detail,
   const base = {
     tenant_id: tenantId, channel, recipient: to, subject: String(text).slice(0, 160),
     status: ok ? "sent" : "failed", smtp_response: String(detail || "").slice(0, 500),
-    smtp_host: via === "jmsurfsms" ? "JMSURF SMS" : via === "cloud" ? "WhatsApp Cloud API" : `${channel === "sms" ? SMS_PROVIDERS[provider] || "SendBulkSMS" : "APIWAP"}${via === "platform" ? " (JMSURF)" : ""}`,
+    smtp_host: via === "jmsurfsms" ? "JMSURF SMS" : via === "builtin" ? "JMSURF SMS (credit)" : via === "cloud" ? "WhatsApp Cloud API" : `${channel === "sms" ? SMS_PROVIDERS[provider] || "SendBulkSMS" : "APIWAP"}${via === "platform" ? " (JMSURF)" : ""}`,
     from_email: sender || null, sent_by: userId || null,
   };
   const extra = {
@@ -525,7 +528,14 @@ async function sendOne({ tenantId, channel, phone, body, userId, reference, even
       const okUnits = await rpc("consume_sms_units", { p_tenant: tenantId, p_units: parts }).catch(() => false);
       if (okUnits !== true) return { ok: false, error: `Not enough SMS units (this message needs ${parts}). Ask JMSURF to top up.` };
     }
-    if (route.via === "jmsurfsms") {
+    if (route.via === "builtin") {
+      if (!(await spendCredit(tenantId, parts))) return { ok: false, error: `Not enough SMS credit (this message needs ${parts} SMS). Top up in System → SMS.`, needsCredit: true };
+      const r = await jmsSend(route.apiKey, phone, body, route.senderId || undefined);
+      const price = (await creditBalance(tenantId).catch(() => null))?.rate_kes_per_sms || 0;
+      result = r.ok ? { ok: true, id: r.id || r.message_id || r.reference, cost: Math.round(parts * price * 100) / 100, sandbox: r.test === true } : { ok: false, error: r.error };
+      if (!r.ok) await refundCredit(tenantId, parts);
+      else checkLowBalance(tenantId, null, true).catch(() => undefined);
+    } else if (route.via === "jmsurfsms") {
       const r = await jmsSend(route.apiKey, phone, body, route.senderId || undefined);
       result = r.ok ? { ok: true, id: r.id || r.message_id || r.reference, cost: r.cost_kes, sandbox: r.test === true } : { ok: false, error: r.error };
       if (r.ok && r.segments) parts = Number(r.segments) || parts;
@@ -566,6 +576,28 @@ export async function sendPlatform(channel, to, text) {
   const m = await cloud();
   if (m.waPlatformConfigured()) return m.waSendPlatform(phone, text);
   return { ok: false, error: "No platform WhatsApp account is saved" };
+}
+
+/** Bulk SMS on the built-in SMS: the SMS are taken from the credit first, given back if it fails. */
+async function builtinBulk(who, body) {
+  if (!eventChannels(await smsUses(who.tenantId), "bulk").sms) return { ok: false, error: "Bulk SMS is switched off (System → SMS → What uses SMS)" };
+  const message = String(body?.message || "").trim();
+  if (!message) return { ok: false, error: "Write the message" };
+  if (message.length > 918) return { ok: false, error: "Keep the message under 6 SMS parts (918 characters)" };
+  const seen = new Set();
+  const recipients = (Array.isArray(body?.recipients) ? body.recipients : []).map((r) => ({ phone: internationalDigits(r?.phone), name: String(r?.name || "").slice(0, 60) }))
+    .filter((r) => r.phone && /^254[17]\d{8}$/.test(r.phone) && !seen.has(r.phone) && seen.add(r.phone));
+  if (!recipients.length) return { ok: false, error: "No valid Kenyan mobile numbers in this audience" };
+  if (recipients.length > 20000) return { ok: false, error: "Send to at most 20,000 people at a time" };
+  if (throttled(`bulk:${who.tenantId}`, 10000)) return { ok: false, error: "Wait a few seconds before another campaign" };
+  const units = smsParts(message) * recipients.length;
+  if (!(await spendCredit(who.tenantId, units))) return { ok: false, needsCredit: true, error: `Not enough SMS credit: this campaign needs ${units.toLocaleString("en-KE")} SMS. Top up in System → SMS.` };
+  const r = await jmsBulk(builtinSmsKey(), { name: String(body?.name || "").slice(0, 80) || undefined, message, recipients, senderId: builtinSmsSender(), sendAt: body?.send_at || undefined });
+  if (!r.ok) await refundCredit(who.tenantId, units);
+  const price = (await creditBalance(who.tenantId).catch(() => null))?.rate_kes_per_sms || 0;
+  await logSend({ tenantId: who.tenantId, channel: "sms", to: `${recipients.length} recipients`, text: message, ok: r.ok, via: "builtin", detail: r.ok ? `campaign ${r.campaign_id || ""}` : r.error, userId: who.user.id, cost: r.ok ? Math.round(units * price * 100) / 100 : 0, parts: r.ok ? units : undefined, event: "bulk" });
+  if (r.ok) checkLowBalance(who.tenantId, null, true).catch(() => undefined);
+  return r.ok ? { ...r, estimated_cost_kes: Math.round(units * price * 100) / 100 } : r;
 }
 
 // --- Routes -----------------------------------------------------------------------
@@ -639,8 +671,20 @@ export async function handleMessagingRequest(req, res, pathname, body, sendJson)
   // --- JMSURF SMS: live balance, bulk campaigns and M-Pesa top-up, without leaving the ERP.
   if (pathname.startsWith("/api/messages/jmsurf/")) {
     const key = await jmsurfSmsKey(who.tenantId);
-    if (!key) return sendJson(res, 200, { ok: false, needsKey: true, error: "Save your JMSURF SMS API key in System → SMS & WhatsApp first" });
     const action = pathname.slice("/api/messages/jmsurf/".length);
+    // No JMSURF SMS account of its own: the built-in SMS credit (balance + M-Pesa top-up here).
+    if (!key) {
+      if (!builtinSmsKey()) return sendJson(res, 200, { ok: false, needsKey: true, error: "SMS is not available yet. Contact JMSURF support." });
+      if (action === "balance") return sendJson(res, 200, await creditBalance(who.tenantId));
+      if (action === "topup") {
+        if (await isDemoTenant(who.tenantId)) return sendJson(res, 200, { ok: false, error: "Payments are switched off in the demo company." });
+        if (throttled(`topup:${who.tenantId}`, 15000)) return sendJson(res, 429, { ok: false, error: "Wait a few seconds before another top-up" });
+        return sendJson(res, 200, await startTopup({ tenantId: who.tenantId, userId: who.user.id, amount: body?.amount, phone: body?.phone }));
+      }
+      if (action === "topup-status") return sendJson(res, 200, await topupStatus(who.tenantId, body?.id));
+      if (action === "bulk") return sendJson(res, 200, await builtinBulk(who, body));
+      return sendJson(res, 404, { ok: false, error: "Unknown SMS action" });
+    }
     if (action === "balance") return sendJson(res, 200, await jmsBalance(key));
     if (action === "topup") {
       const amount = Number(body?.amount);

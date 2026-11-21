@@ -82,7 +82,7 @@ export function SmsGatewaysTab({ canManage }: { canManage: boolean }) {
 
   const lowAt = Number(uses.low_balance ?? DEFAULT_LOW_BALANCE);
   const [view, setView] = useState<"balance" | "uses" | "log" | "connect" | null>(null);
-  const shown = view ?? (jmsSaved ? "balance" : "connect");
+  const shown = view ?? "balance";
 
   if (isLoading) return <OrbLoader label="Loading SMS…" />;
   return (
@@ -95,19 +95,15 @@ export function SmsGatewaysTab({ canManage }: { canManage: boolean }) {
       ]} />
 
       {shown === "balance" && (
-        jmsSaved ? (
-          <div className="space-y-5">
-            <JmsurfSmsWallet lowAt={lowAt} />
-            <SmsMonthTiles hasJmsurf />
-            <SmsTopupHistory />
-          </div>
-        ) : (
-          <EmptyState icon={Smartphone} title="Connect JMSURF SMS first" description="Save your JMSURF SMS API key, then top up here with M-Pesa."
-            action={<Button onClick={() => setView("connect")}><KeyRound /> Connect</Button>} />
-        )
+        // Built-in SMS is paid from this balance; a company's own JMSURF SMS key shows that account's balance instead.
+        <div className="space-y-5">
+          <JmsurfSmsWallet lowAt={lowAt} />
+          <SmsMonthTiles hasJmsurf />
+          <SmsTopupHistory />
+        </div>
       )}
       {shown === "uses" && <SmsUsesPanel canManage={canManage} />}
-      {shown === "log" && <div className="space-y-5"><SmsMonthTiles hasJmsurf={!!jmsSaved} /><SmsUsageLog /></div>}
+      {shown === "log" && <div className="space-y-5"><SmsMonthTiles hasJmsurf /><SmsUsageLog /></div>}
 
       {shown === "connect" && (<>
         <Panel title={<span className="flex items-center gap-2.5"><BrandLogo id="jmsurfsms" name="JMSURF SMS" className="h-8 w-8" />JMSURF SMS <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">Default</span></span> as any} description="Create a key at jmsurfsms.co.ke → API keys (send, balance and top-up permissions)."

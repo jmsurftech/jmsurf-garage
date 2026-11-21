@@ -51,7 +51,7 @@ export default function SmsGatewayPanel({ canManage }: { canManage: boolean }) {
     ["messaging-settings", "messaging-settings-mode"].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
     toast.success("SMS gateway saved");
   };
-  const sending = !m?.has_jmsurf_sms ? (keySaved ? p.name : "nothing yet") : preferred === "own" && keySaved ? p.name : "JMSURF SMS";
+  const sending = !m?.has_jmsurf_sms ? (keySaved ? p.name : "JMSURF SMS (prepaid credit)") : preferred === "own" && keySaved ? p.name : "JMSURF SMS";
 
   return (
     <Panel title="Other SMS gateway" icon={Radio} description="Use your own account with another provider. JMSURF SMS stays the default; switch to your gateway only if you prefer it."
