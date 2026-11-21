@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cacheTenant, clearCachedBusinessSettings, getCachedTenant, wipeAllOfflineCaches } from "@/lib/offlineDb";
@@ -136,6 +137,12 @@ export function TenantProvider({ children }: { children: ReactNode }) {
           // Tenant was deleted or deactivated → wipe caches and force sign-out
           if (data && (data.deleted_at || data.is_active === false)) {
             console.warn("[Tenant] Company is deactivated — signing out.");
+            // Say why on the sign-in screen (the reason the platform gave when it suspended the company).
+            const { data: sub } = await (supabase as any).from("subscriptions").select("status,suspended_reason")
+              .eq("tenant_id", data.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+            toast.error(data.deleted_at ? "This company's account is closed." : "This company's account is suspended.", {
+              description: sub?.suspended_reason || "Contact JMSURF support to open it again.", duration: 20_000,
+            });
             await wipeAllOfflineCaches();
             await signOut();
             await applyTenant(null);

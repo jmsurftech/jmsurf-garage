@@ -94,7 +94,7 @@ export default function AdminDashboard() {
       </>} />
 
       <StatGrid className="md:grid-cols-3 xl:grid-cols-6">
-        <StatTile label="Active companies" value={stats.shops} icon={Building2} tone="info" hint={`${stats.archived} archived`} to="/admin/customers" />
+        <StatTile label="Active companies" value={stats.shops} icon={Building2} tone="info" hint={`${stats.archived} archived`} to="/admin/companies" />
         <StatTile label="Paying" value={stats.paying} icon={CreditCard} tone="success" hint={`${Math.round((stats.paying / Math.max(1, stats.shops)) * 100)}% of active`} />
         <StatTile label="On trial" value={stats.trials} icon={Users} tone="primary" hint={`${stats.endingSoon} ending in 7 days`} />
         <StatTile label="Revenue this month" value={ksh(stats.monthRevenue)} icon={TrendingUp} tone="success" to="/admin/payments" />
@@ -105,7 +105,7 @@ export default function AdminDashboard() {
       {/* What needs attention first, then the charts. */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="Trials ending soon" description="Next 7 days" icon={Hourglass} flush
-          actions={<Link to="/admin/customers" className="text-xs font-semibold text-primary hover:underline">All companies</Link>}>
+          actions={<Link to="/admin/companies" className="text-xs font-semibold text-primary hover:underline">All companies</Link>}>
           {data.endingTrials.length === 0 ? <EmptyState title="No trials ending this week" className="py-10" /> : (
             <ul className="divide-y divide-border">
               {data.endingTrials.map((s: any) => (
@@ -201,7 +201,7 @@ export default function AdminDashboard() {
         </Panel>
 
         <Panel title="Newest companies" icon={Building2} flush
-          actions={<Link to="/admin/customers" className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>}>
+          actions={<Link to="/admin/companies" className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>}>
           {data.recentShops.length === 0 ? <EmptyState title="No companies yet" className="py-10" /> : (
             <TableWrap>
               <table className="dt">

@@ -1,16 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Building2, CheckCircle, LogIn, Plus, UserPlus, Users, Wallet, X } from "lucide-react";
+import { Building2, CheckCircle, Plus, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { EmptyState, Field, Modal, MoreMenu, Panel, Pill, StatusPill } from "@/components/kit";
-import { ROOT_HOST } from "@/lib/host";
+import { Field, Modal, MoreMenu, Panel, StatusPill } from "@/components/kit";
 
-const ROLES = [
-  ["admin", "Administrator"], ["manager", "Manager"], ["finance", "Finance"], ["cashier", "Cashier"],
-  ["sales_person", "Sales person"], ["stock_manager", "Stock manager"], ["customer_service", "Customer service"],
-] as const;
 const months = (cycle?: string) => (cycle === "quarterly" ? 3 : cycle === "annually" ? 12 : 1);
 const ksh = (n: number) => `KSh ${Math.round(n).toLocaleString()}`;
 const errText = (e: any) => String(e?.message || e || "Something went wrong");
@@ -39,94 +34,6 @@ export async function openCompany(tenantId: string, userId?: string): Promise<st
   }
 }
 
-type Person = { user_id: string; email: string | null; display_name: string | null; phone: string | null; role: string; is_owner: boolean; status: string; last_used_at: string | null; companies: number };
-
-export function useCompanyPeople(tenantId?: string) {
-  const [people, setPeople] = useState<Person[]>([]);
-  const [loading, setLoading] = useState(false);
-  const reload = async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    const { data } = await (supabase as any).rpc("admin_company_people", { p_tenant: tenantId });
-    setPeople((data || []) as Person[]);
-    setLoading(false);
-  };
-  useEffect(() => { setPeople([]); void reload(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [tenantId]);
-  return { people, loading, reload };
-}
-
-/** Everyone who can open this company: add any existing login to it, or take access away. */
-export function CompanyPeoplePanel({ tenant, people, loading, reload }: { tenant: any; people: Person[]; loading: boolean; reload: () => Promise<void> }) {
-  const { toast } = useToast();
-  const [adding, setAdding] = useState(false);
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState("admin");
-  const [busy, setBusy] = useState<string | null>(null);
-
-  const add = async () => {
-    setBusy("add");
-    const { error } = await (supabase as any).rpc("add_company_member", { p_tenant: tenant.id, p_email: email.trim(), p_role: role });
-    setBusy(null);
-    if (error) return toast({ title: "Could not give access", description: error.message, variant: "destructive" });
-    toast({ title: "Access given", description: `${email.trim()} can now open ${tenant.business_name} from their company menu.` });
-    setEmail(""); setAdding(false); void reload();
-  };
-  const remove = async (p: Person) => {
-    setBusy(p.user_id);
-    const { error } = await (supabase as any).rpc("remove_company_member", { p_tenant: tenant.id, p_user: p.user_id });
-    setBusy(null);
-    if (error) return toast({ title: "Could not remove access", description: error.message, variant: "destructive" });
-    toast({ title: "Access removed", description: p.email || p.display_name || "" });
-    void reload();
-  };
-  const open = async (p: Person) => {
-    setBusy("open" + p.user_id);
-    const err = await openCompany(tenant.id, p.user_id);
-    setBusy(null);
-    if (err) toast({ title: "Could not open", description: err, variant: "destructive" });
-  };
-
-  return (
-    <Panel flush title="People with access" icon={Users}
-      description="They switch to this company from their company menu."
-      actions={!tenant.deleted_at && <Button size="sm" variant="outline" onClick={() => setAdding((v) => !v)}><UserPlus /> Give access</Button>}>
-      {adding && (
-        <div className="grid gap-3 border-b border-border px-4 py-3 sm:grid-cols-[1fr_180px_auto] sm:items-end">
-          <Field label="Login email" hint="Must already have a login."><input className="fi" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter login email" autoFocus /></Field>
-          <Field label="Role"><select className="fi" value={role} onChange={(e) => setRole(e.target.value)}>{ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Field>
-          <Button onClick={add} disabled={busy === "add" || !email.includes("@")}>{busy === "add" ? "Adding…" : "Give access"}</Button>
-        </div>
-      )}
-      {people.length === 0 ? (
-        <EmptyState icon={Users} title={loading ? "Loading…" : "Nobody yet"} />
-      ) : (
-        <ul className="divide-y divide-border">
-          {people.map((p) => (
-            <li key={p.user_id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">{String(p.display_name || p.email || "?").charAt(0).toUpperCase()}</span>
-              <div className="min-w-0 flex-1">
-                <p className="flex flex-wrap items-center gap-1.5 font-medium">
-                  <span className="truncate">{p.display_name || p.email || "Unnamed"}</span>
-                  {p.is_owner && <Pill tone="primary">Owner</Pill>}
-                  {p.status !== "active" && <Pill tone="warning">No access</Pill>}
-                  {p.companies > 1 && <Pill tone="info">{p.companies} companies</Pill>}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">{p.email || "No email"} · {ROLES.find(([v]) => v === p.role)?.[1] || p.role}{p.last_used_at ? ` · last here ${format(new Date(p.last_used_at), "d MMM yyyy")}` : ""}</p>
-              </div>
-              {p.status === "active" && !tenant.deleted_at && (
-                <Button size="sm" variant="ghost" title={`Open as ${p.display_name || p.email}`} onClick={() => open(p)} disabled={busy === "open" + p.user_id}><LogIn /> Open</Button>
-              )}
-              {!p.is_owner && p.status === "active" && (
-                <button className="icon-btn" title="Remove access" onClick={() => remove(p)} disabled={busy === p.user_id}><X className="h-4 w-4" /></button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </Panel>
-  );
-}
-
 /** The owner's other companies, adding one more for the same owner, and paying for several at once. */
 export function OwnerCompaniesPanel({ tenant, group, subs, onSelect, onAdd, onPay }: {
   tenant: any; group: any[]; subs: Record<string, any>; onSelect: (t: any) => void; onAdd: () => void; onPay: () => void;
@@ -147,7 +54,7 @@ export function OwnerCompaniesPanel({ tenant, group, subs, onSelect, onAdd, onPa
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary">{String(t.business_name || "?").charAt(0).toUpperCase()}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{t.business_name}{t.id === tenant.id && <span className="ml-2 text-xs font-normal text-muted-foreground">(this one)</span>}</p>
-                <p className="truncate font-mono text-[11px] text-muted-foreground">{t.slug ? `${t.slug}.${ROOT_HOST}` : "No address"}</p>
+                <p className="truncate text-[11px] text-muted-foreground">{t.contact_name || t.contact_email || ""}</p>
               </div>
               <div className="hidden text-right text-xs sm:block">
                 <p>{s?.plan_name || "—"}{s ? ` · ${ksh(Number(s.price || 0) * months(s.billing_cycle))}/${s.billing_cycle === "annually" ? "yr" : s.billing_cycle === "quarterly" ? "qtr" : "mo"}` : ""}</p>
@@ -162,20 +69,18 @@ export function OwnerCompaniesPanel({ tenant, group, subs, onSelect, onAdd, onPa
   );
 }
 
-const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32) || "company";
 
 /** A new company owned by the same login (it shows in the owner's company menu straight away). */
 export function AddOwnerCompanyModal({ open, onClose, source, ownerEmail, plans, onDone }: {
   open: boolean; onClose: () => void; source: any; ownerEmail: string | null; plans: any[]; onDone: (tenantId: string) => void;
 }) {
   const { toast } = useToast();
-  const [f, setF] = useState({ name: "", slug: "", plan: "", cycle: "monthly", start: "trial", until: "", copy: true });
+  const [f, setF] = useState({ name: "", plan: "", cycle: "monthly", start: "trial", until: "", copy: true });
   const [busy, setBusy] = useState(false);
-  const [slugTouched, setSlugTouched] = useState(false);
   useEffect(() => {
     if (!open) return;
-    setF({ name: "", slug: "", plan: plans[0]?.id || "", cycle: "monthly", start: "trial", until: "", copy: true });
-    setSlugTouched(false);
+    setF({ name: "", plan: plans[0]?.id || "", cycle: "monthly", start: "trial", until: "", copy: true });
   }, [open, plans]);
 
   const create = async () => {
@@ -183,7 +88,7 @@ export function AddOwnerCompanyModal({ open, onClose, source, ownerEmail, plans,
     setBusy(true);
     try {
       const { data: id, error } = await (supabase as any).rpc("create_company", {
-        p_name: f.name.trim(), p_slug: f.slug, p_country: "KE", p_currency: "KES", p_owner_email: ownerEmail, p_plan: f.plan || null,
+        p_name: f.name.trim(), p_slug: `${slugify(f.name)}-${Math.random().toString(36).slice(2, 6)}`, p_country: "KE", p_currency: "KES", p_owner_email: ownerEmail, p_plan: f.plan || null,
       });
       if (error) throw error;
       // The owner's contact details, as on the company it was added from.
@@ -204,7 +109,7 @@ export function AddOwnerCompanyModal({ open, onClose, source, ownerEmail, plans,
       if (plan) Object.assign(patch, { plan_id: plan.id, plan_name: plan.name, price: Number(plan.price_monthly || 0), max_users: plan.max_users, max_locations: plan.max_locations });
       const { error: e3 } = await supabase.from("subscriptions").update(patch).eq("tenant_id", id);
       if (e3) throw e3;
-      toast({ title: "Company added", description: `${f.name.trim()} · ${f.slug}.${ROOT_HOST} · owner ${ownerEmail}` });
+      toast({ title: "Company added", description: `${f.name.trim()} · owner ${ownerEmail}` });
       onDone(String(id));
     } catch (e) {
       toast({ title: "Could not add the company", description: errText(e), variant: "destructive" });
@@ -216,14 +121,11 @@ export function AddOwnerCompanyModal({ open, onClose, source, ownerEmail, plans,
       description={ownerEmail ? `Owner: ${ownerEmail}` : "This company's owner has no login email."}
       footer={<>
         <Button variant="outline" onClick={onClose}>Cancel</Button>
-        <Button onClick={create} disabled={busy || !ownerEmail || !f.name.trim() || f.slug.length < 3 || (f.start === "active" && !f.until)}>{busy ? "Adding…" : "Add company"}</Button>
+        <Button onClick={create} disabled={busy || !ownerEmail || !f.name.trim() || (f.start === "active" && !f.until)}>{busy ? "Adding…" : "Add company"}</Button>
       </>}>
       <div className="space-y-4">
         <Field label="Business name" required>
-          <input className="fi" placeholder="Enter business name" value={f.name} autoFocus onChange={(e) => setF({ ...f, name: e.target.value, slug: slugTouched ? f.slug : slugify(e.target.value) })} />
-        </Field>
-        <Field label="Company address" required hint={f.slug ? `${f.slug}.${ROOT_HOST}` : "Letters, numbers and dashes"}>
-          <input className="fi" placeholder="Enter address" value={f.slug} onChange={(e) => { setSlugTouched(true); setF({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }); }} />
+          <input className="fi" placeholder="Enter business name" value={f.name} autoFocus onChange={(e) => setF({ ...f, name: e.target.value })} />
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Package">

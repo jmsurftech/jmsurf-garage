@@ -196,7 +196,7 @@ function LeadModal({ lead, onClose }: { lead: Lead | null; onClose: () => void }
             {lead.email && <a href={`mailto:${lead.email}`} className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-medium hover:bg-muted"><Mail className="h-3.5 w-3.5" /> Email</a>}
             {lead.phone && <a href={`tel:${lead.phone}`} className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-medium hover:bg-muted"><Phone className="h-3.5 w-3.5" /> Call</a>}
             {lead.phone && <a href={`https://wa.me/${lead.phone.replace(/\D/g, "").replace(/^0/, "254")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-medium hover:bg-muted"><MessageSquare className="h-3.5 w-3.5" /> WhatsApp</a>}
-            {lead.tenant_id && <Link to="/admin/customers" className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-medium hover:bg-muted"><Building2 className="h-3.5 w-3.5" /> Company account</Link>}
+            {lead.tenant_id && <Link to={`/admin/companies/${lead.tenant_id}`} className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-medium hover:bg-muted"><Building2 className="h-3.5 w-3.5" /> Company account</Link>}
           </div>}
         </div>
         <div>

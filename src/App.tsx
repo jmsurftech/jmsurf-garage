@@ -419,7 +419,9 @@ const AuditLog = lazyPage(() => import("@/pages/AuditLog"));
 
 const AdminLayout = lazyPage(() => import("@/pages/admin/AdminLayout"), "admin");
 const AdminDashboard = lazyPage(() => import("@/pages/admin/AdminDashboard"), "admin");
-const AdminCustomers = lazyPage(() => import("@/pages/admin/AdminCustomers"), "admin");
+const AdminCompanies = lazyPage(() => import("@/pages/admin/AdminCompanies"), "admin");
+const AdminCompany = lazyPage(() => import("@/pages/admin/AdminCompany"), "admin");
+const AdminCustomersMoved = lazyPage(() => import("@/pages/admin/AdminCompanies").then((m) => ({ default: m.CustomersMoved })), "admin");
 const AdminSubscriptions = lazyPage(() => import("@/pages/admin/AdminSubscriptions"), "admin");
 const AdminCMS = lazyPage(() => import("@/pages/admin/AdminCMS"), "admin");
 const AdminSettings = lazyPage(() => import("@/pages/admin/AdminSettings"), "admin");
@@ -982,7 +984,9 @@ const App = () => (
             <Route path="/admin" element={<PlatformOnly><AdminLayout /></PlatformOnly>}>
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<AdminUsers />} />
-              <Route path="customers" element={<AdminCustomers />} />
+              <Route path="companies" element={<AdminCompanies />} />
+              <Route path="companies/:id" element={<AdminCompany />} />
+              <Route path="customers" element={<AdminCustomersMoved />} />
               <Route path="subscriptions" element={<AdminSubscriptions />} />
               <Route path="modules" element={<AdminModules />} />
               <Route path="payments" element={<AdminPayments />} />
