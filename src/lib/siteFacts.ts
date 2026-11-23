@@ -15,7 +15,7 @@ export const CONTACT = {
   phone: "+254 712 504 593",
   /** WhatsApp number (same line). */
   wa: "254712504593",
-  address: "Devan Plaza, 5th Floor, Westlands, Nairobi, Kenya",
+  address: "Devan Plaza, 5th Floor, Crossway Road, Westlands, Nairobi, Kenya",
 };
 
 /** The other launched JMSURF products (owner 2026-11-07: launched systems only; names and addresses as the company publishes them). */

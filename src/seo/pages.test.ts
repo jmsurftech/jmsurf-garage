@@ -3,7 +3,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { PUBLIC_MODULES } from "@/lib/modules";
 import { DEFAULT_CATALOGUE, bundleListPrice, modulesForKinds, priceBox } from "@/lib/garagePlans";
-import { buildSeoPages, HOME, HOME_HEADINGS, llmsTxt, sitemapXml, textOf } from "./pages";
+import { buildSeoPages, COMPANY_SOCIALS, HOME, HOME_HEADINGS, llmsTxt, sitemapXml, textOf } from "./pages";
+import { CONTENT_PAGES, FAQ_ALL } from "./content";
 
 const pages = buildSeoPages();
 const src = (f: string) => readFileSync(path.join(process.cwd(), "src", "pages", f), "utf8");
@@ -22,7 +23,7 @@ describe("website snapshots", () => {
     expect(p.description.length).toBeGreaterThanOrEqual(140);
     expect(p.description.length).toBeLessThanOrEqual(160);
     expect(() => JSON.parse(JSON.stringify(p.jsonld))).not.toThrow();
-    expect(p.jsonld.some((x: any) => x["@type"] === "Organization" && x.name === "JMSURF TECHNOLOGIES LTD")).toBe(true);
+    expect(p.jsonld.some((x: any) => x["@type"] === "Organization" && x.name === "JMSURF Technologies" && x.sameAs === COMPANY_SOCIALS && x.contactPoint)).toBe(true);
     expect(p.body).toContain("More from JMSURF");
     expect(p.body).toContain("Powered by");
     expect(p.body).toContain("ODPC");
@@ -52,6 +53,30 @@ describe("website snapshots", () => {
     const llms = llmsTxt();
     for (const h of ["# JMSURF Garage", "\n> ", "## Key pages", "## Pricing", "## Contact", "## Other JMSURF products"]) expect(llms).toContain(h);
     expect(llms).not.toMatch(/@gmail\.com/);
+  });
+
+  it.each(CONTENT_PAGES.map((c) => [c.path, c] as const))("guide page %s: real length, breadcrumbs, links and a call to action", (_, c) => {
+    const pg = pages.find((x) => x.path === c.path)!;
+    expect(pg).toBeTruthy();
+    const words = pg.text.split(/\s+/).length;
+    expect(words, `${c.path} words`).toBeGreaterThanOrEqual(c.group === "faq" ? 600 : 500);
+    expect(words, `${c.path} words`).toBeLessThanOrEqual(1700);
+    expect(pg.jsonld.some((x: any) => x["@type"] === "BreadcrumbList")).toBe(true);
+    const internal = new Set([...pg.body.matchAll(/href="(\/[^"#]*)"/g)].map((m) => m[1]).filter((h) => h !== "/" && h !== "/register" && h !== c.path));
+    expect(internal.size).toBeGreaterThanOrEqual(8);
+    expect(pg.body).toContain('href="/register"');
+    expect(pg.body).toContain("https://wa.me/254712504593");
+    expect(pg.body).not.toMatch(/John Doe|example\.com|0712345678/);
+  });
+
+  it("guide pages: unique titles and descriptions; the questions page has 15-30 questions", () => {
+    const titles = pages.map((p) => p.title), descs = pages.map((p) => p.description);
+    expect(new Set(titles).size).toBe(titles.length);
+    expect(new Set(descs).size).toBe(descs.length);
+    expect(FAQ_ALL.length).toBeGreaterThanOrEqual(15);
+    expect(FAQ_ALL.length).toBeLessThanOrEqual(30);
+    expect(pages.find((p) => p.path === "/faq")!.jsonld.some((x: any) => x["@type"] === "FAQPage" && x.mainEntity.length === FAQ_ALL.length)).toBe(true);
+    expect(src("ContentPage.tsx")).toContain('from "@/seo/content"');
   });
 
   it("text extraction keeps words apart", () => {

@@ -185,6 +185,7 @@ const ResetPassword = lazyPage(() => import("@/pages/ResetPassword"));
 const Landing = lazyPage(() => import("@/pages/Landing"));
 const Solution = lazyPage(() => import("@/pages/Solution"));
 const Solutions = lazyPage(() => import("@/pages/Solutions"));
+const ContentPage = lazyPage(() => import("@/pages/ContentPage"));
 const Pricing = lazyPage(() => import("@/pages/Pricing"));
 const PhotoCredits = lazyPage(() => import("@/pages/PhotoCredits"));
 const DemoStart = lazyPage(() => import("@/pages/DemoStart"));
@@ -857,6 +858,13 @@ const App = () => (
             <Route path="/features" element={<Landing />} />
             <Route path="/solutions/:key" element={<Solution />} />
             <Route path="/solutions" element={<Solutions />} />
+            {/* Guide pages (src/seo/content.ts): garage types, buyer guides, questions, towns */}
+            <Route path="/for" element={<ContentPage />} />
+            <Route path="/for/:slug" element={<ContentPage />} />
+            <Route path="/guides" element={<ContentPage />} />
+            <Route path="/guides/:slug" element={<ContentPage />} />
+            <Route path="/faq" element={<ContentPage />} />
+            <Route path="/garage-software/:town" element={<ContentPage />} />
             <Route path="/api/demo/start" element={<DemoStart />} />
             <Route path="/subscription-expired" element={<SubscriptionExpired />} />
             <Route path="/delivery-confirm/:noteId" element={<DeliveryConfirmation />} />

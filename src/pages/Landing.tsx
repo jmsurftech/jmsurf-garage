@@ -25,6 +25,7 @@ import { track } from "@/lib/tracking";
 import { JMSURF_FAMILY, CONTACT } from "@/lib/siteFacts";
 import { HOME, HOME_HEADINGS } from "@/seo/homeContent";
 import { HOME_META, canonicalUrl } from "@/seo/meta";
+import { FOOTER_GUIDES } from "@/seo/content";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ bits */
@@ -104,7 +105,7 @@ export function Nav() {
     on(); window.addEventListener("scroll", on, { passive: true });
     return () => window.removeEventListener("scroll", on);
   }, []);
-  const links: [string, string][] = [["/#who", "Who it's for"], ["/#how", "How it works"], ["/solutions", "Modules"], ["/pricing", "Pricing"], ["/#faq", "Questions"]];
+  const links: [string, string][] = [["/for", "Who it's for"], ["/solutions", "Modules"], ["/pricing", "Pricing"], ["/guides", "Guides"], ["/faq", "Questions"]];
   return (
     <header className={cn("fixed inset-x-0 top-0 z-50 transition-all", scrolled || open ? "border-b border-border bg-background/90 shadow-sm backdrop-blur-xl" : "bg-transparent")}>
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 xl:gap-6">
@@ -444,12 +445,13 @@ export function Footer({ phone, email }: { phone: string; email: string }) {
   const cols: [string, [string, string][]][] = [
     ["Product", [["Modules", "/solutions"], ["Pricing", "/pricing"], ["How it works", "/#how"], ["Start free", "/register"], ["Sign in", "https://app.jmsurfgarage.co.ke/login"]]],
     ["Modules", [["Garage Core", "/solutions/garage_core"], ["Workshop Pro", "/solutions/workshop_pro"], ["Parts & Stock", "/solutions/inventory"], ["Body & Paint", "/solutions/body_paint"], ["Car Wash", "/solutions/car_wash"], ["All modules", "/solutions"]]],
+    ["Guides", FOOTER_GUIDES],
     ["Legal", [["Terms of service", "/terms"], ["Privacy policy", "/privacy"], ["System status", "/status"], ["Photo credits", "/photo-credits"]]],
   ];
   return (
     <footer className="border-t border-border bg-card pb-10 pt-14 text-muted-foreground">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid gap-10 lg:grid-cols-[1.4fr_repeat(3,1fr)]">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
           <div>
             <DashLogo tone={darkMode ? "light" : "dark"} tagline="Garage management" />
             <p className="mt-4 max-w-xs text-sm">Garage management software for Kenya, from the roadside fundi to the dealer.</p>

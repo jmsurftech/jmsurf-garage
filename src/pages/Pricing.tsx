@@ -15,6 +15,8 @@ import { HOME } from "@/seo/homeContent";
 import { PRICING_META, canonicalUrl } from "@/seo/meta";
 import { Nav, Footer, FinalCta, Eyebrow, Hl, CTA, Faq, useSiteContact, WhatsAppButton } from "@/pages/Landing";
 import { cn } from "@/lib/utils";
+import { PLAN_TABLE_HEADING, planTable } from "@/seo/content";
+import { TableView } from "@/pages/ContentPage";
 
 export default function Pricing() {
   const cat = useGarageCatalogue();
@@ -85,6 +87,14 @@ export default function Pricing() {
               </div>
             </div>
           )}
+        </section>
+
+        {/* Plans side by side (same table as the page snapshot) */}
+        <section className="pb-16">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <h2 className="font-display text-3xl font-extrabold tracking-tight">{PLAN_TABLE_HEADING}</h2>
+            <TableView t={planTable(cat.plans)} />
+          </div>
         </section>
 
         {/* Modules + calculator */}

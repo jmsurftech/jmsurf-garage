@@ -16,6 +16,8 @@ import { BUNDLE_MODULES, DEFAULT_CATALOGUE, EXTRA_BRANCH_PRICE, bundleListPrice 
 import { CONTACT, JMSURF_FAMILY, PUBLIC_PLANS, SITE_ORIGIN, SUITE_AUDIENCE, suiteFaqs, suiteShort } from "@/lib/siteFacts";
 import { UPDATED, privacySections, termsSections, type Section } from "@/pages/legalText";
 import { HOME, HOME_HEADINGS } from "./homeContent";
+import { CONTENT_LABELS, CONTENT_PAGES, FOOTER_GUIDES, CONTENT_PUBLISHED, PLAN_TABLE_HEADING, contentCrumbs, planTable, waLink, type Block, type ContentPage, type Table } from "./content";
+import { PHOTOS, photoSrc } from "@/lib/photos";
 import {
   HOME_META, LOGIN_META, OG_IMAGE, PRICING_META, PRIVACY_META, REGISTER_META, SOLUTIONS_META, TERMS_META,
   canonicalUrl, suiteMeta, type PageMeta,
@@ -53,15 +55,27 @@ const ORG_ID = "https://jmsurf.co.ke/#organization";
 const SITE_ID = `${SITE_ORIGIN}/#website`;
 const APP_ID = `${SITE_ORIGIN}/#software`;
 
+/** The company's social pages, as linked on jmsurf.co.ke. */
+export const COMPANY_SOCIALS = [
+  "https://www.facebook.com/jmsurftechnologies",
+  "https://www.instagram.com/jmsurftechnologies/",
+  "https://www.linkedin.com/company/jmsurf-technologies",
+  "https://www.tiktok.com/@jmsurftechnologies",
+];
+
 const organization = {
   "@type": "Organization",
   "@id": ORG_ID,
-  name: "JMSURF TECHNOLOGIES LTD",
-  alternateName: "JMSURF Technologies",
+  name: "JMSURF Technologies",
+  legalName: "JMSURF TECHNOLOGIES LTD",
   url: "https://jmsurf.co.ke",
   logo: `${SITE_ORIGIN}/jm-icon-512.png`,
-  address: { "@type": "PostalAddress", streetAddress: "Devan Plaza, 5th Floor, Westlands", addressLocality: "Nairobi", addressCountry: "KE" },
-  sameAs: JMSURF_FAMILY.filter((f) => f.url !== "https://jmsurf.co.ke").map((f) => f.url).concat(SITE_ORIGIN),
+  email: CONTACT.email,
+  telephone: "+254712504593",
+  address: { "@type": "PostalAddress", streetAddress: "Devan Plaza, 5th Floor, Crossway Road, Westlands", addressLocality: "Nairobi", addressCountry: "KE" },
+  contactPoint: [{ "@type": "ContactPoint", contactType: "sales", telephone: "+254712504593", email: CONTACT.email, areaServed: "KE", availableLanguage: ["en", "sw"] }],
+  sameAs: COMPANY_SOCIALS,
+  brand: JMSURF_FAMILY.map((x) => ({ "@type": "Brand", name: x.name, url: x.url })).concat({ "@type": "Brand", name: "JMSURF Garage", url: SITE_ORIGIN }),
 };
 
 const website = {
@@ -128,7 +142,7 @@ function header(): string {
   return `<header class="border-b border-border bg-background"><div class="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-4 sm:px-6">`
     + `<a href="/" class="font-display text-lg font-extrabold tracking-tight text-foreground">JMSURF Garage</a>`
     + `<nav aria-label="Main" class="flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold text-muted-foreground">`
-    + `<a href="/#who">Who it is for</a><a href="/#how">How it works</a><a href="/solutions">Modules</a><a href="/pricing">Pricing</a>`
+    + `<a href="/for">Who it's for</a><a href="/solutions">Modules</a><a href="/pricing">Pricing</a><a href="/guides">Guides</a><a href="/faq">Questions</a>`
     + `<a href="/login">Sign in</a><a href="/register" class="text-primary">Start free</a></nav></div></header>`;
 }
 
@@ -136,11 +150,12 @@ function footer(): string {
   const cols: [string, [string, string][]][] = [
     ["Product", [["Modules", "/solutions"], ["Pricing", "/pricing"], ["How it works", "/#how"], ["Start free", "/register"], ["Sign in", "/login"]]],
     ["Modules", [["Garage Core", "/solutions/garage_core"], ["Workshop Pro", "/solutions/workshop_pro"], ["Parts & Stock", "/solutions/inventory"], ["Body & Paint", "/solutions/body_paint"], ["Car Wash", "/solutions/car_wash"], ["All modules", "/solutions"]]],
+    ["Guides", FOOTER_GUIDES],
     ["Legal", [["Terms of service", "/terms"], ["Privacy policy", "/privacy"], ["System status", "/status"], ["Photo credits", "/photo-credits"]]],
   ];
   return `<footer class="border-t border-border bg-card px-4 py-12 text-sm text-muted-foreground sm:px-6"><div class="mx-auto max-w-7xl">`
     + `<p class="font-display font-bold text-foreground">JMSURF Garage</p><p class="mt-2 max-w-xs">Garage management software for Kenya, from the roadside fundi to the dealer.</p>`
-    + `<div class="mt-8 grid gap-8 sm:grid-cols-3">`
+    + `<div class="mt-8 grid gap-8 sm:grid-cols-4">`
     + cols.map(([t, links]) => `<div><p class="font-display font-bold text-foreground">${esc(t)}</p><ul class="mt-3 space-y-2">${links.map(([l, h]) => `<li><a href="${h}">${esc(l)}</a></li>`).join("")}</ul></div>`).join("")
     + `</div>${familyHtml()}`
     + `<p class="mt-8">JMSURF TECHNOLOGIES LTD is registered with the ODPC (Kenya) as a Data Controller and Data Processor, reg. no. 194-9812-26EB.</p>`
@@ -225,6 +240,7 @@ function pricingBody(): string {
     + `<h1 class="mt-4 font-display text-4xl font-extrabold tracking-tight sm:text-6xl">Pay for your size. Add what you do.</h1>`
     + p("Every plan includes Garage Core. Prices are per garage per month in Kenya shillings, VAT excluded. Pay yearly and get 2 months free. Everything is free for 14 days.")
     + `<section>${h2("Plans")}${planHtml()}</section>`
+    + `<section>${h2(PLAN_TABLE_HEADING)}${tableHtml(planTable(SALE_PLANS))}</section>`
     + `<section>${h2("Modules")}${p("Turn modules on or off any time in System → Modules & billing. A module you turn on is billed from that day; one you turn off runs to the end of the period you paid for.")}${modulePriceHtml()}</section>`
     + `<section>${h2("Extras")}${ul([`Extra branch: ${kes(EXTRA_BRANCH_PRICE)} a month each`, "SMS: bought in bundles from inside your workspace", `All modules bundle: ${BUNDLE_MODULES.length} modules with Pro for ${kes(SALE_PLANS.find((x) => x.bundle)?.price || 0)} a month`])}</section>`
     + `<section>${h2("Billing questions")}${faqHtml(HOME.pricingFaq)}</section>`
@@ -309,6 +325,55 @@ function legalBody(title: string, sections: Section[]): string {
   );
 }
 
+/* ------------------------------------------------------------------ guide pages (mirror ContentPage.tsx) */
+
+export function tableHtml(t: Table): string {
+  return `<div class="mt-4 overflow-x-auto"><table class="w-full text-left text-sm"><caption class="mb-2 text-left text-xs text-muted-foreground">${esc(t.caption)}</caption>`
+    + `<thead><tr>${t.head.map((x) => `<th scope="col" class="border-b border-border px-3 py-2 font-bold">${esc(x)}</th>`).join("")}</tr></thead>`
+    + `<tbody>${t.rows.map((row) => `<tr>${row.map((x, i) => i === 0 ? `<th scope="row" class="border-b border-border px-3 py-2 font-semibold">${esc(x)}</th>` : `<td class="border-b border-border px-3 py-2">${esc(x)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+
+function blockHtml(b: Block): string {
+  return `<section>${h2(b.h)}${(b.p || []).map(p).join("")}${b.list ? ul(b.list) : ""}${b.table ? tableHtml(b.table) : ""}`
+    + (b.links ? `<ul class="mt-4 space-y-3">${b.links.map(([l, h, d]) => `<li><a href="${esc(h)}" class="${linkCls}">${esc(l)}</a><span class="block text-muted-foreground">${esc(d)}</span></li>`).join("")}</ul>` : "")
+    + (b.after || []).map(p).join("") + `</section>`;
+}
+
+function contentBody(c: ContentPage): string {
+  const crumbs = contentCrumbs(c);
+  const photo = c.photo ? PHOTOS[c.photo] : null;
+  const ctas = `<p class="mt-6 flex flex-wrap gap-4"><a href="/register" class="${linkCls}">${esc(CONTENT_LABELS.start)}</a><a href="${esc(waLink(c.wa))}" class="${linkCls}">${esc(CONTENT_LABELS.whatsapp)}</a></p>`;
+  return wrap(
+    `<nav aria-label="Breadcrumb" class="text-xs font-bold uppercase tracking-widest text-muted-foreground">${crumbs.map(([n, pth], i) => i === crumbs.length - 1 ? esc(n) : `<a href="${esc(pth)}">${esc(n)}</a> / `).join("")}</nav>`
+    + `<p class="mt-6 text-xs font-bold uppercase tracking-widest text-primary">${esc(c.eyebrow)}</p>`
+    + `<h1 class="mt-2 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">${esc(c.h1)}</h1>`
+    + `<p class="mt-4 text-lg font-medium">${esc(c.lead)}</p>`
+    + (c.article ? `<p class="mt-2 text-xs text-muted-foreground">${esc(CONTENT_LABELS.updated)} ${esc(CONTENT_PUBLISHED)} · JMSURF Technologies</p>` : "")
+    + ctas
+    + (photo ? `<img src="${photoSrc(photo)}" alt="${esc(photo.alt)}" class="mt-8 w-full rounded-3xl" />` : "")
+    + c.blocks.map(blockHtml).join("")
+    + (c.modules?.length ? `<section>${h2(CONTENT_LABELS.modules)}<ul class="mt-4 space-y-2">${c.modules.map((k) => MODULE_BY_KEY[k]).filter(Boolean).map((m) => `<li><a href="/solutions/${m.key}" class="${linkCls}">${esc(m.name)}</a>: ${esc(m.tagline)}</li>`).join("")}</ul></section>` : "")
+    + (c.faqs?.length ? `<section>${h2(CONTENT_LABELS.faqs)}${c.faqs.map(([q, a]) => `${h3(q)}${p(a)}`).join("")}</section>` : "")
+    + `<section>${h2(CONTENT_LABELS.next)}<ul class="mt-4 space-y-2">${c.related.map(([l, h]) => `<li><a href="${esc(h)}" class="${linkCls}">${esc(l)}</a></li>`).join("")}</ul></section>`
+    + `<section>${h2(HOME_HEADINGS.final)}${p(CONTENT_LABELS.finalText)}${ctas}</section>`,
+  );
+}
+
+function contentJsonld(c: ContentPage): object[] {
+  const meta: PageMeta = { path: c.path, title: c.title, description: c.description };
+  const out: object[] = [organization, website, software,
+    webPage(meta, c.path === "/for" || c.path === "/guides" ? { "@type": "CollectionPage" } : { about: { "@id": APP_ID } }),
+    breadcrumbs(contentCrumbs(c))];
+  if (c.article) out.push({
+    "@type": "Article", "@id": `${canonicalUrl(c.path)}#article`, headline: c.h1, description: c.description,
+    datePublished: CONTENT_PUBLISHED, dateModified: CONTENT_PUBLISHED, inLanguage: "en",
+    author: { "@id": ORG_ID }, publisher: { "@id": ORG_ID }, mainEntityOfPage: canonicalUrl(c.path),
+    image: c.photo ? `${SITE_ORIGIN}${photoSrc(PHOTOS[c.photo])}` : OG_IMAGE,
+  });
+  if (c.faqs?.length) out.push(faqPage(c.faqs));
+  return out;
+}
+
 /* ------------------------------------------------------------------ all pages */
 
 /** Visible text of a snapshot (tags removed), for llms-full.txt and the tests. */
@@ -343,6 +408,8 @@ export function buildSeoPages(): SeoPage[] {
   });
   return [
     home, pricing, solutions, ...suites,
+    ...CONTENT_PAGES.map((c) => page({ path: c.path, title: c.title, description: c.description }, contentBody(c), contentJsonld(c),
+      { ogTitle: c.h1, ogDescription: c.description })),
     page(REGISTER_META, registerBody(), [organization, website, software, webPage(REGISTER_META), breadcrumbs([["Home", "/"], ["Start free", "/register"]])],
       { aliases: ["/signup"] }),
     page(LOGIN_META, loginBody(), [organization, website], { aliases: ["/staff-login"] }),
@@ -358,6 +425,8 @@ export function sitemapXml(pages: SeoPage[], lastmod: string): string {
     `  <url><loc>${canonicalUrl(pg.path)}</loc><lastmod>${lastmod}</lastmod></url>`);
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`;
 }
+
+const FAQ_COUNT = () => CONTENT_PAGES.find((c) => c.path === "/faq")?.faqs?.length || 0;
 
 export function llmsTxt(): string {
   const plans = SALE_PLANS.map((pl) => pl.quoteOnly
@@ -377,8 +446,18 @@ export function llmsTxt(): string {
     `- [Pricing](${SITE_ORIGIN}/pricing): plans, module prices, extra branches and the All modules bundle`,
     `- [All modules](${SITE_ORIGIN}/solutions): every module with what it does`,
     ...MODS.map((m) => `- [${m.name}](${SITE_ORIGIN}/solutions/${m.key}): ${m.tagline}`),
+    `- [Questions](${SITE_ORIGIN}/faq): ${FAQ_COUNT()} answers on plans, M-Pesa, eTIMS, SMS, staff and data`,
     `- [Start free](${SITE_ORIGIN}/register): set up a garage, 14 days free with no card`,
     `- [Terms of Service](${SITE_ORIGIN}/terms) and [Privacy Policy](${SITE_ORIGIN}/privacy)`,
+    "",
+    "## Garage types",
+    ...CONTENT_PAGES.filter((c) => c.group === "for").map((c) => `- [${c.crumb}](${SITE_ORIGIN}${c.path}): ${c.description}`),
+    "",
+    "## Guides",
+    ...CONTENT_PAGES.filter((c) => c.group === "guides").map((c) => `- [${c.h1}](${SITE_ORIGIN}${c.path}): ${c.description}`),
+    "",
+    "## Towns",
+    ...CONTENT_PAGES.filter((c) => c.group === "places").map((c) => `- [${c.crumb}](${SITE_ORIGIN}${c.path}): ${c.description}`),
     "",
     "## Pricing",
     `KES per garage per month, VAT excluded. Every plan includes Garage Core and starts with 14 days free; yearly payment is 10 times the monthly price (2 months free). Extra branches are ${kes(EXTRA_BRANCH_PRICE)} a month each; SMS are bought in bundles.`,
@@ -392,6 +471,8 @@ export function llmsTxt(): string {
     `- Email: ${CONTACT.email}`,
     `- Phone and WhatsApp: ${CONTACT.phone}`,
     `- Office: ${CONTACT.address}`,
+    `- WhatsApp: https://wa.me/${CONTACT.wa}`,
+    `- Questions: ${SITE_ORIGIN}/faq`,
     `- Sign up: ${SITE_ORIGIN}/register`,
     "- Sign in: https://app.jmsurfgarage.co.ke/login",
     "",
