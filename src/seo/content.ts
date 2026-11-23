@@ -615,7 +615,7 @@ const BEST: ContentPage = {
       "5. Works on a phone and on slow data, because mechanics do not sit at desks.",
       "6. Parts stock tied to jobs, so what is fitted is what is billed.",
       "7. Prices in Kenya shillings per month, a free trial, and no long contract.",
-      "8. Your data kept safe and apart from other businesses, with backups and a supplier registered with the Office of the Data Protection Commissioner.",
+      "8. Your data kept safe and apart from other businesses, with a supplier registered with the Office of the Data Protection Commissioner.",
       "9. Support from people in Kenya who answer on phone and WhatsApp.",
       "10. Room to grow: branches, payroll, accounting and specialist work when you need them, without changing systems.",
     ] },
@@ -630,7 +630,7 @@ const BEST: ContentPage = {
     { h: "How JMSURF Garage answers those points", p: [
       "JMSURF Garage was built for Kenyan motor businesses by JMSURF Technologies in Nairobi. Garage Core, which comes with every plan, has job cards for vehicles, customers and vehicles with history, estimates the customer approves or declines line by line from a link, M-Pesa payments that land on your own number, KRA eTIMS invoices, SMS updates, service reminders and basic stock.",
       `Plans go by the size of your garage, from ${kes(FUNDI.price)} a month for the Fundi plan to ${kes(PRO.price)} for Pro, with Enterprise priced for groups. Modules add what your business does, such as inspections and a bay board, a spares till, body and paint, car wash, tyres, imports, car yard, fleet contracts, towing or car hire. Everything is free for ${TRIAL_DAYS} days without a card, and paying yearly gives 2 months free.`,
-      "Each garage's records are kept apart at database level, sign-in supports two-step verification, every change is recorded, and backups run every day. JMSURF TECHNOLOGIES LTD is registered with the ODPC as a data controller and processor (reg. no. 194-9812-26EB).",
+      "Each garage's records are kept apart at database level, sign-in supports two-step verification and every change is recorded. JMSURF TECHNOLOGIES LTD is registered with the ODPC as a data controller and processor (reg. no. 194-9812-26EB).",
     ] },
     { h: "Where it may not fit", p: [
       "JMSURF Garage runs in the browser and needs a data connection to save work; only the spares counter till keeps selling offline. It installs like an app from the browser rather than from an app store. To sign invoices with KRA you need your own eTIMS registration (an OSCU device for your KRA PIN and branch), which KRA issues to you. If you need a feature that is not listed on the module pages, ask before you buy rather than after.",

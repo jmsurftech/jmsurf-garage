@@ -46,7 +46,7 @@ export const HOME = {
     { t: "Each garage kept apart", d: "Database-level separation: one garage can never see another one's records." },
     { t: "Two-step sign-in", d: "An authenticator code for owners and staff who want it." },
     { t: "Roles and rights", d: "Mechanics see their jobs; only the owner sees the money if you want it that way." },
-    { t: "Daily backups", d: "Automatic backups and a standby server in another country." },
+    { t: "Every change recorded", d: "An activity log shows who changed what, and when." },
   ],
   faq: [
     ["Who is JMSURF Garage for?", "Every kind of motor business in Kenya: the roadside fundi, small and busy workshops, dealers' service centres, spares shops, importers, car yards, body shops, car washes, tyre centres, fleets, towing and car hire."],
@@ -56,7 +56,7 @@ export const HOME = {
     ["Can my customers approve estimates on their phone?", "Yes. The estimate goes by SMS or WhatsApp with a link; the customer sees the parts, labour and photos and approves it there."],
     ["Does it work with M-Pesa and KRA?", "Yes. M-Pesa payments and KRA eTIMS invoices are part of every plan."],
     ["Can I run more than one branch?", "Yes. Pro includes two branches and each extra branch is KES 2,000 a month. Groups with many branches get an Enterprise price."],
-    ["Is my data safe?", "Yes. Data is encrypted in transit, each garage is kept apart at database level, sign-in supports two-step verification, and backups run every day."],
+    ["Is my data safe?", "Yes. Data is encrypted in transit, each garage is kept apart at database level, sign-in supports two-step verification, and every change is recorded."],
     ["Is there a free trial?", "Yes: 14 days free with every module you choose, no card needed."],
   ] as [string, string][],
   pricingFaq: [

@@ -10,7 +10,7 @@ import { motion, useInView } from "framer-motion";
 import {
   ArrowRight, Check, X, Menu, Smartphone, ShieldCheck, FileCheck, MessageSquare, WifiOff, Headset, Wallet,
   ClipboardList, ClipboardCheck, FileText, ThumbsUp, Wrench, Receipt, BellRing, ChevronDown, MessageCircle, Phone, Mail,
-  Sun, Moon, Car, Store, Ship, SprayCan, Droplets, Truck, Gauge, Building2, Lock, DatabaseBackup, UserRoundCog, MapPin,
+  Sun, Moon, Car, Store, Ship, SprayCan, Droplets, Truck, Gauge, Building2, Lock, History, UserRoundCog, MapPin,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashLogo, DashMark } from "@/components/brand/DashLogo";
@@ -383,7 +383,7 @@ function Plans() {
 
 /* ------------------------------------------------------------------ security + FAQ */
 
-const SAFE_ICONS = [Lock, ShieldCheck, UserRoundCog, DatabaseBackup];
+const SAFE_ICONS = [Lock, ShieldCheck, UserRoundCog, History];
 
 function Security() {
   return (
